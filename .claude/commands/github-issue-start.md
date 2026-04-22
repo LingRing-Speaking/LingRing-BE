@@ -84,11 +84,12 @@ gh issue list --state open --limit 10 --json number,title,labels \
 ### 7. 브랜치 생성 + 체크아웃
 
 ```bash
-git switch -c "<type>/#<num>-<desc>" "origin/<parent>"
+git switch --no-track -c "<type>/#<num>-<desc>" "origin/<parent>"
 ```
 
 - `git switch -c`는 브랜치 생성과 체크아웃을 한 번에 수행하고, 동일 이름이 이미 있으면 실패합니다 (안전).
-- 기존 브랜치를 재사용하기로 했다면 `-c` 대신 `git switch "<name>"`을 씁니다.
+- **`--no-track` 필수, 그리고 `-c`보다 앞에 와야 함** (`-c`가 뒤에 오는 토큰을 브랜치명으로 먹어버려서 순서가 뒤집히면 "only one reference expected"로 실패). 이 플래그가 없으면 git은 기본으로 `origin/<parent>`를 upstream으로 잡아버리고, 이후 무심코 `git push`/`git pull` 하면 부모 브랜치로 푸시를 시도하거나 부모 변경을 끌어오는 사고가 납니다. upstream은 PR 만들 시점에 `/github-pr`이 `git push -u origin <branch>`로 올바르게 설정합니다.
+- 기존 브랜치를 재사용하기로 했다면 `--no-track -c` 대신 `git switch "<name>"`을 씁니다.
 - 원격 푸시는 하지 않습니다 — PR 만들 시점에 `/github-pr`이 자연스럽게 푸시합니다.
 
 ### 8. 결과 보고
