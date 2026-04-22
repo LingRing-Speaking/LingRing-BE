@@ -1,3 +1,8 @@
+# 설계 규칙
+- 기본적으로 DDD 방법론을 따른다 
+- 같은 Aggregate 내부 객체는 직접참조를 우선 고려한다
+- 다른 Aggregate는 기본적으로 식별자(ID)로 간접참조한다
+
 # 네이밍 규칙
 - 검증/boolean 반환 메서드는 긍정문 사용 (isNotValid, hasNotRank 등 금지)
 - dto 네이밍 대신 request/response로 구분
@@ -7,8 +12,10 @@
 - Google Code Style 기반 (Tab/Indent: 4, Continuation: 8)
 - 클래스와 선언부 필드 사이 개행
 - 메서드 매개변수와 지역 변수에 final 사용
-- Enum 값 정의 시 후행 쉼표 사용
 - 초기화되지 않은 상태로 변수를 선언하지 않는다
+- else 예약어를 쓰지 않는다 (조기 리턴으로 대체)
+- switch식 문장이나 삼항 연산자는 사용하지 않는다
+- 컬렉션에 도메인 동작(검증/필터링/집계 등)이 붙거나, 불변성을 보장해야 한다면 일급 컬렉션으로 래핑한다
         
 # Lombok 사용 규칙:
 - @Data 사용 금지
@@ -23,4 +30,6 @@
 - @Column의 nullable=false인 경우 명시
 - @Embeddable 내부에 @Embedded 사용 금지
 - nullable 하지 않다면, 생성자의 매개변수에도 @NonNull을 붙인다
-
+- @Enumerated는 항상 EnumType.STRING을 사용한다
+- @GeneratedValue의 경우, IDENTITY를 사용한다
+- 검증 로직이나 도메인 로직이 담길 경우, VO 객체로 감싼다
