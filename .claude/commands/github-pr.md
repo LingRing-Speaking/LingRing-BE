@@ -4,88 +4,49 @@ description: 현재 브랜치의 커밋을 분석해 팀 컨벤션에 맞는 Git
 
 # GitHub PR 자동 생성
 
-현재 브랜치에서 부모 브랜치로 향하는 PR을 생성합니다. 브랜치 이름에서 이슈 번호를 추출하고, 커밋·diff를 분석해 PR 제목/본문을 채우고, 필요하면 원격에 푸시한 뒤 `gh`로 PR을 만듭니다.
+현재 브랜치에서 부모 브랜치로 향하는 PR을 만든다. 단계별로 이상이 보이면 멈추고 사용자에게 확인, 아니면 끝까지 이어서 진행.
 
-## 동작 순서
+## 1. 컨텍스트 수집 (병렬)
 
-아래 순서대로 수행하되, 각 단계의 **의도**를 이해하고 이상이 보이면 사용자에게 확인을 요청하세요. 기계적으로 따르기보다, 브랜치명/커밋이 규칙에서 벗어나 있으면 멈추고 물어보는 편이 안전합니다.
+`git branch --show-current`, `git status`, `git remote get-url origin`, `git fetch origin`.
 
-### 1. 컨텍스트 수집
+커밋되지 않은 변경사항이 있으면 **먼저 사용자에게 알리고** 진행 여부 확인.
 
-병렬로 실행해서 한 번에 읽어옵니다.
+## 2. 브랜치명 파싱
 
-- `git branch --show-current` — 현재 브랜치
-- `git status` — 커밋되지 않은 변경사항이 있는지
-- `git remote get-url origin` — GitHub 저장소 식별 (owner/repo 추출)
-- `git fetch origin` — 원격 최신화 (부모 브랜치와 diff 비교를 위해)
+형식: `<type>/#<issue>-<desc>` (예: `feat/#12-jwt-auth`). 정규식 `^(?<type>[a-z]+)/#(?<issue>\d+)-(?<desc>.+)$`.
 
-커밋되지 않은 변경사항이 있다면 **먼저 사용자에게 알리고** 진행 여부를 확인하세요. 커밋이 누락된 상태로 PR을 올리면 리뷰어가 혼란스러워집니다.
+규칙 위배면 멈추고 이슈 번호·타입을 사용자에게 확인. 잘못 파싱해 엉뚱한 이슈에 `Closes`가 걸리면 피해가 크다.
 
-### 2. 브랜치 이름 파싱
+## 3. 부모 브랜치 & 라벨
 
-브랜치 이름 규칙: `<타입>/#<이슈번호>-<설명>` (예: `feat/#01-init`, `hotfix/#42-login-bug`, `chore/#01-init-project`).
+브랜치 전략: `main ← prod ← dev ← 작업 브랜치` (`hotfix`만 `prod`로 직행).
 
-정규식: `^(?<type>[a-z]+)/#(?<issue>\d+)-(?<desc>.+)$`
+| 타입       | 부모   | 라벨        |
+| ---------- | ------ |-----------|
+| `feat`     | `dev`  | `feat`    |
+| `fix`      | `dev`  | `bug`     |
+| `hotfix`   | `prod` | `bug`     |
+| `chore`    | `dev`  | `chore`   |
+| `docs`     | `dev`  | `docs`    |
+| `refactor` | `dev`  | `refactor`|
+| `test`     | `dev`  | `refactor`|
+| `dev`      | `prod` | —         |
+| `prod`     | `main` | —         |
 
-- `type` — 작업 유형 (`feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `hotfix` 등)
-- `issue` — 이슈 번호 (선행 0은 `Closes`에서 제거: `01` → `1`)
-- `desc` — 브랜치 설명
+표에 없는 타입이면 부모 브랜치를 사용자에게 확인. 라벨이 저장소에 없으면(`gh label list`로 확인) `--label`을 생략해 PR 먼저 생성 후 사용자에게 알림.
 
-**규칙에 맞지 않으면** 사용자에게 브랜치 이름을 확인하고, 연관 이슈 번호와 작업 타입을 직접 물어보세요. 잘못된 파싱으로 엉뚱한 이슈에 `Closes`가 걸리면 피해가 큽니다.
+## 4. 커밋·diff 분석
 
-### 3. 부모 브랜치 & 라벨 결정
+`git log origin/<parent>..HEAD`, `git diff origin/<parent>...HEAD --stat`, `git diff origin/<parent>...HEAD`로 실제 변경을 파악. 커밋 메시지 나열이 아니라 **이 PR이 뭘 바꾸는지** 한눈에 이해되게 풀어쓴다.
 
-**부모 브랜치** — 팀 브랜치 전략: `main ← prod ← dev ← <작업 브랜치>`, 단 `hotfix`는 `prod`로 직행.
+## 5. PR 제목
 
-| 현재 브랜치 타입 | 부모 브랜치 |
-|---|---|
-| `feat`, `fix`, `chore`, `docs`, `refactor`, `test` | `dev` |
-| `hotfix` | `prod` |
-| `dev` | `prod` |
-| `prod` | `main` |
+`<type>: <한국어 요약>`, 70자 이내 (예: `feat: 사용자 JWT 인증 추가`). 커밋이 혼재되면 가장 큰 변경을 대표.
 
-위 표에 없는 타입이 나오면 **사용자에게 부모 브랜치를 확인**하세요. 임의로 매핑하지 마세요.
+## 6. PR 본문
 
-**PR 라벨** — 2단계에서 파싱한 `type`을 저장소의 기존 라벨로 매핑해 PR에 부착합니다.
-
-| 브랜치 타입 | 라벨 |
-|---|---|
-| `feat` | `feat` |
-| `fix`, `hotfix` | `bug` |
-| `chore` | `chore` |
-| `docs` | `docs` |
-| `refactor` | `refactor` |
-| `test` | (부착하지 않음) |
-
-매핑된 라벨이 저장소에 존재하지 않으면 `gh pr create --label`이 실패합니다. 이 경우 `--label`을 생략해 PR을 먼저 만들고, **라벨 누락을 사용자에게 알린 뒤** 필요하면 `gh label create`로 생성 후 `gh pr edit --add-label`로 부착하세요. 현재 저장소 라벨은 `gh label list`로 확인할 수 있습니다.
-
-### 4. 커밋 & 변경사항 분석
-
-부모 브랜치(`origin/<parent>`) 기준으로 diff를 봅니다.
-
-- `git log origin/<parent>..HEAD --oneline` — 커밋 목록
-- `git log origin/<parent>..HEAD` — 커밋 본문까지 상세
-- `git diff origin/<parent>...HEAD --stat` — 변경된 파일/라인 요약
-- `git diff origin/<parent>...HEAD` — 실제 변경 내용 (파일이 많으면 중요한 것 위주로)
-
-이 단계의 목적은 PR 본문 두 곳을 채우는 것입니다:
-- **🚀 작업 내용**: 커밋 메시지만 나열하지 말고, 커밋과 diff를 합쳐서 "이 PR이 실제로 무엇을 바꾸는지"를 독자가 한눈에 이해할 수 있게 풀어쓰세요.
-- **💬 리뷰 중점사항**: 변경된 코드에서 리뷰어가 특히 확인할 만한 지점을 짚으세요. 이 프로젝트 맥락에서 자주 쓰이는 예:
-  - 외부 API 호출이나 트랜잭션 경계 변경
-
-항목이 없어 보이면 억지로 만들지 말고 "특별한 주의점 없음" 정도로 간결히 쓰세요.
-
-### 5. PR 제목 작성
-
-여러 커밋을 하나로 요약한 한국어 Conventional Commits 스타일.
-
-- 형식: `<type>: <한국어 요약>` (예: `feat: 사용자 JWT 인증 추가`)
-- 타입은 커밋들의 주된 성격으로 판단. 혼재된 경우 가장 큰 변경을 대표.
-- 70자 이내로 짧게. 상세는 본문에서 다룸.
-
-### 6. PR 본문 생성
-
-템플릿은 `.github/pull_request_template.md`를 그대로 따릅니다. 각 섹션을 아래처럼 채우세요.
+`.github/pull_request_template.md` 구조 유지 (섹션 제목·이모지 포함).
 
 ```markdown
 ## 😉 연관 이슈
@@ -94,60 +55,55 @@ Closes #<이슈번호>
 
 ## 🚀 작업 내용
 
-- <커밋·diff 기반으로 풀어쓴 변경 내용>
-- <파일/기능 단위로 묶어서 정리>
+- <커밋·diff 기반 변경 내용>
 
 ## 💬 리뷰 중점사항
 
-- <변경 코드를 보고 Claude가 찾은 리뷰 포인트>
+- <리뷰어가 특히 봐야 할 지점. 없으면 "특별한 주의점 없음">
 ```
 
-섹션 제목(`## 😉 연관 이슈` 등)은 원본과 정확히 일치시키세요 — 이모지도 포함.
+## 7. 푸시 & PR 생성
 
-### 7. 푸시
-
-로컬 브랜치가 원격에 없거나 원격이 뒤처져 있으면 자동 푸시:
+원격 브랜치가 없거나 뒤처져 있으면 `git push -u origin <branch>` (`--force` 계열 금지).
 
 ```bash
-git push -u origin <current-branch>
-```
-
-이미 원격이 최신이면 이 단계를 건너뜁니다. `--force` 계열은 사용하지 마세요.
-
-### 8. PR 생성
-
-`gh pr create`로 생성. base는 3단계에서 결정한 부모 브랜치, `--label`은 3단계 라벨 매핑 결과.
-
-```bash
-gh pr create \
-  --base <parent> \
-  --head <current-branch> \
-  --label <label> \
-  --title "<생성한 제목>" \
-  --body "$(cat <<'EOF'
-## 😉 연관 이슈
-
-Closes #<issue>
-
-## 🚀 작업 내용
-
-...
-
-## 💬 리뷰 중점사항
-
-...
+gh pr create --base <parent> --head <branch> --label <label> \
+  --title "<title>" --body "$(cat <<'EOF'
+<body>
 EOF
 )"
 ```
 
-라벨 매핑 대상이 없거나(`test` 등) 저장소에 라벨이 존재하지 않으면 `--label` 플래그를 생략하세요.
+같은 브랜치로 PR이 이미 열려있으면 덮어쓰지 말고 **업데이트 여부를 사용자에게 확인** (`gh pr edit`로 갱신). 성공 시 반환된 PR URL을 사용자에게 표시.
 
-성공하면 반환된 PR URL을 사용자에게 보여주세요. 이미 같은 브랜치로 열린 PR이 있으면 `gh`가 실패하는데, 이때는 덮어쓰지 말고 **기존 PR을 업데이트할지 사용자에게 확인**하세요 (`gh pr edit`로 제목/본문 갱신 가능).
+## 8. Slack 알림
+
+프로젝트 루트 `.env`에 `SLACK_USER_TOKEN`·`SLACK_PR_CHANNEL` 모두 있을 때만 실행, 없으면 **조용히 스킵** (best-effort). 메시지에는 2단계의 이슈 번호로 `gh issue view`해서 얻은 이슈 제목을 포함.
+
+```bash
+PROJECT_ROOT=$(git rev-parse --show-toplevel)
+[ -f "$PROJECT_ROOT/.env" ] && { set -a; source "$PROJECT_ROOT/.env"; set +a; }
+
+if [ -n "${SLACK_USER_TOKEN:-}" ] && [ -n "${SLACK_PR_CHANNEL:-}" ]; then
+  ISSUE_TITLE=$(gh issue view <이슈번호> --json title -q .title 2>/dev/null || echo "")
+  if [ -n "$ISSUE_TITLE" ]; then
+    MSG="\"${ISSUE_TITLE}\" 작업에 대해 PR 올렸습니다. 시간날 때 확인 부탁드려요. <${PR_URL}|${PR_TITLE}>"
+  else
+    MSG="PR 올렸습니다. 시간날 때 확인 부탁드려요. <${PR_URL}|${PR_TITLE}>"
+  fi
+  curl -s -X POST -H "Authorization: Bearer $SLACK_USER_TOKEN" \
+    -H "Content-Type: application/json; charset=utf-8" \
+    --data "$(jq -cn --arg ch "$SLACK_PR_CHANNEL" --arg text "$MSG" '{channel:$ch,text:$text}')" \
+    https://slack.com/api/chat.postMessage
+fi
+```
+
+`<URL|텍스트>`는 Slack mrkdwn 클릭 링크. 응답 `"ok":false`면 실패 한 줄만 알리고 **재시도 금지** — PR은 이미 생성됨.
 
 ## 실패 시 대응
 
-- `gh` 미설치 → `brew install gh && gh auth login` 안내
-- 인증 만료 → `gh auth status`로 확인 후 재로그인 안내
-- 부모 브랜치가 원격에 없음 → 사용자에게 실제 부모 브랜치 확인
-- 브랜치명 규칙 위배 → 2단계 안내로 돌아가 수동 확인
-- 매핑된 라벨이 저장소에 없음 → `--label`을 생략해 PR을 먼저 만들고 사용자에게 알림. 필요 시 `gh label create`로 추가 후 `gh pr edit --add-label`로 부착
+- `gh` 미설치/인증 만료 → `brew install gh && gh auth login`
+- 브랜치명 규칙 위배 → 2단계로 돌아가 사용자 확인
+- 부모 브랜치 원격에 없음 → 사용자에게 확인
+- 라벨이 저장소에 없음 → `--label` 생략해 PR 먼저 생성, 사용자에게 알림
+- Slack 알림 실패 / `jq` 미설치 → PR 생성은 성공했으므로 **커맨드 전체 성공 처리**, 실패는 한 줄만 보고
