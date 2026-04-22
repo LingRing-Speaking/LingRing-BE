@@ -20,7 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 구조상 주의점
 
-- 루트 패키지: `com.lingring` (메인 클래스 `LingRingApplication`).
+- 루트 패키지: `com.lingring` (메인 클래스 `LingRingApplication`). 상세 패키지 레이아웃(도메인별 구조 포함)은 `.claude/rules/package-structure.md`를 따른다.
 - `settings.gradle`의 루트 프로젝트 이름은 `backend`로 저장소명 `LingRing-BE`와 다르다. Gradle 프로젝트명은 `backend`이며 jar 산출물 이름, IDE 프로젝트 표시명에 영향을 준다.
 - `.gitignore`가 `src/main/resources/` 및 `src/test/resources/` 아래의 **모든 `*.yml`을 제외**한다. 이미 추적 중인 파일만 예외이므로, 프로파일별 설정(`application-dev.yml` 등)을 추가해도 git이 조용히 무시한다. 의도적으로 커밋하려면 `git add -f`를 쓰거나 무시되지 않는 경로로 옮길 것.
 - `HELP.md`도 gitignore 대상(Spring Initializr 기본 산출물).
