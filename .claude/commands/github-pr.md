@@ -78,27 +78,13 @@ EOF
 
 ## 8. Slack 알림
 
-프로젝트 루트 `.env`에 `SLACK_USER_TOKEN`·`SLACK_PR_CHANNEL` 모두 있을 때만 실행, 없으면 **조용히 스킵** (best-effort). 메시지에는 2단계의 이슈 번호로 `gh issue view`해서 얻은 이슈 제목을 포함.
+Slack 알림 로직은 `.claude/scripts/slack-pr-notify.sh`로 분리되어 있다. 스크립트가 `.env`의 `SLACK_USER_TOKEN`·`SLACK_PR_CHANNEL`을 읽어 best-effort로 처리하며, 둘 중 하나라도 없으면 조용히 종료한다.
 
 ```bash
-PROJECT_ROOT=$(git rev-parse --show-toplevel)
-[ -f "$PROJECT_ROOT/.env" ] && { set -a; source "$PROJECT_ROOT/.env"; set +a; }
-
-if [ -n "${SLACK_USER_TOKEN:-}" ] && [ -n "${SLACK_PR_CHANNEL:-}" ]; then
-  ISSUE_TITLE=$(gh issue view <이슈번호> --json title -q .title 2>/dev/null || echo "")
-  if [ -n "$ISSUE_TITLE" ]; then
-    MSG="\"${ISSUE_TITLE}\" 작업에 대해 PR 올렸습니다. 시간날 때 확인 부탁드려요. <${PR_URL}|${PR_TITLE}>"
-  else
-    MSG="PR 올렸습니다. 시간날 때 확인 부탁드려요. <${PR_URL}|${PR_TITLE}>"
-  fi
-  curl -s -X POST -H "Authorization: Bearer $SLACK_USER_TOKEN" \
-    -H "Content-Type: application/json; charset=utf-8" \
-    --data "$(jq -cn --arg ch "$SLACK_PR_CHANNEL" --arg text "$MSG" '{channel:$ch,text:$text}')" \
-    https://slack.com/api/chat.postMessage
-fi
+./.claude/scripts/slack-pr-notify.sh "<PR_URL>" "<PR_TITLE>" <이슈번호>
 ```
 
-`<URL|텍스트>`는 Slack mrkdwn 클릭 링크. 응답 `"ok":false`면 실패 한 줄만 알리고 **재시도 금지** — PR은 이미 생성됨.
+메시지는 스크립트 내부에서 `<URL|텍스트>` Slack mrkdwn 형식으로 조립된다. 응답 `"ok":false`여도 실패 한 줄만 알리고 **재시도 금지** — PR은 이미 생성됨.
 
 ## 실패 시 대응
 
@@ -107,3 +93,4 @@ fi
 - 부모 브랜치 원격에 없음 → 사용자에게 확인
 - 라벨이 저장소에 없음 → `--label` 생략해 PR 먼저 생성, 사용자에게 알림
 - Slack 알림 실패 / `jq` 미설치 → PR 생성은 성공했으므로 **커맨드 전체 성공 처리**, 실패는 한 줄만 보고
+- `slack-pr-notify.sh: Permission denied` → `chmod +x .claude/scripts/slack-pr-notify.sh` 후 재시도
