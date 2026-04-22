@@ -39,3 +39,7 @@ out/
 /src/main/resources/**/*.yml
 /src/test/resources/**/*.yml
 
+### Claude Code ###
+CLAUDE.local.md
+.claude/settings.local.json
+
