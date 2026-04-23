@@ -41,7 +41,6 @@ out/
 
 ### Claude Code ###
 CLAUDE.local.md
-.claude/settings.local.json
 
 ### Secrets ###
 .env

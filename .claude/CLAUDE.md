@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 코드 작성 시 주의 사항
+- YANGI 원칙을 지킬 것. (당장 필요하지 않은 기능은 미리 만들지 말라)
+- DRY 원칙을 지킬 것. (동일한 코드를 반복적으로 사용하지 말라)
+
 ## 명령어
 
 시스템 Gradle 대신 Gradle Wrapper(`./gradlew`)를 사용합니다.
@@ -24,8 +28,3 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `settings.gradle`의 루트 프로젝트 이름은 `backend`로 저장소명 `LingRing-BE`와 다르다. Gradle 프로젝트명은 `backend`이며 jar 산출물 이름, IDE 프로젝트 표시명에 영향을 준다.
 - `.gitignore`가 `src/main/resources/` 및 `src/test/resources/` 아래의 **모든 `*.yml`을 제외**한다. 이미 추적 중인 파일만 예외이므로, 프로파일별 설정(`application-dev.yml` 등)을 추가해도 git이 조용히 무시한다. 의도적으로 커밋하려면 `git add -f`를 쓰거나 무시되지 않는 경로로 옮길 것.
 - `HELP.md`도 gitignore 대상(Spring Initializr 기본 산출물).
-
-## 이슈 / PR 컨벤션
-
-- 이슈 템플릿은 `.github/ISSUE_TEMPLATE/`에 있음 (`bug-template.md`, `task-template.md`). 이슈를 열 때 이 구조를 따른다.
-- 최근 커밋 메시지는 한국어 Conventional Commits 스타일 (예: `docs: pr template 추가`, `chore: init project`). 동일한 스타일을 유지할 것.
