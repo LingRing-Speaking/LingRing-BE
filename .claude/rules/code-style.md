@@ -3,6 +3,12 @@
 - 같은 Aggregate 내부 객체는 직접참조를 우선 고려한다
 - 다른 Aggregate는 기본적으로 식별자(ID)로 간접참조한다
 
+# 날짜 사용 규칙
+- `LocalDateTime.now()` / `LocalDate.now()` 등 시스템 시계 직접 호출 금지. `DateTimeProvider`를 주입받아 사용한다
+- 기준 타임존은 `Asia/Seoul`로 고정 (서버 OS 기본 타임존 의존 금지)
+- DB 저장 대상 `LocalDateTime`은 마이크로초까지 truncate (MySQL DATETIME(6) 한계)
+- 테스트에서 시각 의존 로직은 `FixedDateTimeProvider`로 시각을 고정해 검증
+
 # 네이밍 규칙
 - 검증/boolean 반환 메서드는 긍정문 사용 (isNotValid, hasNotRank 등 금지)
 - dto 네이밍 대신 request/response로 구분
