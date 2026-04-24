@@ -19,7 +19,7 @@
         
 # Lombok 사용 규칙:
 - @Data 사용 금지
-- @Getter, @NoArgsConstructor, @RequiredArgsConstructor, @Builder(필드 4개 이상시)만 허용
+- @Getter, @NoArgsConstructor, @RequiredArgsConstructor, @Builder(필드 4개 이상시), @EqualsAndHashCode 만 허용
 - 어노테이션이 여럿 있는 경우, 중요한 것을 가장 상단에 배치한다. (Lombok의 어노테이션을 가장 하단에 배치한다)
 
 # 서비스/컨트롤러
