@@ -4,6 +4,12 @@ paths:
   - "src/**/*Test.java"
 ---
 
+# 적용 범위
+- 새로 추가하는 Controller / Service / Repository / Domain 로직에는 대응하는 테스트를 같이 작성한다
+- 기존 로직 수정 시, 변경된 동작을 검증하는 테스트를 추가·갱신한다
+- 테스트 미작성 상태로 PR을 올리지 않는다
+- 테스트 커버리지는 최소 80%를 넘어야한다
+
 # 테스트 프레임워크
 - JUnit 5 + AssertJ 사용
 - 단언(assertion)은 AssertJ의 `assertThat`으로 통일
