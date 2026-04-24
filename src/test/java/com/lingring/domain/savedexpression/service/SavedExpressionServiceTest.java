@@ -7,6 +7,8 @@ import com.lingring.domain.savedexpression.domain.SavedExpression;
 import com.lingring.domain.savedexpression.dto.request.SavedExpressionCreateRequest;
 import com.lingring.domain.savedexpression.dto.response.SavedExpressionListResponse;
 import com.lingring.domain.savedexpression.dto.response.SavedExpressionResponse;
+import com.lingring.domain.user.dao.UserStatsRepository;
+import com.lingring.domain.user.domain.UserStats;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -20,6 +22,9 @@ class SavedExpressionServiceTest extends ServiceIntegrationHelper {
 
     @Autowired
     private SavedExpressionRepository savedExpressionRepository;
+
+    @Autowired
+    private UserStatsRepository userStatsRepository;
 
     @Nested
     @DisplayName("save: 저장한 표현 생성")
@@ -163,6 +168,99 @@ class SavedExpressionServiceTest extends ServiceIntegrationHelper {
 
             // when & then
             savedExpressionService.delete(userId, missingId);
+        }
+    }
+
+    @Nested
+    @DisplayName("UserStats.savedExpressionCount 동기화")
+    class CountSync {
+
+        @Test
+        @DisplayName("save 1회 호출 시 해당 유저의 savedExpressionCount가 1 증가한다")
+        void save_incrementsUserStatsCountByOne() {
+            // given
+            final Long userId = 1L;
+            userStatsRepository.save(UserStats.create(userId));
+            final SavedExpressionCreateRequest request =
+                    new SavedExpressionCreateRequest("How are you?", "어떻게 지내세요?");
+
+            // when
+            savedExpressionService.save(userId, request);
+
+            // then
+            final UserStats reloaded = userStatsRepository.findByUserId(userId).orElseThrow();
+            assertThat(reloaded.getSavedExpressionCount()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("save 2회 호출 시 savedExpressionCount가 누적되어 2가 된다")
+        void save_twice_accumulatesCountToTwo() {
+            // given
+            final Long userId = 1L;
+            userStatsRepository.save(UserStats.create(userId));
+
+            // when
+            savedExpressionService.save(userId, new SavedExpressionCreateRequest("hello", "안녕"));
+            savedExpressionService.save(userId, new SavedExpressionCreateRequest("thanks", "고마워"));
+
+            // then
+            final UserStats reloaded = userStatsRepository.findByUserId(userId).orElseThrow();
+            assertThat(reloaded.getSavedExpressionCount()).isEqualTo(2);
+        }
+
+        @Test
+        @DisplayName("본인 항목 delete 성공 시 savedExpressionCount가 1 감소한다")
+        void delete_whenOwnedByUser_decrementsUserStatsCountByOne() {
+            // given
+            final Long userId = 1L;
+            userStatsRepository.save(UserStats.create(userId));
+            final SavedExpressionResponse saved = savedExpressionService.save(
+                    userId, new SavedExpressionCreateRequest("hello", "안녕"));
+
+            // when
+            savedExpressionService.delete(userId, saved.id());
+
+            // then
+            final UserStats reloaded = userStatsRepository.findByUserId(userId).orElseThrow();
+            assertThat(reloaded.getSavedExpressionCount()).isZero();
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 id로 delete를 호출해도 savedExpressionCount는 변하지 않는다")
+        void delete_whenMissingId_doesNotChangeUserStatsCount() {
+            // given
+            final Long userId = 1L;
+            userStatsRepository.save(UserStats.create(userId));
+            savedExpressionService.save(userId, new SavedExpressionCreateRequest("hello", "안녕"));
+            final Long missingId = 9_999_999L;
+
+            // when
+            savedExpressionService.delete(userId, missingId);
+
+            // then
+            final UserStats reloaded = userStatsRepository.findByUserId(userId).orElseThrow();
+            assertThat(reloaded.getSavedExpressionCount()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("타 유저 소유 항목에 대한 delete는 양쪽 유저의 savedExpressionCount를 변경하지 않는다")
+        void delete_whenNotOwned_doesNotChangeAnyUserStatsCount() {
+            // given
+            final Long ownerId = 1L;
+            final Long otherUserId = 2L;
+            userStatsRepository.save(UserStats.create(ownerId));
+            userStatsRepository.save(UserStats.create(otherUserId));
+            final SavedExpressionResponse saved = savedExpressionService.save(
+                    ownerId, new SavedExpressionCreateRequest("hello", "안녕"));
+
+            // when
+            savedExpressionService.delete(otherUserId, saved.id());
+
+            // then
+            final UserStats ownerStats = userStatsRepository.findByUserId(ownerId).orElseThrow();
+            final UserStats otherStats = userStatsRepository.findByUserId(otherUserId).orElseThrow();
+            assertThat(ownerStats.getSavedExpressionCount()).isEqualTo(1);
+            assertThat(otherStats.getSavedExpressionCount()).isZero();
         }
     }
 }
