@@ -27,6 +27,7 @@ public enum ErrorCode {
 
     // User Error
     INVALID_USER_NAME(BAD_REQUEST, "유효하지 않은 사용자 이름입니다."),
+    USER_NOT_FOUND(NOT_FOUND, "사용자를 찾을 수 없습니다."),
     ;
 
     private final HttpStatus httpStatus;
