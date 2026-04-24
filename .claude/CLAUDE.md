@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 코드 작성 시 주의 사항
 - YANGI 원칙을 지킬 것. (당장 필요하지 않은 기능은 미리 만들지 말라)
 - DRY 원칙을 지킬 것. (동일한 코드를 반복적으로 사용하지 말라)
+- API·도메인 로직 추가/수정 시 반드시 대응하는 테스트를 함께 작성한다 (상세 규칙: `.claude/rules/test-code.md`)
 
 ## 명령어
 
