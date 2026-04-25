@@ -1,12 +1,18 @@
 package com.lingring.global.util;
 
 import java.time.LocalDateTime;
-import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
 public final class FixedDateTimeProvider implements DateTimeProvider {
 
-    private final LocalDateTime fixedTime;
+    private LocalDateTime fixedTime;
+
+    public FixedDateTimeProvider(final LocalDateTime fixedTime) {
+        this.fixedTime = fixedTime;
+    }
+
+    public void setFixedTime(final LocalDateTime fixedTime) {
+        this.fixedTime = fixedTime;
+    }
 
     @Override
     public LocalDateTime now() {
