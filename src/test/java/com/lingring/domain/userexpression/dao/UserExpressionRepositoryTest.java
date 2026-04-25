@@ -1,8 +1,8 @@
-package com.lingring.domain.savedexpression.dao;
+package com.lingring.domain.userexpression.dao;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.lingring.domain.savedexpression.domain.SavedExpression;
+import com.lingring.domain.userexpression.domain.UserExpression;
 import com.lingring.global.config.RepositoryTestHelper;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -12,10 +12,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 
-class SavedExpressionRepositoryTest extends RepositoryTestHelper {
+class UserExpressionRepositoryTest extends RepositoryTestHelper {
 
     @Autowired
-    private SavedExpressionRepository savedExpressionRepository;
+    private UserExpressionRepository userExpressionRepository;
 
     @Nested
     @DisplayName("findAllByUserIdOrderByCreatedAtDesc")
@@ -27,12 +27,12 @@ class SavedExpressionRepositoryTest extends RepositoryTestHelper {
             // given
             final Long userId = 1L;
             final Long otherUserId = 2L;
-            savedExpressionRepository.save(SavedExpression.create(userId, "first", "첫번째"));
-            savedExpressionRepository.save(SavedExpression.create(userId, "second", "두번째"));
-            savedExpressionRepository.save(SavedExpression.create(otherUserId, "other", "다른유저"));
+            userExpressionRepository.save(UserExpression.create(userId, "first", "첫번째"));
+            userExpressionRepository.save(UserExpression.create(userId, "second", "두번째"));
+            userExpressionRepository.save(UserExpression.create(otherUserId, "other", "다른유저"));
 
             // when
-            final Slice<SavedExpression> slice = savedExpressionRepository
+            final Slice<UserExpression> slice = userExpressionRepository
                     .findAllByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, 10));
 
             // then
@@ -46,12 +46,12 @@ class SavedExpressionRepositoryTest extends RepositoryTestHelper {
         void hasNextTrueWhenMoreItemsRemain() {
             // given
             final Long userId = 1L;
-            savedExpressionRepository.save(SavedExpression.create(userId, "first", "첫번째"));
-            savedExpressionRepository.save(SavedExpression.create(userId, "second", "두번째"));
-            savedExpressionRepository.save(SavedExpression.create(userId, "third", "세번째"));
+            userExpressionRepository.save(UserExpression.create(userId, "first", "첫번째"));
+            userExpressionRepository.save(UserExpression.create(userId, "second", "두번째"));
+            userExpressionRepository.save(UserExpression.create(userId, "third", "세번째"));
 
             // when
-            final Slice<SavedExpression> slice = savedExpressionRepository
+            final Slice<UserExpression> slice = userExpressionRepository
                     .findAllByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, 1));
 
             // then
@@ -66,7 +66,7 @@ class SavedExpressionRepositoryTest extends RepositoryTestHelper {
             final Long missingUserId = 9_999_999L;
 
             // when
-            final Slice<SavedExpression> slice = savedExpressionRepository
+            final Slice<UserExpression> slice = userExpressionRepository
                     .findAllByUserIdOrderByCreatedAtDesc(missingUserId, PageRequest.of(0, 10));
 
             // then
@@ -84,12 +84,12 @@ class SavedExpressionRepositoryTest extends RepositoryTestHelper {
         void returnsWhenBothMatch() {
             // given
             final Long userId = 1L;
-            final SavedExpression saved =
-                    savedExpressionRepository.save(SavedExpression.create(userId, "hello", "안녕"));
+            final UserExpression saved =
+                    userExpressionRepository.save(UserExpression.create(userId, "hello", "안녕"));
 
             // when
-            final Optional<SavedExpression> found =
-                    savedExpressionRepository.findByIdAndUserId(saved.getId(), userId);
+            final Optional<UserExpression> found =
+                    userExpressionRepository.findByIdAndUserId(saved.getId(), userId);
 
             // then
             assertThat(found).isPresent();
@@ -102,12 +102,12 @@ class SavedExpressionRepositoryTest extends RepositoryTestHelper {
             // given
             final Long userId = 1L;
             final Long otherUserId = 2L;
-            final SavedExpression saved =
-                    savedExpressionRepository.save(SavedExpression.create(userId, "hello", "안녕"));
+            final UserExpression saved =
+                    userExpressionRepository.save(UserExpression.create(userId, "hello", "안녕"));
 
             // when
-            final Optional<SavedExpression> found =
-                    savedExpressionRepository.findByIdAndUserId(saved.getId(), otherUserId);
+            final Optional<UserExpression> found =
+                    userExpressionRepository.findByIdAndUserId(saved.getId(), otherUserId);
 
             // then
             assertThat(found).isEmpty();

@@ -1,4 +1,4 @@
-package com.lingring.domain.savedexpression.api;
+package com.lingring.domain.userexpression.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -10,10 +10,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
-import com.lingring.domain.savedexpression.dto.request.SavedExpressionCreateRequest;
-import com.lingring.domain.savedexpression.dto.response.SavedExpressionListResponse;
-import com.lingring.domain.savedexpression.dto.response.SavedExpressionResponse;
-import com.lingring.domain.savedexpression.service.SavedExpressionService;
+import com.lingring.domain.userexpression.dto.request.UserExpressionCreateRequest;
+import com.lingring.domain.userexpression.dto.response.UserExpressionListResponse;
+import com.lingring.domain.userexpression.dto.response.UserExpressionResponse;
+import com.lingring.domain.userexpression.service.UserExpressionService;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -28,8 +28,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-@WebMvcTest(SavedExpressionController.class)
-class SavedExpressionControllerTest {
+@WebMvcTest(UserExpressionController.class)
+class UserExpressionControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -38,10 +38,10 @@ class SavedExpressionControllerTest {
     private ObjectMapper objectMapper;
 
     @MockitoBean
-    private SavedExpressionService savedExpressionService;
+    private UserExpressionService userExpressionService;
 
     @Nested
-    @DisplayName("POST /users/{userId}/saved-expressions")
+    @DisplayName("POST /users/{userId}/expressions")
     class Create {
 
         @Test
@@ -49,16 +49,16 @@ class SavedExpressionControllerTest {
         void create_whenValid_returns201WithBody() throws Exception {
             // given
             final Long userId = 1L;
-            final SavedExpressionCreateRequest request =
-                    new SavedExpressionCreateRequest("Hello", "안녕");
-            given(savedExpressionService.save(eq(userId), any(SavedExpressionCreateRequest.class)))
-                    .willReturn(new SavedExpressionResponse(
+            final UserExpressionCreateRequest request =
+                    new UserExpressionCreateRequest("Hello", "안녕");
+            given(userExpressionService.save(eq(userId), any(UserExpressionCreateRequest.class)))
+                    .willReturn(new UserExpressionResponse(
                             10L, userId, "Hello", "안녕", LocalDateTime.now()
                     ));
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/users/{userId}/saved-expressions", userId)
+                            post("/users/{userId}/expressions", userId)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -75,7 +75,7 @@ class SavedExpressionControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /users/{userId}/saved-expressions")
+    @DisplayName("GET /users/{userId}/expressions")
     class GetAll {
 
         @Test
@@ -83,11 +83,11 @@ class SavedExpressionControllerTest {
         void getAll_whenWithParams_returns200WithItemsAndHasNext() throws Exception {
             // given
             final Long userId = 1L;
-            given(savedExpressionService.getAllByUserId(userId, 0, 2)).willReturn(
-                    new SavedExpressionListResponse(
+            given(userExpressionService.getAllByUserId(userId, 0, 2)).willReturn(
+                    new UserExpressionListResponse(
                             List.of(
-                                    new SavedExpressionResponse(2L, userId, "second", "두번째", LocalDateTime.now()),
-                                    new SavedExpressionResponse(1L, userId, "first", "첫번째", LocalDateTime.now())
+                                    new UserExpressionResponse(2L, userId, "second", "두번째", LocalDateTime.now()),
+                                    new UserExpressionResponse(1L, userId, "first", "첫번째", LocalDateTime.now())
                             ),
                             true
                     )
@@ -95,7 +95,7 @@ class SavedExpressionControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            get("/users/{userId}/saved-expressions", userId)
+                            get("/users/{userId}/expressions", userId)
                                     .param("page", "0")
                                     .param("size", "2")
                                     .accept(MediaType.APPLICATION_JSON))
@@ -117,21 +117,21 @@ class SavedExpressionControllerTest {
         void getAll_whenNoParams_usesDefaults() throws Exception {
             // given
             final Long userId = 1L;
-            given(savedExpressionService.getAllByUserId(userId, 0, 20)).willReturn(
-                    new SavedExpressionListResponse(List.of(), false)
+            given(userExpressionService.getAllByUserId(userId, 0, 20)).willReturn(
+                    new UserExpressionListResponse(List.of(), false)
             );
 
             // when
-            mockMvc.perform(get("/users/{userId}/saved-expressions", userId)
+            mockMvc.perform(get("/users/{userId}/expressions", userId)
                     .accept(MediaType.APPLICATION_JSON));
 
             // then
-            then(savedExpressionService).should().getAllByUserId(userId, 0, 20);
+            then(userExpressionService).should().getAllByUserId(userId, 0, 20);
         }
     }
 
     @Nested
-    @DisplayName("DELETE /users/{userId}/saved-expressions/{id}")
+    @DisplayName("DELETE /users/{userId}/expressions/{id}")
     class Delete {
 
         @Test
@@ -140,17 +140,17 @@ class SavedExpressionControllerTest {
             // given
             final Long userId = 1L;
             final Long id = 10L;
-            willDoNothing().given(savedExpressionService).delete(userId, id);
+            willDoNothing().given(userExpressionService).delete(userId, id);
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            delete("/users/{userId}/saved-expressions/{id}", userId, id))
+                            delete("/users/{userId}/expressions/{id}", userId, id))
                     .andReturn()
                     .getResponse();
 
             // then
             assertThat(response.getStatus()).isEqualTo(204);
-            then(savedExpressionService).should().delete(userId, id);
+            then(userExpressionService).should().delete(userId, id);
         }
     }
 }

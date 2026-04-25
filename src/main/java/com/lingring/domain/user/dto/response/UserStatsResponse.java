@@ -11,7 +11,7 @@ public record UserStatsResponse(
         BigDecimal mannerTemperature,
         int totalCallCount,
         int currentStreakDays,
-        int savedExpressionCount,
+        int expressionCount,
         LocalDate lastStudyDate
 ) {
 
@@ -22,7 +22,7 @@ public record UserStatsResponse(
                 userStats.getMannerTemperature(),
                 userStats.getTotalCallCount(),
                 userStats.getCurrentStreakDays(),
-                userStats.getSavedExpressionCount(),
+                userStats.getExpressionCount(),
                 userStats.getLastStudyDate()
         );
     }

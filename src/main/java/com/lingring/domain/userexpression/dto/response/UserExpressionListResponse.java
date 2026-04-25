@@ -1,18 +1,18 @@
-package com.lingring.domain.savedexpression.dto.response;
+package com.lingring.domain.userexpression.dto.response;
 
-import com.lingring.domain.savedexpression.domain.SavedExpression;
+import com.lingring.domain.userexpression.domain.UserExpression;
 import java.util.List;
 import org.springframework.data.domain.Slice;
 
-public record SavedExpressionListResponse(
-        List<SavedExpressionResponse> items,
+public record UserExpressionListResponse(
+        List<UserExpressionResponse> items,
         boolean hasNext
 ) {
 
-    public static SavedExpressionListResponse from(final Slice<SavedExpression> slice) {
-        final List<SavedExpressionResponse> items = slice.getContent().stream()
-                .map(SavedExpressionResponse::from)
+    public static UserExpressionListResponse from(final Slice<UserExpression> slice) {
+        final List<UserExpressionResponse> items = slice.getContent().stream()
+                .map(UserExpressionResponse::from)
                 .toList();
-        return new SavedExpressionListResponse(items, slice.hasNext());
+        return new UserExpressionListResponse(items, slice.hasNext());
     }
 }

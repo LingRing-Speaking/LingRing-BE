@@ -55,12 +55,12 @@ class UserStatsRepositoryTest extends RepositoryTestHelper {
     }
 
     @Nested
-    @DisplayName("incrementSavedExpressionCount")
-    class IncrementSavedExpressionCount {
+    @DisplayName("incrementExpressionCount")
+    class IncrementExpressionCount {
 
         @Test
-        @DisplayName("userId에 해당하는 UserStats의 savedExpressionCount를 1 증가시키고 영향 row 수 1을 반환한다")
-        void incrementSavedExpressionCount_whenExists_increasesByOne() {
+        @DisplayName("userId에 해당하는 UserStats의 expressionCount를 1 증가시키고 영향 row 수 1을 반환한다")
+        void incrementExpressionCount_whenExists_increasesByOne() {
             // given
             final Long userId = 1L;
             userStatsRepository.save(UserStats.create(userId));
@@ -68,17 +68,17 @@ class UserStatsRepositoryTest extends RepositoryTestHelper {
             em.clear();
 
             // when
-            final int affected = userStatsRepository.incrementSavedExpressionCount(userId);
+            final int affected = userStatsRepository.incrementExpressionCount(userId);
 
             // then
             assertThat(affected).isEqualTo(1);
             final UserStats reloaded = userStatsRepository.findByUserId(userId).orElseThrow();
-            assertThat(reloaded.getSavedExpressionCount()).isEqualTo(1);
+            assertThat(reloaded.getExpressionCount()).isEqualTo(1);
         }
 
         @Test
         @DisplayName("해당 userId의 UserStats가 없으면 영향 row 수 0을 반환하고 다른 row에 영향 없다")
-        void incrementSavedExpressionCount_whenNotExists_returnsZero() {
+        void incrementExpressionCount_whenNotExists_returnsZero() {
             // given
             final Long existingUserId = 1L;
             final Long missingUserId = 9_999_999L;
@@ -87,57 +87,57 @@ class UserStatsRepositoryTest extends RepositoryTestHelper {
             em.clear();
 
             // when
-            final int affected = userStatsRepository.incrementSavedExpressionCount(missingUserId);
+            final int affected = userStatsRepository.incrementExpressionCount(missingUserId);
 
             // then
             assertThat(affected).isZero();
             final UserStats reloaded = userStatsRepository.findByUserId(existingUserId).orElseThrow();
-            assertThat(reloaded.getSavedExpressionCount()).isZero();
+            assertThat(reloaded.getExpressionCount()).isZero();
         }
     }
 
     @Nested
-    @DisplayName("decrementSavedExpressionCount")
-    class DecrementSavedExpressionCount {
+    @DisplayName("decrementExpressionCount")
+    class DecrementExpressionCount {
 
         @Test
-        @DisplayName("userId에 해당하는 UserStats의 savedExpressionCount를 1 감소시키고 영향 row 수 1을 반환한다")
-        void decrementSavedExpressionCount_whenExists_decreasesByOne() {
+        @DisplayName("userId에 해당하는 UserStats의 expressionCount를 1 감소시키고 영향 row 수 1을 반환한다")
+        void decrementExpressionCount_whenExists_decreasesByOne() {
             // given
             final Long userId = 1L;
             userStatsRepository.save(UserStats.create(userId));
-            userStatsRepository.incrementSavedExpressionCount(userId);
-            userStatsRepository.incrementSavedExpressionCount(userId);
+            userStatsRepository.incrementExpressionCount(userId);
+            userStatsRepository.incrementExpressionCount(userId);
             em.flush();
             em.clear();
 
             // when
-            final int affected = userStatsRepository.decrementSavedExpressionCount(userId);
+            final int affected = userStatsRepository.decrementExpressionCount(userId);
 
             // then
             assertThat(affected).isEqualTo(1);
             final UserStats reloaded = userStatsRepository.findByUserId(userId).orElseThrow();
-            assertThat(reloaded.getSavedExpressionCount()).isEqualTo(1);
+            assertThat(reloaded.getExpressionCount()).isEqualTo(1);
         }
 
         @Test
         @DisplayName("해당 userId의 UserStats가 없으면 영향 row 수 0을 반환하고 다른 row에 영향 없다")
-        void decrementSavedExpressionCount_whenNotExists_returnsZero() {
+        void decrementExpressionCount_whenNotExists_returnsZero() {
             // given
             final Long existingUserId = 1L;
             final Long missingUserId = 9_999_999L;
             userStatsRepository.save(UserStats.create(existingUserId));
-            userStatsRepository.incrementSavedExpressionCount(existingUserId);
+            userStatsRepository.incrementExpressionCount(existingUserId);
             em.flush();
             em.clear();
 
             // when
-            final int affected = userStatsRepository.decrementSavedExpressionCount(missingUserId);
+            final int affected = userStatsRepository.decrementExpressionCount(missingUserId);
 
             // then
             assertThat(affected).isZero();
             final UserStats reloaded = userStatsRepository.findByUserId(existingUserId).orElseThrow();
-            assertThat(reloaded.getSavedExpressionCount()).isEqualTo(1);
+            assertThat(reloaded.getExpressionCount()).isEqualTo(1);
         }
     }
 }

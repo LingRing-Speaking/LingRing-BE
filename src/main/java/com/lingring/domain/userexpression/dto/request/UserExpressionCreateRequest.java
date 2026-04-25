@@ -1,6 +1,6 @@
-package com.lingring.domain.savedexpression.dto.request;
+package com.lingring.domain.userexpression.dto.request;
 
-public record SavedExpressionCreateRequest(
+public record UserExpressionCreateRequest(
         String expression,
         String meaning
 ) {

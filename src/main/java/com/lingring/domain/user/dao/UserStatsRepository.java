@@ -15,13 +15,13 @@ public interface UserStatsRepository extends JpaRepository<UserStats, Long> {
 
     @Modifying
     @Query("UPDATE UserStats u "
-            + "SET u.savedExpressionCount = u.savedExpressionCount + 1 "
+            + "SET u.expressionCount = u.expressionCount + 1 "
             + "WHERE u.userId = :userId")
-    int incrementSavedExpressionCount(@Param("userId") Long userId);
+    int incrementExpressionCount(@Param("userId") Long userId);
 
     @Modifying
     @Query("UPDATE UserStats u "
-            + "SET u.savedExpressionCount = u.savedExpressionCount - 1 "
+            + "SET u.expressionCount = u.expressionCount - 1 "
             + "WHERE u.userId = :userId")
-    int decrementSavedExpressionCount(@Param("userId") Long userId);
+    int decrementExpressionCount(@Param("userId") Long userId);
 }

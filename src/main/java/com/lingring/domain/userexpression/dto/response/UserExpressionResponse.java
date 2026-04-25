@@ -1,9 +1,9 @@
-package com.lingring.domain.savedexpression.dto.response;
+package com.lingring.domain.userexpression.dto.response;
 
-import com.lingring.domain.savedexpression.domain.SavedExpression;
+import com.lingring.domain.userexpression.domain.UserExpression;
 import java.time.LocalDateTime;
 
-public record SavedExpressionResponse(
+public record UserExpressionResponse(
         Long id,
         Long userId,
         String expression,
@@ -11,13 +11,13 @@ public record SavedExpressionResponse(
         LocalDateTime createdAt
 ) {
 
-    public static SavedExpressionResponse from(final SavedExpression savedExpression) {
-        return new SavedExpressionResponse(
-                savedExpression.getId(),
-                savedExpression.getUserId(),
-                savedExpression.getExpression().getValue(),
-                savedExpression.getMeaning().getValue(),
-                savedExpression.getCreatedAt()
+    public static UserExpressionResponse from(final UserExpression userExpression) {
+        return new UserExpressionResponse(
+                userExpression.getId(),
+                userExpression.getUserId(),
+                userExpression.getExpression().getValue(),
+                userExpression.getMeaning().getValue(),
+                userExpression.getCreatedAt()
         );
     }
 }

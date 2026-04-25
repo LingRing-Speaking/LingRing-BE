@@ -32,7 +32,7 @@ public enum ErrorCode {
     // UserStats Error
     USER_STATS_NOT_FOUND(NOT_FOUND, "사용자 통계를 찾을 수 없습니다."),
 
-    // SavedExpression Error
+    // UserExpression Error
     INVALID_EXPRESSION(BAD_REQUEST, "유효하지 않은 표현입니다."),
     INVALID_MEANING(BAD_REQUEST, "유효하지 않은 뜻입니다."),
     ;

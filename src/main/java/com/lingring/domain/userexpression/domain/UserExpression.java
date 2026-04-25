@@ -1,10 +1,10 @@
-package com.lingring.domain.savedexpression.domain;
+package com.lingring.domain.userexpression.domain;
 
 import static jakarta.persistence.GenerationType.IDENTITY;
 import static lombok.AccessLevel.PROTECTED;
 
-import com.lingring.domain.savedexpression.domain.vo.Expression;
-import com.lingring.domain.savedexpression.domain.vo.Meaning;
+import com.lingring.domain.userexpression.domain.vo.Expression;
+import com.lingring.domain.userexpression.domain.vo.Meaning;
 import com.lingring.global.common.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
@@ -19,12 +19,12 @@ import lombok.NonNull;
 
 @Entity
 @Table(
-        name = "saved_expression",
-        indexes = @Index(name = "idx_saved_expression_user_created", columnList = "user_id, created_at")
+        name = "user_expression",
+        indexes = @Index(name = "idx_user_expression_user_created", columnList = "user_id, created_at")
 )
 @Getter
 @NoArgsConstructor(access = PROTECTED)
-public class SavedExpression extends BaseTimeEntity {
+public class UserExpression extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
@@ -40,7 +40,7 @@ public class SavedExpression extends BaseTimeEntity {
     @Embedded
     private Meaning meaning;
 
-    private SavedExpression(
+    private UserExpression(
             @NonNull final Long userId,
             @NonNull final Expression expression,
             @NonNull final Meaning meaning
@@ -50,11 +50,11 @@ public class SavedExpression extends BaseTimeEntity {
         this.meaning = meaning;
     }
 
-    public static SavedExpression create(
+    public static UserExpression create(
             @NonNull final Long userId,
             @NonNull final String expression,
             @NonNull final String meaning
     ) {
-        return new SavedExpression(userId, new Expression(expression), new Meaning(meaning));
+        return new UserExpression(userId, new Expression(expression), new Meaning(meaning));
     }
 }

@@ -1,4 +1,4 @@
-package com.lingring.domain.savedexpression.domain.vo;
+package com.lingring.domain.userexpression.domain.vo;
 
 import static lombok.AccessLevel.PROTECTED;
 

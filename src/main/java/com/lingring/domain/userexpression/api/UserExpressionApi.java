@@ -1,8 +1,8 @@
-package com.lingring.domain.savedexpression.api;
+package com.lingring.domain.userexpression.api;
 
-import com.lingring.domain.savedexpression.dto.request.SavedExpressionCreateRequest;
-import com.lingring.domain.savedexpression.dto.response.SavedExpressionListResponse;
-import com.lingring.domain.savedexpression.dto.response.SavedExpressionResponse;
+import com.lingring.domain.userexpression.dto.request.UserExpressionCreateRequest;
+import com.lingring.domain.userexpression.dto.response.UserExpressionListResponse;
+import com.lingring.domain.userexpression.dto.response.UserExpressionResponse;
 import com.lingring.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
-@Tag(name = "SavedExpression", description = "저장한 표현 API")
-public interface SavedExpressionApi {
+@Tag(name = "UserExpression", description = "저장한 표현 API")
+public interface UserExpressionApi {
 
     @Operation(
             summary = "저장한 표현 생성",
@@ -36,11 +36,11 @@ public interface SavedExpressionApi {
             )
     })
     @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping("/users/{userId}/saved-expressions")
-    ApiResponse<SavedExpressionResponse> create(
+    @PostMapping("/users/{userId}/expressions")
+    ApiResponse<UserExpressionResponse> create(
             @Parameter(description = "저장할 사용자 id", example = "1")
             @PathVariable("userId") final Long userId,
-            @RequestBody final SavedExpressionCreateRequest request
+            @RequestBody final UserExpressionCreateRequest request
     );
 
     @Operation(
@@ -55,8 +55,8 @@ public interface SavedExpressionApi {
             )
     })
     @ResponseStatus(HttpStatus.OK)
-    @GetMapping("/users/{userId}/saved-expressions")
-    ApiResponse<SavedExpressionListResponse> getAll(
+    @GetMapping("/users/{userId}/expressions")
+    ApiResponse<UserExpressionListResponse> getAll(
             @Parameter(description = "조회할 사용자 id", example = "1")
             @PathVariable("userId") final Long userId,
             @Parameter(description = "0-based 페이지 번호", example = "0")
@@ -76,7 +76,7 @@ public interface SavedExpressionApi {
             )
     })
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @DeleteMapping("/users/{userId}/saved-expressions/{id}")
+    @DeleteMapping("/users/{userId}/expressions/{id}")
     ApiResponse<Void> delete(
             @Parameter(description = "삭제 요청 사용자 id", example = "1")
             @PathVariable("userId") final Long userId,

@@ -62,7 +62,7 @@ class UserStatsControllerTest {
             assertThat(body.get("data").get("level").asText()).isEqualTo("BEGINNER");
             assertThat(body.get("data").get("totalCallCount").asInt()).isZero();
             assertThat(body.get("data").get("currentStreakDays").asInt()).isZero();
-            assertThat(body.get("data").get("savedExpressionCount").asInt()).isZero();
+            assertThat(body.get("data").get("expressionCount").asInt()).isZero();
             assertThat(body.get("data").get("lastStudyDate").isNull()).isTrue();
         }
 

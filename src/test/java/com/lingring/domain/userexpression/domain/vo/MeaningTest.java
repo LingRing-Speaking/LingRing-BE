@@ -1,4 +1,4 @@
-package com.lingring.domain.savedexpression.domain.vo;
+package com.lingring.domain.userexpression.domain.vo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
