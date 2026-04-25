@@ -35,6 +35,11 @@ public enum ErrorCode {
     // UserExpression Error
     INVALID_EXPRESSION(BAD_REQUEST, "유효하지 않은 표현입니다."),
     INVALID_MEANING(BAD_REQUEST, "유효하지 않은 뜻입니다."),
+
+    // RecommendedExpression Error
+    INVALID_RECOMMENDED_EXPRESSION(BAD_REQUEST, "유효하지 않은 추천 표현입니다."),
+    INVALID_RECOMMENDED_MEANING(BAD_REQUEST, "유효하지 않은 추천 뜻입니다."),
+    RECOMMENDED_EXPRESSION_NOT_FOUND(NOT_FOUND, "오늘의 추천 표현을 찾을 수 없습니다."),
     ;
 
     private final HttpStatus httpStatus;
