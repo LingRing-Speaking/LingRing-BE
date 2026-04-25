@@ -44,7 +44,7 @@ class UserStatsServiceTest extends ServiceIntegrationHelper {
             assertThat(response.mannerTemperature()).isEqualByComparingTo(new BigDecimal("36.5"));
             assertThat(response.totalCallCount()).isZero();
             assertThat(response.currentStreakDays()).isZero();
-            assertThat(response.savedExpressionCount()).isZero();
+            assertThat(response.expressionCount()).isZero();
             assertThat(response.lastStudyDate()).isNull();
         }
 

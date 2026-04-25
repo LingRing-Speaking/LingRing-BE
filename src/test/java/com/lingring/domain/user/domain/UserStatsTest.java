@@ -23,7 +23,7 @@ class UserStatsTest {
         assertThat(userStats.getMannerTemperature()).isEqualByComparingTo(new BigDecimal("36.5"));
         assertThat(userStats.getTotalCallCount()).isZero();
         assertThat(userStats.getCurrentStreakDays()).isZero();
-        assertThat(userStats.getSavedExpressionCount()).isZero();
+        assertThat(userStats.getExpressionCount()).isZero();
         assertThat(userStats.getLastStudyDate()).isNull();
     }
 }

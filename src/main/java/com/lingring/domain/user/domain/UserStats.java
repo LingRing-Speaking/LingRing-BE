@@ -46,8 +46,8 @@ public class UserStats extends BaseTimeEntity {
     @Column(name = "current_streak_days", nullable = false)
     private int currentStreakDays;
 
-    @Column(name = "saved_expression_count", nullable = false)
-    private int savedExpressionCount;
+    @Column(name = "expression_count", nullable = false)
+    private int expressionCount;
 
     @Column(name = "last_study_date")
     private LocalDate lastStudyDate;
@@ -58,7 +58,7 @@ public class UserStats extends BaseTimeEntity {
         this.mannerTemperature = INITIAL_MANNER_TEMPERATURE;
         this.totalCallCount = 0;
         this.currentStreakDays = 0;
-        this.savedExpressionCount = 0;
+        this.expressionCount = 0;
         this.lastStudyDate = null;
     }
 
