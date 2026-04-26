@@ -6,6 +6,7 @@ import com.lingring.domain.userexpression.dto.request.UserExpressionCreateReques
 import com.lingring.domain.userexpression.dto.response.UserExpressionListResponse;
 import com.lingring.domain.userexpression.dto.response.UserExpressionResponse;
 import com.lingring.domain.user.dao.UserStatsRepository;
+import com.lingring.global.common.pagination.PageSize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
@@ -16,9 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class UserExpressionService {
-
-    private static final int MIN_SIZE = 1;
-    private static final int MAX_SIZE = 50;
 
     private final UserExpressionRepository userExpressionRepository;
     private final UserStatsRepository userStatsRepository;
@@ -33,9 +31,9 @@ public class UserExpressionService {
     }
 
     public UserExpressionListResponse getAllByUserId(final Long userId, final int page, final int size) {
-        final int clampedSize = Math.min(Math.max(size, MIN_SIZE), MAX_SIZE);
+        final PageSize pageSize = PageSize.clamp(size);
         final Slice<UserExpression> slice = userExpressionRepository
-                .findAllByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(page, clampedSize));
+                .findAllByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(page, pageSize.value()));
         return UserExpressionListResponse.from(slice);
     }
 
