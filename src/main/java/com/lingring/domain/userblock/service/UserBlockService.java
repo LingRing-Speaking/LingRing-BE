@@ -5,6 +5,7 @@ import com.lingring.domain.userblock.domain.UserBlock;
 import com.lingring.domain.userblock.dto.request.UserBlockCreateRequest;
 import com.lingring.domain.userblock.dto.response.UserBlockListResponse;
 import com.lingring.domain.userblock.dto.response.UserBlockResponse;
+import com.lingring.global.common.pagination.PageSize;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
@@ -17,9 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class UserBlockService {
-
-    private static final int MIN_SIZE = 1;
-    private static final int MAX_SIZE = 50;
 
     private final UserBlockRepository userBlockRepository;
 
@@ -41,9 +39,9 @@ public class UserBlockService {
     }
 
     public UserBlockListResponse getAllByUserId(final Long userId, final int page, final int size) {
-        final int clampedSize = Math.min(Math.max(size, MIN_SIZE), MAX_SIZE);
+        final PageSize pageSize = PageSize.clamp(size);
         final Slice<UserBlock> slice = userBlockRepository
-                .findAllByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(page, clampedSize));
+                .findAllByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(page, pageSize.value()));
         return UserBlockListResponse.from(slice);
     }
 
