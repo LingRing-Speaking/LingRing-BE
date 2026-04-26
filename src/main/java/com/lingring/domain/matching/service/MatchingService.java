@@ -2,11 +2,11 @@ package com.lingring.domain.matching.service;
 
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.domain.MatchingCandidate;
+import com.lingring.domain.matching.domain.MatchingQueue;
 import com.lingring.domain.matching.domain.policy.MatchingPolicies;
 import com.lingring.domain.matching.dto.response.MatchingStatusResponse;
 import com.lingring.global.util.DateTimeProvider;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -55,12 +55,7 @@ public class MatchingService {
     }
 
     private Optional<MatchingCandidate> findCompatiblePartner(final MatchingCandidate self) {
-        final List<MatchingCandidate> queue = matchingQueueRepository.findAllOrderByEnqueuedAt()
-                .stream()
-                .filter(candidate -> !candidate.userId().equals(self.userId()))
-                .toList();
-        return matchingPolicies.filterCandidates(self, queue)
-                .stream()
-                .findFirst();
+        final MatchingQueue queue = new MatchingQueue(matchingQueueRepository.findAllOrderByEnqueuedAt());
+        return queue.findPartnerFor(self, matchingPolicies);
     }
 }
