@@ -32,10 +32,7 @@ public class MatchingService {
         }
 
         final Long partnerId = partner.get().userId();
-        matchingQueueRepository.remove(partnerId);
-        matchingQueueRepository.remove(userId);
-        matchingQueueRepository.saveResult(userId, partnerId);
-        matchingQueueRepository.saveResult(partnerId, userId);
+        matchingQueueRepository.commitMatch(userId, partnerId);
         return MatchingStatusResponse.matched(partnerId);
     }
 

@@ -147,4 +147,46 @@ class MatchingQueueRepositoryTest extends ServiceIntegrationHelper {
             assertThat(matchingQueueRepository.findResult(1L)).isEmpty();
         }
     }
+
+    @Nested
+    @DisplayName("commitMatch")
+    class CommitMatch {
+
+        @Test
+        @DisplayName("commit 후 두 사용자 모두 큐에서 제거된다")
+        void commit_removesBothFromQueue() {
+            // given
+            matchingQueueRepository.enqueue(1L, BASE_TIME);
+            matchingQueueRepository.enqueue(2L, BASE_TIME.plusSeconds(1));
+
+            // when
+            matchingQueueRepository.commitMatch(1L, 2L);
+
+            // then
+            assertThat(matchingQueueRepository.contains(1L)).isFalse();
+            assertThat(matchingQueueRepository.contains(2L)).isFalse();
+        }
+
+        @Test
+        @DisplayName("commit 후 양쪽 사용자에게 서로의 partnerId가 결과로 저장된다")
+        void commit_savesResultsForBothUsers() {
+            // when
+            matchingQueueRepository.commitMatch(1L, 2L);
+
+            // then
+            assertThat(matchingQueueRepository.findResult(1L)).contains(2L);
+            assertThat(matchingQueueRepository.findResult(2L)).contains(1L);
+        }
+
+        @Test
+        @DisplayName("큐에 두 사용자가 없어도 result는 정상 저장된다 (멱등)")
+        void commit_savesResultsEvenIfNotInQueue() {
+            // when
+            matchingQueueRepository.commitMatch(1L, 2L);
+
+            // then
+            assertThat(matchingQueueRepository.findResult(1L)).contains(2L);
+            assertThat(matchingQueueRepository.findResult(2L)).contains(1L);
+        }
+    }
 }

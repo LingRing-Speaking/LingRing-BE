@@ -58,6 +58,12 @@ public class MatchingQueueRepository {
         redisTemplate.opsForValue().set(resultKey(userId), partnerId.toString(), RESULT_TTL);
     }
 
+    public void commitMatch(final Long userId, final Long partnerId) {
+        redisTemplate.opsForZSet().remove(QUEUE_KEY, userId.toString(), partnerId.toString());
+        redisTemplate.opsForValue().set(resultKey(userId), partnerId.toString(), RESULT_TTL);
+        redisTemplate.opsForValue().set(resultKey(partnerId), userId.toString(), RESULT_TTL);
+    }
+
     public Optional<Long> findResult(final Long userId) {
         final String value = redisTemplate.opsForValue().get(resultKey(userId));
         if (value == null) {
