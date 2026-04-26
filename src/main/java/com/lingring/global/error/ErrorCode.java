@@ -43,6 +43,10 @@ public enum ErrorCode {
 
     // UserBlock Error
     SELF_BLOCK_NOT_ALLOWED(BAD_REQUEST, "자기 자신을 차단할 수 없습니다."),
+
+    // UserReport Error
+    SELF_REPORT_NOT_ALLOWED(BAD_REQUEST, "자기 자신을 신고할 수 없습니다."),
+    INVALID_REPORT_DESCRIPTION(BAD_REQUEST, "유효하지 않은 신고 상세 내용입니다."),
     ;
 
     private final HttpStatus httpStatus;

@@ -102,6 +102,24 @@ CONSTRAINT `fk_user_block_blocked_user` FOREIGN KEY (`blocked_user_id`) REFERENC
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
+-- user_report: 사용자 신고
+-- ============================================
+CREATE TABLE `user_report` (
+`id`               BIGINT       NOT NULL AUTO_INCREMENT,
+`user_id`          BIGINT       NOT NULL,
+`reported_user_id` BIGINT       NOT NULL,
+`reason`           ENUM('INAPPROPRIATE_CONVERSATION', 'BAD_MANNERS', 'OTHER') NOT NULL,
+`description`      VARCHAR(200) NOT NULL,
+`created_at`       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+`updated_at`       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+PRIMARY KEY (`id`),
+KEY `idx_user_report_user_id`          (`user_id`),
+KEY `idx_user_report_reported_user_id` (`reported_user_id`),
+CONSTRAINT `fk_user_report_user`          FOREIGN KEY (`user_id`)          REFERENCES `user`(`id`),
+CONSTRAINT `fk_user_report_reported_user` FOREIGN KEY (`reported_user_id`) REFERENCES `user`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
 -- call_analyze: 통화 분석 (참가자별 1개)
 -- ============================================
 CREATE TABLE `call_analyze` (
