@@ -1,9 +1,7 @@
 package com.lingring.domain.matching.domain.policy;
 
 import com.lingring.domain.matching.domain.MatchingCandidate;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Predicate;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -15,11 +13,14 @@ public class MatchingPolicies {
         this.policies = List.copyOf(policies);
     }
 
-    public MatchingFilters filtersFor(final MatchingCandidate self) {
-        final List<Predicate<MatchingCandidate>> filters = new ArrayList<>(policies.size());
+    public List<MatchingCandidate> filterCandidates(
+            final MatchingCandidate self,
+            final List<MatchingCandidate> candidates
+    ) {
+        List<MatchingCandidate> result = candidates;
         for (final MatchingPolicy policy : policies) {
-            filters.add(policy.filterFor(self));
+            result = policy.filterCandidates(self, result);
         }
-        return new MatchingFilters(filters);
+        return result;
     }
 }

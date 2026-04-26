@@ -2,7 +2,6 @@ package com.lingring.domain.matching.service;
 
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.domain.MatchingCandidate;
-import com.lingring.domain.matching.domain.policy.MatchingFilters;
 import com.lingring.domain.matching.domain.policy.MatchingPolicies;
 import com.lingring.domain.matching.dto.response.MatchingStatusResponse;
 import com.lingring.global.util.DateTimeProvider;
@@ -56,16 +55,12 @@ public class MatchingService {
     }
 
     private Optional<MatchingCandidate> findCompatiblePartner(final MatchingCandidate self) {
-        final MatchingFilters filters = matchingPolicies.filtersFor(self);
-        final List<MatchingCandidate> candidates = matchingQueueRepository.findAllOrderByEnqueuedAt();
-        for (final MatchingCandidate candidate : candidates) {
-            if (candidate.userId().equals(self.userId())) {
-                continue;
-            }
-            if (filters.allMatch(candidate)) {
-                return Optional.of(candidate);
-            }
-        }
-        return Optional.empty();
+        final List<MatchingCandidate> queue = matchingQueueRepository.findAllOrderByEnqueuedAt()
+                .stream()
+                .filter(candidate -> !candidate.userId().equals(self.userId()))
+                .toList();
+        return matchingPolicies.filterCandidates(self, queue)
+                .stream()
+                .findFirst();
     }
 }

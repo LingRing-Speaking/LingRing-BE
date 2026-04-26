@@ -14,81 +14,61 @@ class MatchingPoliciesTest {
     private static final LocalDateTime FIXED_TIME = LocalDateTime.of(2026, 4, 27, 10, 0);
 
     @Nested
-    @DisplayName("filtersFor")
-    class FiltersFor {
+    @DisplayName("filterCandidates")
+    class FilterCandidates {
 
         @Test
-        @DisplayName("등록된 모든 정책이 통과되어야 후보가 매칭 가능하다")
-        void allMatch_whenEveryPolicyAccepts_returnsTrue() {
-            // given
+        @DisplayName("등록된 모든 정책을 순차 적용해 후보를 좁힌다")
+        void appliesAllPoliciesSequentially() {
+            // given: 정책1은 id<5만 통과, 정책2는 id가 짝수만 통과
             final MatchingPolicies policies = new MatchingPolicies(List.of(
-                    self -> candidate -> true,
-                    self -> candidate -> true
+                    (self, candidates) -> candidates.stream()
+                            .filter(c -> c.userId() < 5)
+                            .toList(),
+                    (self, candidates) -> candidates.stream()
+                            .filter(c -> c.userId() % 2 == 0)
+                            .toList()
             ));
-            final MatchingCandidate self = candidate(1L);
-            final MatchingCandidate other = candidate(2L);
+            final List<MatchingCandidate> candidates = List.of(
+                    candidate(2L), candidate(3L), candidate(4L), candidate(6L), candidate(7L)
+            );
 
             // when
-            final MatchingFilters filters = policies.filtersFor(self);
+            final List<MatchingCandidate> result = policies.filterCandidates(candidate(1L), candidates);
 
-            // then
-            assertThat(filters.allMatch(other)).isTrue();
+            // then: id<5 통과 → {2,3,4}, 짝수 통과 → {2,4}
+            assertThat(result).extracting(MatchingCandidate::userId).containsExactly(2L, 4L);
         }
 
         @Test
-        @DisplayName("정책 중 하나라도 거부하면 후보가 매칭 불가능하다")
-        void allMatch_whenAnyPolicyRejects_returnsFalse() {
-            // given
-            final MatchingPolicies policies = new MatchingPolicies(List.of(
-                    self -> candidate -> true,
-                    self -> candidate -> false
-            ));
-            final MatchingCandidate self = candidate(1L);
-            final MatchingCandidate other = candidate(2L);
-
-            // when
-            final MatchingFilters filters = policies.filtersFor(self);
-
-            // then
-            assertThat(filters.allMatch(other)).isFalse();
-        }
-
-        @Test
-        @DisplayName("정책이 없으면 항상 매칭 가능하다 (vacuous truth)")
-        void allMatch_whenNoPolicies_returnsTrue() {
+        @DisplayName("정책이 하나도 없으면 후보를 그대로 반환한다")
+        void returnsAllWhenNoPolicies() {
             // given
             final MatchingPolicies policies = new MatchingPolicies(List.of());
-            final MatchingCandidate self = candidate(1L);
-            final MatchingCandidate other = candidate(2L);
+            final List<MatchingCandidate> candidates = List.of(candidate(2L), candidate(3L));
 
             // when
-            final MatchingFilters filters = policies.filtersFor(self);
+            final List<MatchingCandidate> result = policies.filterCandidates(candidate(1L), candidates);
 
             // then
-            assertThat(filters.allMatch(other)).isTrue();
+            assertThat(result).extracting(MatchingCandidate::userId).containsExactly(2L, 3L);
         }
 
         @Test
-        @DisplayName("filterFor는 self당 1회만 호출되고, 그 결과 Predicate가 후보별로 재사용된다")
-        void filterFor_isCalledOncePerSelf_andReusedAcrossCandidates() {
+        @DisplayName("정책 중 하나라도 모두 거부하면 빈 리스트를 반환한다")
+        void returnsEmptyWhenAnyPolicyRejectsAll() {
             // given
-            final int[] filterForCallCount = {0};
             final MatchingPolicies policies = new MatchingPolicies(List.of(
-                    self -> {
-                        filterForCallCount[0]++;
-                        return candidate -> true;
-                    }
+                    (self, candidates) -> candidates,
+                    (self, candidates) -> List.of()
             ));
-            final MatchingCandidate self = candidate(1L);
+            final List<MatchingCandidate> candidates = List.of(candidate(2L), candidate(3L));
 
-            // when: filtersFor 한 번 호출 후 여러 후보 검사
-            final MatchingFilters filters = policies.filtersFor(self);
-            filters.allMatch(candidate(2L));
-            filters.allMatch(candidate(3L));
-            filters.allMatch(candidate(4L));
+            // when
+            final List<MatchingCandidate> result = policies.filterCandidates(candidate(1L), candidates);
 
             // then
-            assertThat(filterForCallCount[0]).isEqualTo(1);
+            assertThat(result).isEmpty();
         }
     }
 

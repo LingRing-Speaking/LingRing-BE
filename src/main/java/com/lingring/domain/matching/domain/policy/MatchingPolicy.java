@@ -1,9 +1,9 @@
 package com.lingring.domain.matching.domain.policy;
 
 import com.lingring.domain.matching.domain.MatchingCandidate;
-import java.util.function.Predicate;
+import java.util.List;
 
 public interface MatchingPolicy {
 
-    Predicate<MatchingCandidate> filterFor(MatchingCandidate self);
+    List<MatchingCandidate> filterCandidates(MatchingCandidate self, List<MatchingCandidate> candidates);
 }

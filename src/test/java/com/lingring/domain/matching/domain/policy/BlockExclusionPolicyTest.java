@@ -7,7 +7,7 @@ import com.lingring.domain.userblock.dao.UserBlockRepository;
 import com.lingring.domain.userblock.domain.UserBlock;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.time.LocalDateTime;
-import java.util.function.Predicate;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -24,67 +24,64 @@ class BlockExclusionPolicyTest extends ServiceIntegrationHelper {
     private UserBlockRepository userBlockRepository;
 
     @Nested
-    @DisplayName("filterFor: self 기준 매칭 가능 여부 Predicate 생성")
-    class FilterFor {
+    @DisplayName("filterCandidates: 양방향 차단 후보 제외")
+    class FilterCandidates {
 
         @Test
-        @DisplayName("차단 관계가 없으면 true를 반환한다")
-        void returnsTrue_whenNoBlockRelation() {
+        @DisplayName("차단 관계가 없으면 모든 후보가 그대로 반환된다")
+        void returnsAll_whenNoBlockRelation() {
             // given
             final MatchingCandidate self = candidate(1L);
-            final MatchingCandidate other = candidate(2L);
+            final List<MatchingCandidate> candidates = List.of(candidate(2L), candidate(3L));
 
             // when
-            final Predicate<MatchingCandidate> filter = blockExclusionPolicy.filterFor(self);
+            final List<MatchingCandidate> result = blockExclusionPolicy.filterCandidates(self, candidates);
 
             // then
-            assertThat(filter.test(other)).isTrue();
+            assertThat(result).extracting(MatchingCandidate::userId).containsExactly(2L, 3L);
         }
 
         @Test
-        @DisplayName("self가 other를 차단했으면 false를 반환한다")
-        void returnsFalse_whenSelfBlockedOther() {
+        @DisplayName("self가 차단한 후보가 제외된다")
+        void excludes_whenSelfBlockedCandidate() {
             // given
             userBlockRepository.save(UserBlock.create(1L, 2L));
             final MatchingCandidate self = candidate(1L);
-            final MatchingCandidate other = candidate(2L);
+            final List<MatchingCandidate> candidates = List.of(candidate(2L), candidate(3L));
 
             // when
-            final Predicate<MatchingCandidate> filter = blockExclusionPolicy.filterFor(self);
+            final List<MatchingCandidate> result = blockExclusionPolicy.filterCandidates(self, candidates);
 
             // then
-            assertThat(filter.test(other)).isFalse();
+            assertThat(result).extracting(MatchingCandidate::userId).containsExactly(3L);
         }
 
         @Test
-        @DisplayName("other가 self를 차단했으면 false를 반환한다 (양방향 검증)")
-        void returnsFalse_whenOtherBlockedSelf() {
+        @DisplayName("self를 차단한 후보가 제외된다 (양방향)")
+        void excludes_whenCandidateBlockedSelf() {
             // given
             userBlockRepository.save(UserBlock.create(2L, 1L));
             final MatchingCandidate self = candidate(1L);
-            final MatchingCandidate other = candidate(2L);
+            final List<MatchingCandidate> candidates = List.of(candidate(2L), candidate(3L));
 
             // when
-            final Predicate<MatchingCandidate> filter = blockExclusionPolicy.filterFor(self);
+            final List<MatchingCandidate> result = blockExclusionPolicy.filterCandidates(self, candidates);
 
             // then
-            assertThat(filter.test(other)).isFalse();
+            assertThat(result).extracting(MatchingCandidate::userId).containsExactly(3L);
         }
 
         @Test
-        @DisplayName("서로 차단하지 않은 다른 후보는 true, 차단된 후보만 false를 반환한다")
-        void filtersOnlyBlockedCandidates() {
+        @DisplayName("후보 목록이 비어있으면 빈 리스트를 반환한다")
+        void returnsEmpty_whenCandidatesEmpty() {
             // given
-            userBlockRepository.save(UserBlock.create(1L, 2L));
             final MatchingCandidate self = candidate(1L);
 
             // when
-            final Predicate<MatchingCandidate> filter = blockExclusionPolicy.filterFor(self);
+            final List<MatchingCandidate> result = blockExclusionPolicy.filterCandidates(self, List.of());
 
             // then
-            assertThat(filter.test(candidate(2L))).isFalse();
-            assertThat(filter.test(candidate(3L))).isTrue();
-            assertThat(filter.test(candidate(4L))).isTrue();
+            assertThat(result).isEmpty();
         }
     }
 
