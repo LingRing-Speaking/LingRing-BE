@@ -40,6 +40,9 @@ public enum ErrorCode {
     INVALID_RECOMMENDED_EXPRESSION(BAD_REQUEST, "유효하지 않은 추천 표현입니다."),
     INVALID_RECOMMENDED_MEANING(BAD_REQUEST, "유효하지 않은 추천 뜻입니다."),
     RECOMMENDED_EXPRESSION_NOT_FOUND(NOT_FOUND, "오늘의 추천 표현을 찾을 수 없습니다."),
+
+    // UserBlock Error
+    SELF_BLOCK_NOT_ALLOWED(BAD_REQUEST, "자기 자신을 차단할 수 없습니다."),
     ;
 
     private final HttpStatus httpStatus;

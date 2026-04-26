@@ -86,6 +86,22 @@ CONSTRAINT `fk_call_content_call_history` FOREIGN KEY (`call_history_id`) REFERE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
+-- user_block: 사용자 차단
+-- ============================================
+CREATE TABLE `user_block` (
+`id`              BIGINT   NOT NULL AUTO_INCREMENT,
+`user_id`         BIGINT   NOT NULL,
+`blocked_user_id` BIGINT   NOT NULL,
+`created_at`      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+`updated_at`      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+PRIMARY KEY (`id`),
+UNIQUE KEY `uk_user_block_user_blocked` (`user_id`, `blocked_user_id`),
+KEY `idx_user_block_user_id` (`user_id`),
+CONSTRAINT `fk_user_block_user`         FOREIGN KEY (`user_id`)         REFERENCES `user`(`id`),
+CONSTRAINT `fk_user_block_blocked_user` FOREIGN KEY (`blocked_user_id`) REFERENCES `user`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
 -- call_analyze: 통화 분석 (참가자별 1개)
 -- ============================================
 CREATE TABLE `call_analyze` (
