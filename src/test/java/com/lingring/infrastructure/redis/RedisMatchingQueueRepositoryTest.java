@@ -1,7 +1,8 @@
-package com.lingring.domain.matching.dao;
+package com.lingring.infrastructure.redis;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.domain.MatchingCandidate;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.time.LocalDateTime;
@@ -12,7 +13,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-class MatchingQueueRepositoryTest extends ServiceIntegrationHelper {
+class RedisMatchingQueueRepositoryTest extends ServiceIntegrationHelper {
 
     private static final LocalDateTime BASE_TIME = LocalDateTime.of(2026, 4, 27, 10, 0);
 
