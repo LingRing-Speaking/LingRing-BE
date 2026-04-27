@@ -4,11 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.domain.MatchingCandidate;
+import com.lingring.domain.matching.domain.MatchingResult;
 import com.lingring.domain.matching.scheduler.MatchingWorker;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 class RedisMatchingQueueRepositoryTest extends ServiceIntegrationHelper {
 
     private static final LocalDateTime BASE_TIME = LocalDateTime.of(2026, 4, 27, 10, 0);
+    private static final UUID ROOM_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
 
     @Autowired
     private MatchingQueueRepository matchingQueueRepository;
@@ -115,27 +118,14 @@ class RedisMatchingQueueRepositoryTest extends ServiceIntegrationHelper {
     }
 
     @Nested
-    @DisplayName("saveResult / findResult / clearResult")
+    @DisplayName("findResult / clearResult")
     class ResultOperations {
-
-        @Test
-        @DisplayName("saveResult 후 findResult는 partnerId를 반환한다")
-        void saveAndFindResult() {
-            // given
-            matchingQueueRepository.saveResult(1L, 2L);
-
-            // when
-            final Optional<Long> result = matchingQueueRepository.findResult(1L);
-
-            // then
-            assertThat(result).contains(2L);
-        }
 
         @Test
         @DisplayName("저장 안 된 사용자의 findResult는 빈 Optional을 반환한다")
         void findResult_whenNotSaved_returnsEmpty() {
             // when
-            final Optional<Long> result = matchingQueueRepository.findResult(99L);
+            final Optional<MatchingResult> result = matchingQueueRepository.findResult(99L);
 
             // then
             assertThat(result).isEmpty();
@@ -145,13 +135,31 @@ class RedisMatchingQueueRepositoryTest extends ServiceIntegrationHelper {
         @DisplayName("clearResult 후 findResult는 빈 Optional을 반환한다")
         void clearResult_thenFindReturnsEmpty() {
             // given
-            matchingQueueRepository.saveResult(1L, 2L);
+            matchingQueueRepository.saveResult(1L, 2L, ROOM_ID);
 
             // when
             matchingQueueRepository.clearResult(1L);
 
             // then
             assertThat(matchingQueueRepository.findResult(1L)).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("saveResult")
+    class SaveResult {
+
+        @Test
+        @DisplayName("partnerId와 roomId가 함께 저장된다")
+        void saveResult_persistsPartnerIdAndRoomId() {
+            // when
+            matchingQueueRepository.saveResult(1L, 2L, ROOM_ID);
+
+            // then
+            final Optional<MatchingResult> result = matchingQueueRepository.findResult(1L);
+            assertThat(result).isPresent();
+            assertThat(result.get().partnerId()).isEqualTo(2L);
+            assertThat(result.get().roomId()).isEqualTo(ROOM_ID);
         }
     }
 
@@ -167,14 +175,20 @@ class RedisMatchingQueueRepositoryTest extends ServiceIntegrationHelper {
             matchingQueueRepository.enqueue(2L, BASE_TIME.plusSeconds(1));
 
             // when
-            final boolean committed = matchingQueueRepository.commitMatch(1L, 2L);
+            final boolean committed = matchingQueueRepository.commitMatch(1L, 2L, ROOM_ID);
 
             // then
             assertThat(committed).isTrue();
             assertThat(matchingQueueRepository.contains(1L)).isFalse();
             assertThat(matchingQueueRepository.contains(2L)).isFalse();
-            assertThat(matchingQueueRepository.findResult(1L)).contains(2L);
-            assertThat(matchingQueueRepository.findResult(2L)).contains(1L);
+            final Optional<MatchingResult> resultForUser1 = matchingQueueRepository.findResult(1L);
+            final Optional<MatchingResult> resultForUser2 = matchingQueueRepository.findResult(2L);
+            assertThat(resultForUser1).isPresent();
+            assertThat(resultForUser1.get().partnerId()).isEqualTo(2L);
+            assertThat(resultForUser1.get().roomId()).isEqualTo(ROOM_ID);
+            assertThat(resultForUser2).isPresent();
+            assertThat(resultForUser2.get().partnerId()).isEqualTo(1L);
+            assertThat(resultForUser2.get().roomId()).isEqualTo(ROOM_ID);
         }
 
         @Test
@@ -184,7 +198,7 @@ class RedisMatchingQueueRepositoryTest extends ServiceIntegrationHelper {
             matchingQueueRepository.enqueue(1L, BASE_TIME);
 
             // when
-            final boolean committed = matchingQueueRepository.commitMatch(1L, 2L);
+            final boolean committed = matchingQueueRepository.commitMatch(1L, 2L, ROOM_ID);
 
             // then
             assertThat(committed).isFalse();
@@ -200,7 +214,7 @@ class RedisMatchingQueueRepositoryTest extends ServiceIntegrationHelper {
             matchingQueueRepository.enqueue(2L, BASE_TIME);
 
             // when
-            final boolean committed = matchingQueueRepository.commitMatch(1L, 2L);
+            final boolean committed = matchingQueueRepository.commitMatch(1L, 2L, ROOM_ID);
 
             // then
             assertThat(committed).isFalse();
@@ -213,7 +227,7 @@ class RedisMatchingQueueRepositoryTest extends ServiceIntegrationHelper {
         @DisplayName("두 사용자 모두 큐에 없으면 commit 실패: false 반환 + result 저장 안 함")
         void commit_whenNeitherInQueue_returnsFalseAndNoResultStored() {
             // when
-            final boolean committed = matchingQueueRepository.commitMatch(1L, 2L);
+            final boolean committed = matchingQueueRepository.commitMatch(1L, 2L, ROOM_ID);
 
             // then
             assertThat(committed).isFalse();

@@ -2,12 +2,17 @@ package com.lingring.domain.matching.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.lingring.domain.matching.dao.MatchRepository;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
+import com.lingring.domain.matching.domain.Match;
+import com.lingring.domain.matching.domain.MatchStatus;
+import com.lingring.domain.matching.domain.MatchingResult;
 import com.lingring.domain.matching.scheduler.MatchingWorker;
 import com.lingring.domain.userblock.dao.UserBlockRepository;
 import com.lingring.domain.userblock.domain.UserBlock;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -23,6 +28,9 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
 
     @Autowired
     private MatchingQueueRepository matchingQueueRepository;
+
+    @Autowired
+    private MatchRepository matchRepository;
 
     @Autowired
     private UserBlockRepository userBlockRepository;
@@ -60,7 +68,7 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
         }
 
         @Test
-        @DisplayName("두 사용자가 큐에 있으면 입장 시각 순으로 페어링하고 양쪽 결과를 저장한다")
+        @DisplayName("두 사용자가 큐에 있으면 입장 시각 순으로 페어링하고 양쪽 결과를 동일한 roomId로 저장한다")
         void executeRound_pairsTwoUsersByEnqueuedAtOrder() {
             // given
             matchingQueueRepository.enqueue(1L, BASE);
@@ -72,8 +80,34 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
             // then
             assertThat(matchingQueueRepository.contains(1L)).isFalse();
             assertThat(matchingQueueRepository.contains(2L)).isFalse();
-            assertThat(matchingQueueRepository.findResult(1L)).contains(2L);
-            assertThat(matchingQueueRepository.findResult(2L)).contains(1L);
+            final Optional<MatchingResult> result1 = matchingQueueRepository.findResult(1L);
+            final Optional<MatchingResult> result2 = matchingQueueRepository.findResult(2L);
+            assertThat(result1).isPresent();
+            assertThat(result1.get().partnerId()).isEqualTo(2L);
+            assertThat(result2).isPresent();
+            assertThat(result2.get().partnerId()).isEqualTo(1L);
+            assertThat(result1.get().roomId()).isEqualTo(result2.get().roomId());
+        }
+
+        @Test
+        @DisplayName("페어링 성사 시 Match 엔티티가 STARTED 상태로 영속화된다")
+        void executeRound_persistsMatchEntity() {
+            // given
+            matchingQueueRepository.enqueue(1L, BASE);
+            matchingQueueRepository.enqueue(2L, BASE.plusSeconds(1));
+
+            // when
+            matchingExecutor.executeRound();
+
+            // then
+            final Optional<MatchingResult> result = matchingQueueRepository.findResult(1L);
+            assertThat(result).isPresent();
+            final Optional<Match> match = matchRepository.findByRoomId(result.get().roomId());
+            assertThat(match).isPresent();
+            assertThat(match.get().getStatus()).isEqualTo(MatchStatus.STARTED);
+            assertThat(match.get().getUserAId()).isEqualTo(1L);
+            assertThat(match.get().getUserBId()).isEqualTo(2L);
+            assertThat(match.get().getEndedAt()).isNull();
         }
 
         @Test
@@ -92,8 +126,12 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
             assertThat(matchingQueueRepository.contains(3L)).isFalse();
             assertThat(matchingQueueRepository.contains(2L)).isFalse();
             assertThat(matchingQueueRepository.contains(1L)).isTrue();
-            assertThat(matchingQueueRepository.findResult(3L)).contains(2L);
-            assertThat(matchingQueueRepository.findResult(2L)).contains(3L);
+            assertThat(matchingQueueRepository.findResult(3L))
+                    .map(MatchingResult::partnerId)
+                    .contains(2L);
+            assertThat(matchingQueueRepository.findResult(2L))
+                    .map(MatchingResult::partnerId)
+                    .contains(3L);
             assertThat(matchingQueueRepository.findResult(1L)).isEmpty();
         }
 
@@ -111,10 +149,18 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
 
             // then: 1-2, 3-4 두 쌍이 매칭되어 큐가 비어야 함
             assertThat(matchingQueueRepository.findAllOrderByEnqueuedAt()).isEmpty();
-            assertThat(matchingQueueRepository.findResult(1L)).contains(2L);
-            assertThat(matchingQueueRepository.findResult(2L)).contains(1L);
-            assertThat(matchingQueueRepository.findResult(3L)).contains(4L);
-            assertThat(matchingQueueRepository.findResult(4L)).contains(3L);
+            assertThat(matchingQueueRepository.findResult(1L))
+                    .map(MatchingResult::partnerId)
+                    .contains(2L);
+            assertThat(matchingQueueRepository.findResult(2L))
+                    .map(MatchingResult::partnerId)
+                    .contains(1L);
+            assertThat(matchingQueueRepository.findResult(3L))
+                    .map(MatchingResult::partnerId)
+                    .contains(4L);
+            assertThat(matchingQueueRepository.findResult(4L))
+                    .map(MatchingResult::partnerId)
+                    .contains(3L);
         }
 
         @Test
@@ -132,7 +178,9 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
             assertThat(matchingQueueRepository.contains(1L)).isFalse();
             assertThat(matchingQueueRepository.contains(2L)).isFalse();
             assertThat(matchingQueueRepository.contains(3L)).isTrue();
-            assertThat(matchingQueueRepository.findResult(1L)).contains(2L);
+            assertThat(matchingQueueRepository.findResult(1L))
+                    .map(MatchingResult::partnerId)
+                    .contains(2L);
             assertThat(matchingQueueRepository.findResult(3L)).isEmpty();
         }
 
