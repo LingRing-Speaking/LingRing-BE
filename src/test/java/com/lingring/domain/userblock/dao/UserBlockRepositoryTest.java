@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.lingring.domain.userblock.domain.UserBlock;
 import com.lingring.global.config.RepositoryTestHelper;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -131,6 +132,66 @@ class UserBlockRepositoryTest extends RepositoryTestHelper {
             // then
             assertThat(slice.getContent()).isEmpty();
             assertThat(slice.hasNext()).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("findBlockedUserIdsByUserId")
+    class FindBlockedUserIdsByUserId {
+
+        @Test
+        @DisplayName("userId가 차단한 모든 blockedUserId를 반환한다")
+        void returnsAllBlockedIds() {
+            // given
+            userBlockRepository.save(UserBlock.create(1L, 10L));
+            userBlockRepository.save(UserBlock.create(1L, 11L));
+            userBlockRepository.save(UserBlock.create(2L, 20L));
+
+            // when
+            final List<Long> blockedIds = userBlockRepository.findBlockedUserIdsByUserId(1L);
+
+            // then
+            assertThat(blockedIds).containsExactlyInAnyOrder(10L, 11L);
+        }
+
+        @Test
+        @DisplayName("차단 기록이 없으면 빈 리스트를 반환한다")
+        void returnsEmptyWhenNone() {
+            // when
+            final List<Long> blockedIds = userBlockRepository.findBlockedUserIdsByUserId(9_999_999L);
+
+            // then
+            assertThat(blockedIds).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("findUserIdsByBlockedUserId")
+    class FindUserIdsByBlockedUserId {
+
+        @Test
+        @DisplayName("blockedUserId를 차단한 모든 userId를 반환한다")
+        void returnsAllBlockerIds() {
+            // given
+            userBlockRepository.save(UserBlock.create(1L, 10L));
+            userBlockRepository.save(UserBlock.create(2L, 10L));
+            userBlockRepository.save(UserBlock.create(3L, 11L));
+
+            // when
+            final List<Long> blockerIds = userBlockRepository.findUserIdsByBlockedUserId(10L);
+
+            // then
+            assertThat(blockerIds).containsExactlyInAnyOrder(1L, 2L);
+        }
+
+        @Test
+        @DisplayName("아무도 해당 사용자를 차단하지 않았다면 빈 리스트를 반환한다")
+        void returnsEmptyWhenNone() {
+            // when
+            final List<Long> blockerIds = userBlockRepository.findUserIdsByBlockedUserId(9_999_999L);
+
+            // then
+            assertThat(blockerIds).isEmpty();
         }
     }
 }
