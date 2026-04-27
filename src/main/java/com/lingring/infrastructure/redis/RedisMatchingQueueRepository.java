@@ -2,10 +2,10 @@ package com.lingring.infrastructure.redis;
 
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.domain.MatchingCandidate;
+import com.lingring.global.util.Zones;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -22,7 +22,6 @@ public class RedisMatchingQueueRepository implements MatchingQueueRepository {
     private static final String QUEUE_KEY = "matching:queue";
     private static final String RESULT_KEY_PREFIX = "matching:result:";
     private static final Duration RESULT_TTL = Duration.ofSeconds(60);
-    private static final ZoneId SEOUL_ZONE = ZoneId.of("Asia/Seoul");
 
     private final StringRedisTemplate redisTemplate;
 
@@ -91,10 +90,10 @@ public class RedisMatchingQueueRepository implements MatchingQueueRepository {
     }
 
     private double toScore(final LocalDateTime enqueuedAt) {
-        return enqueuedAt.atZone(SEOUL_ZONE).toInstant().toEpochMilli();
+        return enqueuedAt.atZone(Zones.SEOUL).toInstant().toEpochMilli();
     }
 
     private LocalDateTime fromScore(final double score) {
-        return LocalDateTime.ofInstant(Instant.ofEpochMilli((long) score), SEOUL_ZONE);
+        return LocalDateTime.ofInstant(Instant.ofEpochMilli((long) score), Zones.SEOUL);
     }
 }
