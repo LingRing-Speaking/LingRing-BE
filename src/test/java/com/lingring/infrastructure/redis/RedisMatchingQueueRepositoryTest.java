@@ -160,40 +160,65 @@ class RedisMatchingQueueRepositoryTest extends ServiceIntegrationHelper {
     class CommitMatch {
 
         @Test
-        @DisplayName("commit 후 두 사용자 모두 큐에서 제거된다")
-        void commit_removesBothFromQueue() {
+        @DisplayName("두 사용자가 모두 큐에 있으면 commit 성공: true 반환 + 양쪽 큐 제거 + 양쪽 result 저장")
+        void commit_whenBothInQueue_savesResultsAndReturnsTrue() {
             // given
             matchingQueueRepository.enqueue(1L, BASE_TIME);
             matchingQueueRepository.enqueue(2L, BASE_TIME.plusSeconds(1));
 
             // when
-            matchingQueueRepository.commitMatch(1L, 2L);
+            final boolean committed = matchingQueueRepository.commitMatch(1L, 2L);
 
             // then
+            assertThat(committed).isTrue();
             assertThat(matchingQueueRepository.contains(1L)).isFalse();
             assertThat(matchingQueueRepository.contains(2L)).isFalse();
-        }
-
-        @Test
-        @DisplayName("commit 후 양쪽 사용자에게 서로의 partnerId가 결과로 저장된다")
-        void commit_savesResultsForBothUsers() {
-            // when
-            matchingQueueRepository.commitMatch(1L, 2L);
-
-            // then
             assertThat(matchingQueueRepository.findResult(1L)).contains(2L);
             assertThat(matchingQueueRepository.findResult(2L)).contains(1L);
         }
 
         @Test
-        @DisplayName("큐에 두 사용자가 없어도 result는 정상 저장된다 (멱등)")
-        void commit_savesResultsEvenIfNotInQueue() {
+        @DisplayName("partner가 큐에 없으면 commit 실패: false 반환 + self 큐에 그대로 + result 저장 안 함")
+        void commit_whenPartnerLeftBeforeCommit_returnsFalseAndNoResultStored() {
+            // given: 1L은 큐에 있지만 2L은 이미 leaveQueue로 빠진 상태
+            matchingQueueRepository.enqueue(1L, BASE_TIME);
+
             // when
-            matchingQueueRepository.commitMatch(1L, 2L);
+            final boolean committed = matchingQueueRepository.commitMatch(1L, 2L);
 
             // then
-            assertThat(matchingQueueRepository.findResult(1L)).contains(2L);
-            assertThat(matchingQueueRepository.findResult(2L)).contains(1L);
+            assertThat(committed).isFalse();
+            assertThat(matchingQueueRepository.contains(1L)).isTrue();
+            assertThat(matchingQueueRepository.findResult(1L)).isEmpty();
+            assertThat(matchingQueueRepository.findResult(2L)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("self가 큐에 없으면 commit 실패: false 반환 + partner 큐에 그대로 + result 저장 안 함")
+        void commit_whenUserLeftBeforeCommit_returnsFalseAndNoResultStored() {
+            // given
+            matchingQueueRepository.enqueue(2L, BASE_TIME);
+
+            // when
+            final boolean committed = matchingQueueRepository.commitMatch(1L, 2L);
+
+            // then
+            assertThat(committed).isFalse();
+            assertThat(matchingQueueRepository.contains(2L)).isTrue();
+            assertThat(matchingQueueRepository.findResult(1L)).isEmpty();
+            assertThat(matchingQueueRepository.findResult(2L)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("두 사용자 모두 큐에 없으면 commit 실패: false 반환 + result 저장 안 함")
+        void commit_whenNeitherInQueue_returnsFalseAndNoResultStored() {
+            // when
+            final boolean committed = matchingQueueRepository.commitMatch(1L, 2L);
+
+            // then
+            assertThat(committed).isFalse();
+            assertThat(matchingQueueRepository.findResult(1L)).isEmpty();
+            assertThat(matchingQueueRepository.findResult(2L)).isEmpty();
         }
     }
 }

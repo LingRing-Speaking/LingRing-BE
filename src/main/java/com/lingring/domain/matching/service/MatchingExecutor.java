@@ -42,7 +42,10 @@ public class MatchingExecutor {
             return;
         }
         final Long partnerId = partner.get().userId();
-        matchingQueueRepository.commitMatch(self.userId(), partnerId);
+        final boolean committed = matchingQueueRepository.commitMatch(self.userId(), partnerId);
+        if (!committed) {
+            return;
+        }
         consumed.add(self.userId());
         consumed.add(partnerId);
     }
