@@ -6,6 +6,7 @@ import com.lingring.domain.matching.domain.policy.MatchingPolicies;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,8 @@ class MatchingQueueTest {
             ));
 
             // when
-            final Optional<MatchingCandidate> partner = queue.findPartnerFor(candidate(1L), acceptAll);
+            final Optional<MatchingCandidate> partner =
+                    queue.findPartnerFor(candidate(1L), acceptAll, Set.of());
 
             // then
             assertThat(partner).isPresent();
@@ -47,7 +49,8 @@ class MatchingQueueTest {
             ));
 
             // when
-            final Optional<MatchingCandidate> partner = queue.findPartnerFor(candidate(1L), rejectAll);
+            final Optional<MatchingCandidate> partner =
+                    queue.findPartnerFor(candidate(1L), rejectAll, Set.of());
 
             // then
             assertThat(partner).isEmpty();
@@ -63,7 +66,8 @@ class MatchingQueueTest {
             ));
 
             // when
-            final Optional<MatchingCandidate> partner = queue.findPartnerFor(candidate(1L), acceptAll);
+            final Optional<MatchingCandidate> partner =
+                    queue.findPartnerFor(candidate(1L), acceptAll, Set.of());
 
             // then
             assertThat(partner).isEmpty();
@@ -79,7 +83,8 @@ class MatchingQueueTest {
             ));
 
             // when
-            final Optional<MatchingCandidate> partner = queue.findPartnerFor(candidate(1L), acceptAll);
+            final Optional<MatchingCandidate> partner =
+                    queue.findPartnerFor(candidate(1L), acceptAll, Set.of());
 
             // then
             assertThat(partner).isEmpty();
@@ -97,11 +102,32 @@ class MatchingQueueTest {
             ));
 
             // when
-            final Optional<MatchingCandidate> partner = queue.findPartnerFor(candidate(1L), acceptAll);
+            final Optional<MatchingCandidate> partner =
+                    queue.findPartnerFor(candidate(1L), acceptAll, Set.of());
 
             // then: self(1L) 제외 후 [2, 3], 첫 번째 → 2
             assertThat(partner).isPresent();
             assertThat(partner.get().userId()).isEqualTo(2L);
+        }
+
+        @Test
+        @DisplayName("excludedIds에 포함된 후보는 정책 적용 전에 제외된다")
+        void excludesCandidatesInExcludedIds() {
+            // given
+            final MatchingQueue queue = new MatchingQueue(List.of(
+                    candidate(2L), candidate(3L), candidate(4L)
+            ));
+            final MatchingPolicies acceptAll = new MatchingPolicies(List.of(
+                    (self, candidates) -> candidates
+            ));
+
+            // when: 2L은 같은 틱에서 이미 다른 페어에 소비된 상태
+            final Optional<MatchingCandidate> partner =
+                    queue.findPartnerFor(candidate(1L), acceptAll, Set.of(2L));
+
+            // then: 2L 건너뛰고 다음 후보 3L 반환
+            assertThat(partner).isPresent();
+            assertThat(partner.get().userId()).isEqualTo(3L);
         }
     }
 

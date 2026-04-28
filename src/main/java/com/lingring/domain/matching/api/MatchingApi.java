@@ -18,19 +18,18 @@ public interface MatchingApi {
 
     @Operation(
             summary = "매칭 대기열 입장",
-            description = "userId의 사용자가 매칭 대기열에 입장한다. 즉시 매칭 가능한 상대가 있으면 MATCHED와 partnerId를, 없으면 WAITING을 반환한다. "
-                    + "이미 큐에 있는 상태에서 다시 호출하면 입장 시각이 갱신되고 새 후보 탐색을 다시 시도한다 (멱등)."
+            description = "userId의 사용자를 매칭 대기열에 적재한다. 매칭 자체는 백그라운드 워커가 주기적으로 수행하므로, "
+                    + "결과는 GET /users/{userId}/matching 폴링으로 확인한다. 이미 큐에 있어도 입장 시각이 갱신되며 (멱등) 이전 매칭 결과는 클리어된다."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "200",
-                    description = "대기 중 또는 즉시 매칭 성공",
-                    useReturnTypeSchema = true
+                    responseCode = "204",
+                    description = "대기열 입장 성공"
             )
     })
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @PostMapping("/users/{userId}/matching")
-    ApiResponse<MatchingStatusResponse> enterQueue(
+    ApiResponse<Void> enterQueue(
             @Parameter(description = "매칭을 요청하는 사용자 id", example = "1")
             @PathVariable("userId") final Long userId
     );
