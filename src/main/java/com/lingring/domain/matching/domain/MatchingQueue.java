@@ -3,6 +3,7 @@ package com.lingring.domain.matching.domain;
 import com.lingring.domain.matching.domain.policy.MatchingPolicies;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public final class MatchingQueue {
 
@@ -14,11 +15,13 @@ public final class MatchingQueue {
 
     public Optional<MatchingCandidate> findPartnerFor(
             final MatchingCandidate self,
-            final MatchingPolicies policies
+            final MatchingPolicies policies,
+            final Set<Long> excludedIds
     ) {
-        final List<MatchingCandidate> excludingSelf = candidates.stream()
+        final List<MatchingCandidate> filtered = candidates.stream()
                 .filter(candidate -> !candidate.userId().equals(self.userId()))
+                .filter(candidate -> !excludedIds.contains(candidate.userId()))
                 .toList();
-        return policies.filterCandidates(self, excludingSelf).stream().findFirst();
+        return policies.filterCandidates(self, filtered).stream().findFirst();
     }
 }

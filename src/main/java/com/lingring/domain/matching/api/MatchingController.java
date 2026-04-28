@@ -14,8 +14,9 @@ public class MatchingController implements MatchingApi {
     private final MatchingService matchingService;
 
     @Override
-    public ApiResponse<MatchingStatusResponse> enterQueue(final Long userId) {
-        return ApiResponse.success(HttpStatus.OK, matchingService.enterQueue(userId));
+    public ApiResponse<Void> enterQueue(final Long userId) {
+        matchingService.enterQueue(userId);
+        return ApiResponse.success(HttpStatus.NO_CONTENT);
     }
 
     @Override

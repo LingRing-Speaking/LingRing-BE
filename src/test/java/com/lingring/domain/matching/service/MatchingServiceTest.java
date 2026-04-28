@@ -5,14 +5,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.domain.MatchStatus;
 import com.lingring.domain.matching.dto.response.MatchingStatusResponse;
-import com.lingring.domain.userblock.dao.UserBlockRepository;
-import com.lingring.domain.userblock.domain.UserBlock;
+import com.lingring.domain.matching.scheduler.MatchingWorker;
 import com.lingring.global.config.ServiceIntegrationHelper;
-import java.time.LocalDateTime;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 class MatchingServiceTest extends ServiceIntegrationHelper {
 
@@ -22,133 +21,64 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
     @Autowired
     private MatchingQueueRepository matchingQueueRepository;
 
-    @Autowired
-    private UserBlockRepository userBlockRepository;
+    @MockitoBean
+    @SuppressWarnings("unused")
+    private MatchingWorker matchingWorker;
 
     @Nested
     @DisplayName("enterQueue: 매칭 대기열 입장")
     class EnterQueue {
 
         @Test
-        @DisplayName("큐가 비어있을 때 입장하면 WAITING을 반환하고 큐에 적재된다")
-        void enter_whenQueueEmpty_returnsWaiting() {
+        @DisplayName("입장 시 큐에 적재된다")
+        void enter_addsUserToQueue() {
             // when
-            final MatchingStatusResponse response = matchingService.enterQueue(1L);
+            matchingService.enterQueue(1L);
 
             // then
-            assertThat(response.status()).isEqualTo(MatchStatus.WAITING);
-            assertThat(response.partnerId()).isNull();
             assertThat(matchingQueueRepository.contains(1L)).isTrue();
         }
 
         @Test
-        @DisplayName("다른 사용자가 대기 중일 때 입장하면 즉시 매칭되고 양쪽 큐에서 모두 제거된다")
-        void enter_whenPartnerWaiting_returnsMatched() {
-            // given
-            matchingService.enterQueue(1L);
-
+        @DisplayName("입장은 즉시 매칭하지 않으므로 두 사용자가 동시에 입장해도 양쪽 모두 큐에 남는다")
+        void enter_doesNotMatchEvenIfPartnerWaiting() {
             // when
-            final MatchingStatusResponse response = matchingService.enterQueue(2L);
-
-            // then
-            assertThat(response.status()).isEqualTo(MatchStatus.MATCHED);
-            assertThat(response.partnerId()).isEqualTo(1L);
-            assertThat(matchingQueueRepository.contains(1L)).isFalse();
-            assertThat(matchingQueueRepository.contains(2L)).isFalse();
-        }
-
-        @Test
-        @DisplayName("매칭 성사 시 양쪽 사용자에게 매칭 결과가 저장된다")
-        void enter_whenMatched_savesResultForBothUsers() {
-            // given
             matchingService.enterQueue(1L);
-
-            // when
             matchingService.enterQueue(2L);
 
             // then
-            assertThat(matchingQueueRepository.findResult(1L)).contains(2L);
-            assertThat(matchingQueueRepository.findResult(2L)).contains(1L);
-        }
-
-        @Test
-        @DisplayName("내가 차단한 사용자만 큐에 있으면 매칭되지 않고 WAITING을 반환한다")
-        void enter_whenOnlyBlockedCandidatesAvailable_returnsWaiting() {
-            // given
-            userBlockRepository.save(UserBlock.create(2L, 1L));
-            matchingService.enterQueue(1L);
-
-            // when
-            final MatchingStatusResponse response = matchingService.enterQueue(2L);
-
-            // then
-            assertThat(response.status()).isEqualTo(MatchStatus.WAITING);
             assertThat(matchingQueueRepository.contains(1L)).isTrue();
             assertThat(matchingQueueRepository.contains(2L)).isTrue();
+            assertThat(matchingQueueRepository.findResult(1L)).isEmpty();
+            assertThat(matchingQueueRepository.findResult(2L)).isEmpty();
         }
 
         @Test
-        @DisplayName("나를 차단한 사용자만 큐에 있어도 매칭되지 않는다 (양방향 차단)")
-        void enter_whenBlockedBySelfsCandidates_returnsWaiting() {
-            // given
-            userBlockRepository.save(UserBlock.create(1L, 2L));
-            matchingService.enterQueue(1L);
+        @DisplayName("이전 매칭 결과가 남아있어도 다시 입장하면 결과가 클리어되고 큐에 적재된다")
+        void enter_clearsPreviousResult() {
+            // given: 이전에 1L-2L이 매칭됐다고 가정한 상태
+            matchingQueueRepository.commitMatch(1L, 2L);
+            assertThat(matchingQueueRepository.findResult(1L)).contains(2L);
 
             // when
-            final MatchingStatusResponse response = matchingService.enterQueue(2L);
-
-            // then
-            assertThat(response.status()).isEqualTo(MatchStatus.WAITING);
-        }
-
-        @Test
-        @DisplayName("차단된 후보와 차단되지 않은 후보가 큐에 모두 있으면 차단되지 않은 후보와 매칭된다")
-        void enter_whenBlockedAndNonBlockedExist_picksNonBlocked() {
-            // given: 3L이 1L을 차단. 큐에 3L(먼저)과 2L이 적재되어 있음
-            userBlockRepository.save(UserBlock.create(3L, 1L));
-            final LocalDateTime base = LocalDateTime.of(2026, 4, 27, 10, 0);
-            matchingQueueRepository.enqueue(3L, base);
-            matchingQueueRepository.enqueue(2L, base.plusSeconds(1));
-
-            // when: 1L 입장
-            final MatchingStatusResponse response = matchingService.enterQueue(1L);
-
-            // then: 3L은 양방향 차단으로 제외되어 1L은 2L과 매칭됨, 3L은 큐에 그대로 남음
-            assertThat(response.status()).isEqualTo(MatchStatus.MATCHED);
-            assertThat(response.partnerId()).isEqualTo(2L);
-            assertThat(matchingQueueRepository.contains(2L)).isFalse();
-            assertThat(matchingQueueRepository.contains(1L)).isFalse();
-            assertThat(matchingQueueRepository.contains(3L)).isTrue();
-        }
-
-        @Test
-        @DisplayName("이미 큐에 있는 사용자가 다시 입장하면 입장 시각이 갱신되고 새 후보 탐색을 다시 시도한다")
-        void enter_whenAlreadyInQueue_refreshesAndRetries() {
-            // given
             matchingService.enterQueue(1L);
 
-            // when: 같은 사용자가 다시 호출
-            final MatchingStatusResponse response = matchingService.enterQueue(1L);
-
-            // then: 큐에 다른 후보 없음 → WAITING (자기 자신과는 매칭 안 됨)
-            assertThat(response.status()).isEqualTo(MatchStatus.WAITING);
+            // then
+            assertThat(matchingQueueRepository.findResult(1L)).isEmpty();
             assertThat(matchingQueueRepository.contains(1L)).isTrue();
         }
 
         @Test
-        @DisplayName("매칭 성사 후 다시 입장 시도하면 기존 결과가 클리어되고 새로 매칭 시도한다")
-        void enter_afterMatched_clearsPreviousResult() {
+        @DisplayName("이미 큐에 있는 사용자가 다시 입장해도 예외 없이 다시 적재된다 (멱등)")
+        void enter_whenAlreadyInQueue_remainsInQueue() {
             // given
             matchingService.enterQueue(1L);
-            matchingService.enterQueue(2L);
-            assertThat(matchingQueueRepository.findResult(1L)).contains(2L);
 
             // when
-            final MatchingStatusResponse response = matchingService.enterQueue(1L);
+            matchingService.enterQueue(1L);
 
-            // then: 이전 결과 클리어 + 큐 비어있어 WAITING
-            assertThat(response.status()).isEqualTo(MatchStatus.WAITING);
-            assertThat(matchingQueueRepository.findResult(1L)).isEmpty();
+            // then
+            assertThat(matchingQueueRepository.contains(1L)).isTrue();
         }
     }
 
@@ -159,9 +89,8 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
         @Test
         @DisplayName("매칭 결과가 있으면 MATCHED를 반환한다")
         void getStatus_whenMatched_returnsMatched() {
-            // given
-            matchingService.enterQueue(1L);
-            matchingService.enterQueue(2L);
+            // given: 워커가 페어링한 상태를 직접 시드
+            matchingQueueRepository.commitMatch(1L, 2L);
 
             // when
             final MatchingStatusResponse response = matchingService.getStatus(1L);

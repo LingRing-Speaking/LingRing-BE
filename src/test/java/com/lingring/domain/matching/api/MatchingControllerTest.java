@@ -39,47 +39,21 @@ class MatchingControllerTest {
     class EnterQueue {
 
         @Test
-        @DisplayName("즉시 매칭되면 200과 MATCHED + partnerId를 반환한다")
-        void enterQueue_whenMatched_returns200WithPartnerId() throws Exception {
+        @DisplayName("대기열 입장에 성공하면 204를 반환한다")
+        void enterQueue_returns204() throws Exception {
             // given
             final Long userId = 1L;
-            given(matchingService.enterQueue(userId))
-                    .willReturn(MatchingStatusResponse.matched(2L));
+            willDoNothing().given(matchingService).enterQueue(userId);
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/users/{userId}/matching", userId)
-                                    .accept(MediaType.APPLICATION_JSON))
+                            post("/users/{userId}/matching", userId))
                     .andReturn()
                     .getResponse();
 
             // then
-            assertThat(response.getStatus()).isEqualTo(200);
-            final JsonNode body = objectMapper.readTree(response.getContentAsString());
-            assertThat(body.get("data").get("status").asText()).isEqualTo("MATCHED");
-            assertThat(body.get("data").get("partnerId").asLong()).isEqualTo(2L);
-        }
-
-        @Test
-        @DisplayName("매칭 안 되면 200과 WAITING을 반환한다")
-        void enterQueue_whenWaiting_returns200WithWaiting() throws Exception {
-            // given
-            final Long userId = 1L;
-            given(matchingService.enterQueue(userId))
-                    .willReturn(MatchingStatusResponse.waiting());
-
-            // when
-            final MockHttpServletResponse response = mockMvc.perform(
-                            post("/users/{userId}/matching", userId)
-                                    .accept(MediaType.APPLICATION_JSON))
-                    .andReturn()
-                    .getResponse();
-
-            // then
-            assertThat(response.getStatus()).isEqualTo(200);
-            final JsonNode body = objectMapper.readTree(response.getContentAsString());
-            assertThat(body.get("data").get("status").asText()).isEqualTo("WAITING");
-            assertThat(body.get("data").get("partnerId").isNull()).isTrue();
+            assertThat(response.getStatus()).isEqualTo(204);
+            then(matchingService).should().enterQueue(userId);
         }
     }
 
