@@ -21,7 +21,7 @@ public class RedisMatchingQueueRepository implements MatchingQueueRepository {
 
     private static final String QUEUE_KEY = "matching:queue";
     private static final String RESULT_KEY_PREFIX = "matching:result:";
-    private static final Duration RESULT_TTL = Duration.ofSeconds(60);
+    private static final Duration RESULT_TTL = Duration.ofSeconds(15);
 
     private final StringRedisTemplate redisTemplate;
 
