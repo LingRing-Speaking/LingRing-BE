@@ -17,7 +17,7 @@ public interface MatchingQueueRepository {
 
     void saveResult(Long userId, Long partnerId);
 
-    void commitMatch(Long userId, Long partnerId);
+    boolean commitMatch(Long userId, Long partnerId);
 
     Optional<Long> findResult(Long userId);
 

@@ -11,8 +11,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -22,8 +24,16 @@ public class RedisMatchingQueueRepository implements MatchingQueueRepository {
     private static final String QUEUE_KEY = "matching:queue";
     private static final String RESULT_KEY_PREFIX = "matching:result:";
     private static final Duration RESULT_TTL = Duration.ofSeconds(15);
+    private static final DefaultRedisScript<Long> COMMIT_MATCH_SCRIPT = loadCommitMatchScript();
 
     private final StringRedisTemplate redisTemplate;
+
+    private static DefaultRedisScript<Long> loadCommitMatchScript() {
+        final DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+        script.setLocation(new ClassPathResource("scripts/match-commit.lua"));
+        script.setResultType(Long.class);
+        return script;
+    }
 
     @Override
     public void enqueue(final Long userId, final LocalDateTime enqueuedAt) {
@@ -65,10 +75,19 @@ public class RedisMatchingQueueRepository implements MatchingQueueRepository {
     }
 
     @Override
-    public void commitMatch(final Long userId, final Long partnerId) {
-        redisTemplate.opsForZSet().remove(QUEUE_KEY, userId.toString(), partnerId.toString());
-        redisTemplate.opsForValue().set(resultKey(userId), partnerId.toString(), RESULT_TTL);
-        redisTemplate.opsForValue().set(resultKey(partnerId), userId.toString(), RESULT_TTL);
+    public boolean commitMatch(final Long userId, final Long partnerId) {
+        final Long result = redisTemplate.execute(
+                COMMIT_MATCH_SCRIPT,
+                List.of(QUEUE_KEY, resultKey(userId), resultKey(partnerId)),
+                userId.toString(),
+                partnerId.toString(),
+                String.valueOf(RESULT_TTL.toSeconds())
+        );
+        return isSuccess(result);
+    }
+
+    private boolean isSuccess(final Long result) {
+        return result != null && result == 1L;
     }
 
     @Override
