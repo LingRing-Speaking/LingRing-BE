@@ -57,7 +57,8 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
         @DisplayName("이전 매칭 결과가 남아있어도 다시 입장하면 결과가 클리어되고 큐에 적재된다")
         void enter_clearsPreviousResult() {
             // given: 이전에 1L-2L이 매칭됐다고 가정한 상태
-            matchingQueueRepository.commitMatch(1L, 2L);
+            matchingQueueRepository.saveResult(1L, 2L);
+            matchingQueueRepository.saveResult(2L, 1L);
             assertThat(matchingQueueRepository.findResult(1L)).contains(2L);
 
             // when
@@ -90,7 +91,8 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
         @DisplayName("매칭 결과가 있으면 MATCHED를 반환한다")
         void getStatus_whenMatched_returnsMatched() {
             // given: 워커가 페어링한 상태를 직접 시드
-            matchingQueueRepository.commitMatch(1L, 2L);
+            matchingQueueRepository.saveResult(1L, 2L);
+            matchingQueueRepository.saveResult(2L, 1L);
 
             // when
             final MatchingStatusResponse response = matchingService.getStatus(1L);
