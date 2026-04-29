@@ -1,8 +1,10 @@
 package com.lingring.domain.signaling.api;
 
+import static com.lingring.domain.signaling.api.SignalingSessionAttributes.*;
+
 import com.lingring.domain.signaling.dao.LocalSessionRegistry;
 import com.lingring.domain.signaling.domain.SignalingMessage;
-import com.lingring.domain.signaling.service.SignalingDispatcher;
+import com.lingring.domain.signaling.facade.SignalingFacade;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -18,12 +20,12 @@ import tools.jackson.databind.ObjectMapper;
 public class SignalingWebSocketHandler extends TextWebSocketHandler {
 
     private final LocalSessionRegistry sessionRegistry;
-    private final SignalingDispatcher signalingDispatcher;
+    private final SignalingFacade signalingFacade;
     private final ObjectMapper objectMapper;
 
     @Override
     public void afterConnectionEstablished(final WebSocketSession session) {
-        sessionRegistry.register(SignalingSessionAttributes.getUserId(session), session);
+        sessionRegistry.register(getUserId(session), session);
     }
 
     @Override
@@ -32,14 +34,14 @@ public class SignalingWebSocketHandler extends TextWebSocketHandler {
         if (parsed == null) {
             return;
         }
-        signalingDispatcher.dispatch(SignalingSessionAttributes.getUserId(session), parsed);
+        signalingFacade.dispatch(getUserId(session), getRoomId(session), parsed);
     }
 
     @Override
     public void afterConnectionClosed(final WebSocketSession session, final CloseStatus status) {
-        final Long userId = SignalingSessionAttributes.getUserId(session);
+        final Long userId = getUserId(session);
         sessionRegistry.unregister(userId);
-        signalingDispatcher.handleDisconnect(userId, SignalingSessionAttributes.getRoomId(session));
+        signalingFacade.handleDisconnect(userId, getRoomId(session));
     }
 
     private SignalingMessage parse(final TextMessage message) {

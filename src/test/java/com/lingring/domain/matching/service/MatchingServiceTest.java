@@ -171,6 +171,65 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
     }
 
     @Nested
+    @DisplayName("findByRoomId: 매칭 조회")
+    class FindByRoomId {
+
+        @Test
+        @DisplayName("roomId에 매칭이 존재하면 Optional에 담아 반환한다")
+        void findByRoomId_whenPresent_returnsMatch() {
+            // given
+            final UUID roomId = UUID.randomUUID();
+            final LocalDateTime startedAt = LocalDateTime.of(2026, 4, 28, 10, 0);
+            matchRepository.save(Match.start(1L, 2L, roomId, startedAt));
+
+            // when
+            final Optional<Match> found = matchingService.findByRoomId(roomId);
+
+            // then
+            assertThat(found).isPresent();
+            assertThat(found.get().getRoomId()).isEqualTo(roomId);
+        }
+
+        @Test
+        @DisplayName("roomId에 매칭이 없으면 빈 Optional을 반환한다")
+        void findByRoomId_whenAbsent_returnsEmpty() {
+            // when
+            final Optional<Match> found = matchingService.findByRoomId(UUID.randomUUID());
+
+            // then
+            assertThat(found).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("getByRoomId: 매칭 조회 (필수)")
+    class GetByRoomId {
+
+        @Test
+        @DisplayName("roomId에 매칭이 존재하면 Match를 반환한다")
+        void getByRoomId_whenPresent_returnsMatch() {
+            // given
+            final UUID roomId = UUID.randomUUID();
+            final LocalDateTime startedAt = LocalDateTime.of(2026, 4, 28, 10, 0);
+            matchRepository.save(Match.start(1L, 2L, roomId, startedAt));
+
+            // when
+            final Match found = matchingService.getByRoomId(roomId);
+
+            // then
+            assertThat(found.getRoomId()).isEqualTo(roomId);
+        }
+
+        @Test
+        @DisplayName("roomId에 매칭이 없으면 MatchNotFoundException을 던진다")
+        void getByRoomId_whenAbsent_throws() {
+            // when & then
+            assertThatThrownBy(() -> matchingService.getByRoomId(UUID.randomUUID()))
+                    .isInstanceOf(MatchNotFoundException.class);
+        }
+    }
+
+    @Nested
     @DisplayName("endMatch: 매칭 종료")
     class EndMatch {
 

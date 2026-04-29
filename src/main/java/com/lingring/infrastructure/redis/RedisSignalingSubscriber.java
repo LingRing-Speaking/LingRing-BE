@@ -1,7 +1,7 @@
 package com.lingring.infrastructure.redis;
 
 import com.lingring.domain.signaling.domain.SignalingMessage;
-import com.lingring.domain.signaling.service.SignalingDispatcher;
+import com.lingring.domain.signaling.facade.SignalingFacade;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -17,7 +17,7 @@ public class RedisSignalingSubscriber implements MessageListener {
 
     private final ObjectMapper objectMapper;
     @Lazy
-    private final SignalingDispatcher signalingDispatcher;
+    private final SignalingFacade signalingFacade;
 
     @Override
     public void onMessage(final Message message, final byte[] pattern) {
@@ -25,7 +25,7 @@ public class RedisSignalingSubscriber implements MessageListener {
         if (parsed == null) {
             return;
         }
-        signalingDispatcher.deliverLocally(parsed);
+        signalingFacade.deliverLocally(parsed);
     }
 
     private SignalingMessage parse(final byte[] body) {

@@ -42,10 +42,18 @@ public class MatchingService {
         matchingQueueRepository.remove(userId);
     }
 
+    public Optional<Match> findByRoomId(final UUID roomId) {
+        return matchRepository.findByRoomId(roomId);
+    }
+
+    public Match getByRoomId(final UUID roomId) {
+        return matchRepository.findByRoomId(roomId)
+                .orElseThrow(() -> new MatchNotFoundException(roomId));
+    }
+
     @Transactional
     public void endMatch(final UUID roomId) {
-        final Match match = matchRepository.findByRoomId(roomId)
-                .orElseThrow(() -> new MatchNotFoundException(roomId));
+        final Match match = getByRoomId(roomId);
         match.end(dateTimeProvider.now());
     }
 }

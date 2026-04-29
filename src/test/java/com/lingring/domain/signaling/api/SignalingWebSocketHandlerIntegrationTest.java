@@ -75,8 +75,8 @@ class SignalingWebSocketHandlerIntegrationTest {
         final WebSocketSession sessionB = connect(2L, roomId, handlerB);
 
         // when: 양쪽 JOIN
-        sendMessage(sessionA, new SignalingMessage(SignalingMessageType.JOIN, roomId, null, null, null));
-        sendMessage(sessionB, new SignalingMessage(SignalingMessageType.JOIN, roomId, null, null, null));
+        sendMessage(sessionA, new SignalingMessage(SignalingMessageType.JOIN, null, null, null));
+        sendMessage(sessionB, new SignalingMessage(SignalingMessageType.JOIN, null, null, null));
 
         // then: 양쪽이 READY 수신, caller=1L, callee=2L
         final SignalingMessage readyForA = handlerA.awaitNext();
@@ -87,7 +87,7 @@ class SignalingWebSocketHandlerIntegrationTest {
         assertThat(readyForA.payload().get("calleeUserId").asLong()).isEqualTo(2L);
 
         // OFFER A → B
-        sendMessage(sessionA, offerOrAnswer(SignalingMessageType.OFFER, roomId, "offer-sdp"));
+        sendMessage(sessionA, offerOrAnswer(SignalingMessageType.OFFER, "offer-sdp"));
         final SignalingMessage offerForB = handlerB.awaitNext();
         assertThat(offerForB.type()).isEqualTo(SignalingMessageType.OFFER);
         assertThat(offerForB.fromUserId()).isEqualTo(1L);
@@ -95,14 +95,14 @@ class SignalingWebSocketHandlerIntegrationTest {
         assertThat(offerForB.payload().get("sdp").asString()).isEqualTo("offer-sdp");
 
         // ANSWER B → A
-        sendMessage(sessionB, offerOrAnswer(SignalingMessageType.ANSWER, roomId, "answer-sdp"));
+        sendMessage(sessionB, offerOrAnswer(SignalingMessageType.ANSWER, "answer-sdp"));
         final SignalingMessage answerForA = handlerA.awaitNext();
         assertThat(answerForA.type()).isEqualTo(SignalingMessageType.ANSWER);
         assertThat(answerForA.fromUserId()).isEqualTo(2L);
         assertThat(answerForA.toUserId()).isEqualTo(1L);
 
         // HANGUP A → B
-        sendMessage(sessionA, new SignalingMessage(SignalingMessageType.HANGUP, roomId, null, null, null));
+        sendMessage(sessionA, new SignalingMessage(SignalingMessageType.HANGUP, null, null, null));
         final SignalingMessage hangupForB = handlerB.awaitNext();
         assertThat(hangupForB.type()).isEqualTo(SignalingMessageType.HANGUP);
 
@@ -176,11 +176,9 @@ class SignalingWebSocketHandlerIntegrationTest {
         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
     }
 
-    private SignalingMessage offerOrAnswer(
-            final SignalingMessageType type, final UUID roomId, final String sdp
-    ) {
+    private SignalingMessage offerOrAnswer(final SignalingMessageType type, final String sdp) {
         final ObjectNode payload = objectMapper.createObjectNode().put("sdp", sdp);
-        return new SignalingMessage(type, roomId, null, null, payload);
+        return new SignalingMessage(type, null, null, payload);
     }
 
     private static final class CollectingHandler extends TextWebSocketHandler {
