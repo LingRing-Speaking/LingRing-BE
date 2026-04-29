@@ -55,7 +55,8 @@ public class SignalingDispatcher {
         }
         if (type == SignalingMessageType.OFFER
                 || type == SignalingMessageType.ANSWER
-                || type == SignalingMessageType.ICE_CANDIDATE) {
+                || type == SignalingMessageType.ICE_CANDIDATE
+        ) {
             handleForward(senderId, match, message);
             return;
         }

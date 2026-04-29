@@ -23,6 +23,7 @@ import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.http.server.ServletServerHttpResponse;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.web.socket.WebSocketSession;
 
 class SignalingHandshakeInterceptorTest {
 
@@ -57,8 +58,8 @@ class SignalingHandshakeInterceptorTest {
 
             // then
             assertThat(result).isTrue();
-            assertThat(attributes.get(SignalingHandshakeInterceptor.USER_ID_ATTR)).isEqualTo(1L);
-            assertThat(attributes.get(SignalingHandshakeInterceptor.ROOM_ID_ATTR)).isEqualTo(ROOM_ID);
+            assertThat(attributes.get(SignalingSessionAttributes.USER_ID)).isEqualTo(1L);
+            assertThat(attributes.get(SignalingSessionAttributes.ROOM_ID)).isEqualTo(ROOM_ID);
         }
 
         @Test

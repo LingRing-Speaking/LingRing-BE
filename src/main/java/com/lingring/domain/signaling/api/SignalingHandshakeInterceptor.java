@@ -19,9 +19,6 @@ import org.springframework.web.socket.server.HandshakeInterceptor;
 @RequiredArgsConstructor
 public class SignalingHandshakeInterceptor implements HandshakeInterceptor {
 
-    public static final String USER_ID_ATTR = "userId";
-    public static final String ROOM_ID_ATTR = "roomId";
-
     private final MatchRepository matchRepository;
 
     @Override
@@ -59,8 +56,8 @@ public class SignalingHandshakeInterceptor implements HandshakeInterceptor {
             return false;
         }
 
-        attributes.put(USER_ID_ATTR, userId);
-        attributes.put(ROOM_ID_ATTR, roomId);
+        SignalingSessionAttributes.putUserId(attributes, userId);
+        SignalingSessionAttributes.putRoomId(attributes, roomId);
         return true;
     }
 
@@ -75,7 +72,7 @@ public class SignalingHandshakeInterceptor implements HandshakeInterceptor {
 
     // TODO(JWT): 토큰 도입 시 이 메서드만 교체. token 추출 + 검증 후 userId 반환.
     private Long extractUserId(final HttpServletRequest request) {
-        final String value = request.getParameter(USER_ID_ATTR);
+        final String value = request.getParameter(SignalingSessionAttributes.USER_ID);
         if (value == null || value.isBlank()) {
             return null;
         }
@@ -87,7 +84,7 @@ public class SignalingHandshakeInterceptor implements HandshakeInterceptor {
     }
 
     private UUID extractRoomId(final HttpServletRequest request) {
-        final String value = request.getParameter(ROOM_ID_ATTR);
+        final String value = request.getParameter(SignalingSessionAttributes.ROOM_ID);
         if (value == null || value.isBlank()) {
             return null;
         }
