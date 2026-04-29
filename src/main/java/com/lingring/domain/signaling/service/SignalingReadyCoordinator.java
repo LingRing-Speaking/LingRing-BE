@@ -3,7 +3,6 @@ package com.lingring.domain.signaling.service;
 import com.lingring.domain.matching.domain.Match;
 import com.lingring.domain.signaling.domain.SignalingMessage;
 import com.lingring.domain.signaling.domain.SignalingMessageType;
-import com.lingring.infrastructure.redis.RedisSignalingPublisher;
 import com.lingring.infrastructure.redis.SignalingChannels;
 import java.time.Duration;
 import java.util.UUID;
@@ -20,7 +19,7 @@ public class SignalingReadyCoordinator {
     private static final Duration JOINED_SET_TTL = Duration.ofHours(1);
     private static final long EXPECTED_PARTICIPANTS = 2L;
 
-    private final RedisSignalingPublisher signalingPublisher;
+    private final SignalingPublisher signalingPublisher;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
 

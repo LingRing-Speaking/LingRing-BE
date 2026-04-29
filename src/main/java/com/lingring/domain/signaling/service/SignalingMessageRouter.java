@@ -3,7 +3,6 @@ package com.lingring.domain.signaling.service;
 import com.lingring.domain.matching.domain.Match;
 import com.lingring.domain.signaling.domain.SignalingMessage;
 import com.lingring.domain.signaling.domain.SignalingMessageType;
-import com.lingring.infrastructure.redis.RedisSignalingPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -11,7 +10,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class SignalingMessageRouter {
 
-    private final RedisSignalingPublisher signalingPublisher;
+    private final SignalingPublisher signalingPublisher;
 
     public void forwardToCounterpart(final Match match, final Long senderId, final SignalingMessage message) {
         final Long counterpart = match.counterpartOf(senderId);

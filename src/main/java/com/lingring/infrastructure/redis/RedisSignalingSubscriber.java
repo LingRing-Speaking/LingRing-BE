@@ -1,10 +1,9 @@
 package com.lingring.infrastructure.redis;
 
 import com.lingring.domain.signaling.domain.SignalingMessage;
-import com.lingring.domain.signaling.facade.SignalingFacade;
+import com.lingring.domain.signaling.service.SignalingSessionMessenger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.stereotype.Component;
@@ -16,8 +15,7 @@ import tools.jackson.databind.ObjectMapper;
 public class RedisSignalingSubscriber implements MessageListener {
 
     private final ObjectMapper objectMapper;
-    @Lazy
-    private final SignalingFacade signalingFacade;
+    private final SignalingSessionMessenger sessionMessenger;
 
     @Override
     public void onMessage(final Message message, final byte[] pattern) {
@@ -25,7 +23,10 @@ public class RedisSignalingSubscriber implements MessageListener {
         if (parsed == null) {
             return;
         }
-        signalingFacade.deliverLocally(parsed);
+        if (parsed.toUserId() == null) {
+            return;
+        }
+        sessionMessenger.sendToUser(parsed.toUserId(), parsed);
     }
 
     private SignalingMessage parse(final byte[] body) {

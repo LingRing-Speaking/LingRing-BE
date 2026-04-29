@@ -6,7 +6,6 @@ import com.lingring.domain.signaling.domain.SignalingMessage;
 import com.lingring.domain.signaling.domain.SignalingMessageType;
 import com.lingring.domain.signaling.service.SignalingMessageRouter;
 import com.lingring.domain.signaling.service.SignalingReadyCoordinator;
-import com.lingring.domain.signaling.service.SignalingSessionMessenger;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +20,6 @@ public class SignalingFacade {
     private final MatchingService matchingService;
     private final SignalingMessageRouter messageRouter;
     private final SignalingReadyCoordinator readyCoordinator;
-    private final SignalingSessionMessenger sessionMessenger;
 
     public void dispatch(final Long senderId, final UUID roomId, final SignalingMessage message) {
         final Match match = matchingService.getByRoomId(roomId);
@@ -41,16 +39,10 @@ public class SignalingFacade {
             readyCoordinator.cleanupRoom(roomId);
             return;
         }
-        log.warn("Unhandled signaling message type from sender {}: {}", senderId, type);
+        log.error("Unhandled signaling message type from sender {}: {}", senderId, type);
     }
 
-    public void deliverLocally(final SignalingMessage message) {
-        if (message.toUserId() == null) {
-            return;
-        }
-        sessionMessenger.sendToUser(message.toUserId(), message);
-    }
-
+    // TODO: RDB는 성공, Redis는 실패한다면?
     public void handleDisconnect(final Long userId, final UUID roomId) {
         if (roomId == null) {
             return;
