@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.lingring.domain.user.dao.UserRepository;
+import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.domain.user.dto.response.UserMyResponse;
@@ -31,7 +32,9 @@ class UserServiceTest extends ServiceIntegrationHelper {
         @DisplayName("존재하는 사용자 id로 조회하면 id와 이름을 반환한다")
         void getMy_whenUserExists_returnsResponse() {
             // given
-            final User saved = userRepository.save(User.create(new Name("링링"), null));
+            final User saved = userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "kakao-test-sub-1", new Name("링링"), null)
+            );
 
             // when
             final UserMyResponse response = userService.getMy(saved.getId());
