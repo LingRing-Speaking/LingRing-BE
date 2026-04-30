@@ -1,17 +1,24 @@
 package com.lingring.domain.matching.service;
 
+import com.lingring.domain.matching.dao.MatchRepository;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
+import com.lingring.domain.matching.domain.Match;
+import com.lingring.domain.matching.domain.MatchingResult;
 import com.lingring.domain.matching.dto.response.MatchingStatusResponse;
+import com.lingring.domain.matching.exception.MatchNotFoundException;
 import com.lingring.global.util.DateTimeProvider;
 import java.util.Optional;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class MatchingService {
 
     private final MatchingQueueRepository matchingQueueRepository;
+    private final MatchRepository matchRepository;
     private final DateTimeProvider dateTimeProvider;
 
     public void enterQueue(final Long userId) {
@@ -20,9 +27,10 @@ public class MatchingService {
     }
 
     public MatchingStatusResponse getStatus(final Long userId) {
-        final Optional<Long> result = matchingQueueRepository.findResult(userId);
+        final Optional<MatchingResult> result = matchingQueueRepository.findResult(userId);
         if (result.isPresent()) {
-            return MatchingStatusResponse.matched(result.get());
+            final MatchingResult matched = result.get();
+            return MatchingStatusResponse.matched(matched.partnerId(), matched.roomId());
         }
         if (matchingQueueRepository.contains(userId)) {
             return MatchingStatusResponse.waiting();
@@ -32,5 +40,20 @@ public class MatchingService {
 
     public void leaveQueue(final Long userId) {
         matchingQueueRepository.remove(userId);
+    }
+
+    public Optional<Match> findByRoomId(final UUID roomId) {
+        return matchRepository.findByRoomId(roomId);
+    }
+
+    public Match getByRoomId(final UUID roomId) {
+        return matchRepository.findByRoomId(roomId)
+                .orElseThrow(() -> new MatchNotFoundException(roomId));
+    }
+
+    @Transactional
+    public void endMatch(final UUID roomId) {
+        final Match match = getByRoomId(roomId);
+        match.end(dateTimeProvider.now());
     }
 }

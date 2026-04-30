@@ -17,7 +17,7 @@ com.lingring
 
 ```
 domain/<도메인>/
-├── api/                             — Controller (HTTP 진입점)
+├── api/                             — Inbound 어댑터 계층 (Controller / WebSocketHandler 등 외부 프로토콜 진입점과 그에 부속되는 Interceptor / ArgumentResolver / ControllerAdvice). 도메인 지식이 없는 진짜 횡단 인터셉터는 global/interceptor/.
 ├── service/                         — Application Service (트랜잭션 경계)
 ├── facade/                          (선택) 여러 service 오케스트레이션
 ├── dao/
