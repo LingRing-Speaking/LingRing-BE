@@ -2,6 +2,7 @@ package com.lingring.infrastructure.redis;
 
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.domain.MatchingCandidate;
+import com.lingring.domain.matching.domain.MatchingResult;
 import com.lingring.global.util.Zones;
 import java.time.Duration;
 import java.time.Instant;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -23,6 +25,7 @@ public class RedisMatchingQueueRepository implements MatchingQueueRepository {
 
     private static final String QUEUE_KEY = "matching:queue";
     private static final String RESULT_KEY_PREFIX = "matching:result:";
+    private static final String RESULT_DELIMITER = ":";
     private static final Duration RESULT_TTL = Duration.ofSeconds(15);
     private static final DefaultRedisScript<Long> COMMIT_MATCH_SCRIPT = loadCommitMatchScript();
 
@@ -70,17 +73,19 @@ public class RedisMatchingQueueRepository implements MatchingQueueRepository {
     }
 
     @Override
-    public void saveResult(final Long userId, final Long partnerId) {
-        redisTemplate.opsForValue().set(resultKey(userId), partnerId.toString(), RESULT_TTL);
+    public void saveResult(final Long userId, final Long partnerId, final UUID roomId) {
+        redisTemplate.opsForValue().set(resultKey(userId), serialize(partnerId, roomId), RESULT_TTL);
     }
 
     @Override
-    public boolean commitMatch(final Long userId, final Long partnerId) {
+    public boolean commitMatch(final Long userId, final Long partnerId, final UUID roomId) {
         final Long result = redisTemplate.execute(
                 COMMIT_MATCH_SCRIPT,
                 List.of(QUEUE_KEY, resultKey(userId), resultKey(partnerId)),
                 userId.toString(),
                 partnerId.toString(),
+                serialize(partnerId, roomId),
+                serialize(userId, roomId),
                 String.valueOf(RESULT_TTL.toSeconds())
         );
         return isSuccess(result);
@@ -91,12 +96,12 @@ public class RedisMatchingQueueRepository implements MatchingQueueRepository {
     }
 
     @Override
-    public Optional<Long> findResult(final Long userId) {
+    public Optional<MatchingResult> findResult(final Long userId) {
         final String value = redisTemplate.opsForValue().get(resultKey(userId));
         if (value == null) {
             return Optional.empty();
         }
-        return Optional.of(Long.parseLong(value));
+        return Optional.of(deserialize(value));
     }
 
     @Override
@@ -106,6 +111,17 @@ public class RedisMatchingQueueRepository implements MatchingQueueRepository {
 
     private String resultKey(final Long userId) {
         return RESULT_KEY_PREFIX + userId;
+    }
+
+    private String serialize(final Long partnerId, final UUID roomId) {
+        return partnerId + RESULT_DELIMITER + roomId;
+    }
+
+    private MatchingResult deserialize(final String value) {
+        final int delimiterIndex = value.indexOf(RESULT_DELIMITER);
+        final Long partnerId = Long.parseLong(value.substring(0, delimiterIndex));
+        final UUID roomId = UUID.fromString(value.substring(delimiterIndex + 1));
+        return new MatchingResult(partnerId, roomId);
     }
 
     private double toScore(final LocalDateTime enqueuedAt) {

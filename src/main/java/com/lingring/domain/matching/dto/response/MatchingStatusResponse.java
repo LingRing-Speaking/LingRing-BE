@@ -1,21 +1,23 @@
 package com.lingring.domain.matching.dto.response;
 
-import com.lingring.domain.matching.domain.MatchStatus;
+import com.lingring.domain.matching.domain.MatchingPollStatus;
+import java.util.UUID;
 
 public record MatchingStatusResponse(
-        MatchStatus status,
-        Long partnerId
+        MatchingPollStatus status,
+        Long partnerId,
+        UUID roomId
 ) {
 
     public static MatchingStatusResponse waiting() {
-        return new MatchingStatusResponse(MatchStatus.WAITING, null);
+        return new MatchingStatusResponse(MatchingPollStatus.WAITING, null, null);
     }
 
-    public static MatchingStatusResponse matched(final Long partnerId) {
-        return new MatchingStatusResponse(MatchStatus.MATCHED, partnerId);
+    public static MatchingStatusResponse matched(final Long partnerId, final UUID roomId) {
+        return new MatchingStatusResponse(MatchingPollStatus.MATCHED, partnerId, roomId);
     }
 
     public static MatchingStatusResponse none() {
-        return new MatchingStatusResponse(MatchStatus.NONE, null);
+        return new MatchingStatusResponse(MatchingPollStatus.NONE, null, null);
     }
 }

@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import com.lingring.domain.matching.dto.response.MatchingStatusResponse;
 import com.lingring.domain.matching.service.MatchingService;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,8 @@ import tools.jackson.databind.ObjectMapper;
 
 @WebMvcTest(MatchingController.class)
 class MatchingControllerTest {
+
+    private static final UUID ROOM_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
 
     @Autowired
     private MockMvc mockMvc;
@@ -62,12 +65,12 @@ class MatchingControllerTest {
     class GetStatus {
 
         @Test
-        @DisplayName("매칭 결과가 있으면 MATCHED + partnerId를 반환한다")
+        @DisplayName("매칭 결과가 있으면 MATCHED + partnerId + roomId를 반환한다")
         void getStatus_whenMatched_returnsMatched() throws Exception {
             // given
             final Long userId = 1L;
             given(matchingService.getStatus(userId))
-                    .willReturn(MatchingStatusResponse.matched(2L));
+                    .willReturn(MatchingStatusResponse.matched(2L, ROOM_ID));
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
@@ -81,6 +84,7 @@ class MatchingControllerTest {
             final JsonNode body = objectMapper.readTree(response.getContentAsString());
             assertThat(body.get("data").get("status").asText()).isEqualTo("MATCHED");
             assertThat(body.get("data").get("partnerId").asLong()).isEqualTo(2L);
+            assertThat(body.get("data").get("roomId").asText()).isEqualTo(ROOM_ID.toString());
         }
 
         @Test
