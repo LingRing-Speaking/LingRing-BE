@@ -4,6 +4,7 @@ import com.lingring.global.common.response.ApiResponse;
 import com.lingring.global.error.exception.BadRequestException;
 import com.lingring.global.error.exception.DomainException;
 import com.lingring.global.error.exception.ForbiddenException;
+import com.lingring.global.error.exception.IdpUnavailableException;
 import com.lingring.global.error.exception.InvalidValueException;
 import com.lingring.global.error.exception.NotFoundException;
 import com.lingring.global.error.exception.UnauthorizedException;
@@ -48,6 +49,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DomainException.class)
     public ApiResponse<Void> handleDomainException(final DomainException e) {
         log.error(e.getMessage());
+        return ApiResponse.error(e.getErrorCode());
+    }
+
+    @ExceptionHandler(IdpUnavailableException.class)
+    public ApiResponse<Void> handleIdpUnavailableException(final IdpUnavailableException e) {
+        log.error(e.getMessage(), e);
         return ApiResponse.error(e.getErrorCode());
     }
 

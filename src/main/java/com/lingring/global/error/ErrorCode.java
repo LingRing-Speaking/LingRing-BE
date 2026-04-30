@@ -1,5 +1,6 @@
 package com.lingring.global.error;
 
+import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
@@ -27,6 +28,8 @@ public enum ErrorCode {
 
     // Auth Error
     INVALID_TOKEN(UNAUTHORIZED, "유효하지 않은 인증 토큰입니다."),
+    INVALID_ID_TOKEN(UNAUTHORIZED, "유효하지 않은 IdP 토큰입니다."),
+    IDP_UNAVAILABLE(BAD_GATEWAY, "IdP 인증 서버 통신에 실패했습니다. 잠시 후 다시 시도해주세요."),
 
     // User Error
     INVALID_USER_NAME(BAD_REQUEST, "유효하지 않은 사용자 이름입니다."),
