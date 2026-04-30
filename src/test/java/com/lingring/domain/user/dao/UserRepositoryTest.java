@@ -65,4 +65,34 @@ class UserRepositoryTest extends RepositoryTestHelper {
             assertThat(found).isEmpty();
         }
     }
+
+    @Nested
+    @DisplayName("existsByName")
+    class ExistsByName {
+
+        @Test
+        @DisplayName("같은 이름의 User가 있으면 true를 반환한다")
+        void existsByName_whenExists_returnsTrue() {
+            // given
+            userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "kakao-sub-1", new Name("링링"), null)
+            );
+
+            // when
+            final boolean exists = userRepository.existsByName(new Name("링링"));
+
+            // then
+            assertThat(exists).isTrue();
+        }
+
+        @Test
+        @DisplayName("같은 이름의 User가 없으면 false를 반환한다")
+        void existsByName_whenNotExists_returnsFalse() {
+            // when
+            final boolean exists = userRepository.existsByName(new Name("미존재"));
+
+            // then
+            assertThat(exists).isFalse();
+        }
+    }
 }

@@ -30,6 +30,8 @@ public enum ErrorCode {
     INVALID_TOKEN(UNAUTHORIZED, "유효하지 않은 인증 토큰입니다."),
     INVALID_ID_TOKEN(UNAUTHORIZED, "유효하지 않은 IdP 토큰입니다."),
     IDP_UNAVAILABLE(BAD_GATEWAY, "IdP 인증 서버 통신에 실패했습니다. 잠시 후 다시 시도해주세요."),
+    NICKNAME_CONFLICT(CONFLICT, "이미 사용 중인 닉네임입니다."),
+    NICKNAME_REQUIRED(BAD_REQUEST, "신규 가입 시 nickname은 필수입니다."),
 
     // User Error
     INVALID_USER_NAME(BAD_REQUEST, "유효하지 않은 사용자 이름입니다."),
