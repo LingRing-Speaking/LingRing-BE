@@ -143,6 +143,81 @@ class SignalingWebSocketHandlerIntegrationTest {
     }
 
     @Test
+    @DisplayName("grace period 안에 재연결하면 매치가 종료되지 않는다")
+    void reconnectWithinGracePeriod_keepsMatchAlive() throws Exception {
+        // given: 매치 생성 후 user 1이 연결, JOIN까지 진행해 set에 진입
+        final UUID roomId = UUID.randomUUID();
+        matchRepository.save(Match.start(1L, 2L, roomId, STARTED_AT));
+
+        final CollectingHandler handlerA1 = new CollectingHandler(objectMapper);
+        final CollectingHandler handlerA2 = new CollectingHandler(objectMapper);
+        final CollectingHandler handlerB = new CollectingHandler(objectMapper);
+
+        final WebSocketSession sessionA1 = connect(1L, roomId, handlerA1);
+        final WebSocketSession sessionB = connect(2L, roomId, handlerB);
+        sendMessage(sessionA1, new SignalingMessage(SignalingMessageType.JOIN, null, null, null));
+
+        // when: A가 끊기지만 grace 안에 재연결, 그 사이 B는 JOIN
+        sessionA1.close();
+        Awaitility.await().atMost(Duration.ofSeconds(AWAIT_SECONDS))
+                .until(() -> !sessionA1.isOpen());
+
+        final WebSocketSession sessionA2 = connect(1L, roomId, handlerA2);
+        sendMessage(sessionB, new SignalingMessage(SignalingMessageType.JOIN, null, null, null));
+
+        // then: 매치는 살아 있고 READY가 양쪽에 도달
+        final SignalingMessage readyForA2 = handlerA2.awaitNext();
+        final SignalingMessage readyForB = handlerB.awaitNext();
+        assertThat(readyForA2.type()).isEqualTo(SignalingMessageType.READY);
+        assertThat(readyForB.type()).isEqualTo(SignalingMessageType.READY);
+
+        // grace 만료 시간을 넘겨도 매치가 ENDED로 전이되지 않아야 함
+        Thread.sleep(1500);
+        assertThat(matchRepository.findByRoomId(roomId).orElseThrow().getStatus())
+                .isNotEqualTo(MatchStatus.ENDED);
+
+        sessionA2.close();
+        sessionB.close();
+    }
+
+    @Test
+    @DisplayName("같은 user가 WS를 두 번 열어도 첫 세션 close가 매치를 종료시키지 않고 READY가 정상 발행된다")
+    void duplicateSessionDoesNotTriggerCleanup() throws Exception {
+        // given
+        final UUID roomId = UUID.randomUUID();
+        matchRepository.save(Match.start(1L, 2L, roomId, STARTED_AT));
+
+        final CollectingHandler handlerA1 = new CollectingHandler(objectMapper);
+        final CollectingHandler handlerA2 = new CollectingHandler(objectMapper);
+        final CollectingHandler handlerB = new CollectingHandler(objectMapper);
+
+        // when: user 1이 동일한 roomId로 두 세션을 연 뒤 살아남은 세션과 user 2가 JOIN
+        final WebSocketSession sessionA1 = connect(1L, roomId, handlerA1);
+        final WebSocketSession sessionA2 = connect(1L, roomId, handlerA2);
+        final WebSocketSession sessionB = connect(2L, roomId, handlerB);
+
+        // 첫 세션은 서버에 의해 close 되어야 함
+        Awaitility.await().atMost(Duration.ofSeconds(AWAIT_SECONDS))
+                .until(() -> !sessionA1.isOpen());
+
+        sendMessage(sessionA2, new SignalingMessage(SignalingMessageType.JOIN, null, null, null));
+        sendMessage(sessionB, new SignalingMessage(SignalingMessageType.JOIN, null, null, null));
+
+        // then: 살아남은 sessionA2와 sessionB 모두 READY 수신 (cleanupRoom이 발화하지 않았음을 의미)
+        final SignalingMessage readyForA2 = handlerA2.awaitNext();
+        final SignalingMessage readyForB = handlerB.awaitNext();
+        assertThat(readyForA2.type()).isEqualTo(SignalingMessageType.READY);
+        assertThat(readyForB.type()).isEqualTo(SignalingMessageType.READY);
+
+        // 매치는 종료되지 않아야 함
+        assertThat(matchRepository.findByRoomId(roomId).orElseThrow().getStatus())
+                .isNotEqualTo(MatchStatus.ENDED);
+
+        sessionA2.close();
+        sessionB.close();
+    }
+
+    @Test
     @DisplayName("존재하지 않는 roomId로 연결을 시도하면 핸드셰이크가 실패한다")
     void connect_whenRoomNotFound_handshakeFails() {
         // when & then

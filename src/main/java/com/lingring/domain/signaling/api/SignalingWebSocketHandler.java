@@ -5,6 +5,8 @@ import static com.lingring.domain.signaling.api.SignalingSessionAttributes.*;
 import com.lingring.domain.signaling.dao.LocalSessionRegistry;
 import com.lingring.domain.signaling.domain.SignalingMessage;
 import com.lingring.domain.signaling.facade.SignalingFacade;
+import com.lingring.domain.signaling.service.DisconnectScheduler;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -21,11 +23,14 @@ public class SignalingWebSocketHandler extends TextWebSocketHandler {
 
     private final LocalSessionRegistry sessionRegistry;
     private final SignalingFacade signalingFacade;
+    private final DisconnectScheduler disconnectScheduler;
     private final ObjectMapper objectMapper;
 
     @Override
     public void afterConnectionEstablished(final WebSocketSession session) {
-        sessionRegistry.register(getUserId(session), session);
+        final Long userId = getUserId(session);
+        sessionRegistry.register(userId, session);
+        disconnectScheduler.cancel(userId);
     }
 
     @Override
@@ -40,8 +45,17 @@ public class SignalingWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(final WebSocketSession session, final CloseStatus status) {
         final Long userId = getUserId(session);
-        sessionRegistry.unregister(userId);
-        signalingFacade.handleDisconnect(userId, getRoomId(session));
+        final boolean wasActive = sessionRegistry.unregister(userId, session);
+        if (!wasActive) {
+            return;
+        }
+        final UUID roomId = getRoomId(session);
+        disconnectScheduler.schedule(userId, () -> {
+            if (sessionRegistry.find(userId).isPresent()) {
+                return;
+            }
+            signalingFacade.handleDisconnect(userId, roomId);
+        });
     }
 
     private SignalingMessage parse(final TextMessage message) {

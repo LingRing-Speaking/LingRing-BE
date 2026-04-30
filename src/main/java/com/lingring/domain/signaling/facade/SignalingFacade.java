@@ -1,6 +1,7 @@
 package com.lingring.domain.signaling.facade;
 
 import com.lingring.domain.matching.domain.Match;
+import com.lingring.domain.matching.domain.MatchStatus;
 import com.lingring.domain.matching.service.MatchingService;
 import com.lingring.domain.signaling.domain.SignalingMessage;
 import com.lingring.domain.signaling.domain.SignalingMessageType;
@@ -53,6 +54,9 @@ public class SignalingFacade {
         }
         final Match match = matchOpt.get();
         if (!match.involves(userId)) {
+            return;
+        }
+        if (match.getStatus() == MatchStatus.ENDED) {
             return;
         }
         messageRouter.publishHangup(match, userId);
