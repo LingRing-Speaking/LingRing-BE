@@ -18,7 +18,7 @@ import lombok.NonNull;
 public class Name {
 
     private static final int MIN_LENGTH = 2;
-    private static final int MAX_LENGTH = 15;
+    private static final int MAX_LENGTH = 30;
 
     @Column(name = "name", nullable = false, length = MAX_LENGTH)
     private final String value;

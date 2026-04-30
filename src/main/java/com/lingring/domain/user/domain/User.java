@@ -21,10 +21,16 @@ import lombok.NonNull;
 @Entity
 @Table(
         name = "users",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_users_provider_provider_user_id",
-                columnNames = {"provider", "provider_user_id"}
-        )
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_users_provider_provider_user_id",
+                        columnNames = {"provider", "provider_user_id"}
+                ),
+                @UniqueConstraint(
+                        name = "uk_users_name",
+                        columnNames = {"name"}
+                )
+        }
 )
 @Getter
 @NoArgsConstructor(access = PROTECTED)
