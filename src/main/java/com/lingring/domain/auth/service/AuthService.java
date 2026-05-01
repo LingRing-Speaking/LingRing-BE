@@ -1,17 +1,13 @@
 package com.lingring.domain.auth.service;
 
-import com.lingring.domain.auth.dto.request.SocialLoginRequest;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse;
 import com.lingring.domain.auth.dto.response.TokenPairResponse;
-import com.lingring.domain.auth.exception.NicknameConflictException;
 import com.lingring.domain.user.dao.UserRepository;
 import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
-import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.global.auth.jwt.IdTokenVerifier;
 import com.lingring.global.auth.jwt.IdTokenVerifiers;
 import com.lingring.global.error.ErrorCode;
-import com.lingring.global.error.exception.BadRequestException;
 import com.lingring.global.error.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,14 +21,14 @@ public class AuthService {
     private final UserRepository userRepository;
     private final TokenIssuer tokenIssuer;
 
-    @Transactional
-    public AuthTokenResponse socialLogin(final SocialLoginRequest request) {
-        final Provider provider = Provider.from(request.provider());
+    public VerifiedIdToken verifyIdToken(final String providerName, final String idToken) {
+        final Provider provider = Provider.from(providerName);
         final IdTokenVerifier verifier = idTokenVerifiers.resolve(provider);
-        final String providerUserId = verifier.verify(request.idToken());
-        final User user = userRepository.findByProviderAndProviderUserId(provider, providerUserId)
-                .orElseGet(() -> registerNewUser(provider, providerUserId, request.nickname()));
+        final String providerUserId = verifier.verify(idToken);
+        return new VerifiedIdToken(provider, providerUserId);
+    }
 
+    public AuthTokenResponse issueTokensFor(final User user) {
         final TokenIssuance issued = tokenIssuer.issueFor(user.getId());
         return AuthTokenResponse.of(issued.accessToken(), issued.refreshToken(), user);
     }
@@ -52,24 +48,5 @@ public class AuthService {
 
     public void logout(final Long userId) {
         tokenIssuer.invalidate(userId);
-    }
-
-    private User registerNewUser(
-            final Provider provider,
-            final String providerUserId,
-            final String nickname
-    ) {
-        if (nickname == null || nickname.isBlank()) {
-            throw new BadRequestException(
-                    ErrorCode.NICKNAME_REQUIRED,
-                    "신규 가입에는 nickname이 필요합니다."
-            );
-        }
-        final Name name = new Name(nickname);
-        if (userRepository.existsByName(name)) {
-            throw new NicknameConflictException(nickname);
-        }
-        final User user = User.createFromOAuth(provider, providerUserId, name, null);
-        return userRepository.save(user);
     }
 }

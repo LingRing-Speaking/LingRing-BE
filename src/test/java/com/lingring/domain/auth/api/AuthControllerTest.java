@@ -13,6 +13,7 @@ import com.lingring.domain.auth.dto.request.SocialLoginRequest;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse.UserSummary;
 import com.lingring.domain.auth.dto.response.TokenPairResponse;
+import com.lingring.domain.auth.facade.SocialLoginFacade;
 import com.lingring.domain.auth.service.AuthService;
 import com.lingring.global.auth.context.AuthContext;
 import org.junit.jupiter.api.AfterEach;
@@ -40,6 +41,9 @@ class AuthControllerTest {
     @MockitoBean
     private AuthService authService;
 
+    @MockitoBean
+    private SocialLoginFacade socialLoginFacade;
+
     @AfterEach
     void clearAuthContext() {
         AuthContext.clear();
@@ -56,7 +60,7 @@ class AuthControllerTest {
             final SocialLoginRequest request = new SocialLoginRequest(
                     "kakao", "id-token", null, "링링이"
             );
-            given(authService.socialLogin(any(SocialLoginRequest.class))).willReturn(
+            given(socialLoginFacade.socialLogin(any(SocialLoginRequest.class))).willReturn(
                     new AuthTokenResponse(
                             "access-jwt",
                             "refresh-jwt",
@@ -98,7 +102,7 @@ class AuthControllerTest {
             // then
             final JsonNode body = objectMapper.readTree(response.getContentAsString());
             assertThat(body.get("status").asInt()).isEqualTo(400);
-            then(authService).should(never()).socialLogin(any());
+            then(socialLoginFacade).should(never()).socialLogin(any());
         }
 
         @Test
@@ -119,7 +123,7 @@ class AuthControllerTest {
             // then
             final JsonNode body = objectMapper.readTree(response.getContentAsString());
             assertThat(body.get("status").asInt()).isEqualTo(400);
-            then(authService).should(never()).socialLogin(any());
+            then(socialLoginFacade).should(never()).socialLogin(any());
         }
     }
 
