@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,6 +37,6 @@ public interface UserReportApi {
     ApiResponse<UserReportResponse> report(
             @Parameter(description = "신고를 요청하는 사용자 id", example = "1")
             @PathVariable("userId") final Long userId,
-            @RequestBody final UserReportCreateRequest request
+            @Valid @RequestBody final UserReportCreateRequest request
     );
 }

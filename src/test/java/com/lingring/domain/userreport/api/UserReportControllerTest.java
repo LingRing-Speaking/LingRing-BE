@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.never;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import com.lingring.domain.userreport.domain.ReportReason;
@@ -106,6 +108,98 @@ class UserReportControllerTest {
                     .isEqualTo(ErrorCode.SELF_REPORT_NOT_ALLOWED.getHttpStatus().value());
             assertThat(body.get("message").asText())
                     .isEqualTo(ErrorCode.SELF_REPORT_NOT_ALLOWED.getMessage());
+        }
+
+        @Test
+        @DisplayName("reportedUserId가 null이면 @Valid가 차단하고 service를 호출하지 않는다")
+        void report_whenReportedUserIdNull_rejectedByValidation() throws Exception {
+            // given
+            final Long userId = 1L;
+            final UserReportCreateRequest request = new UserReportCreateRequest(
+                    null, ReportReason.BAD_MANNERS, "정상적인 사유 설명입니다"
+            );
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(
+                            post("/users/{userId}/reports", userId)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(request)))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("status").asInt()).isEqualTo(400);
+            then(userReportService).should(never()).report(any(), any());
+        }
+
+        @Test
+        @DisplayName("reason이 null이면 @Valid가 차단하고 service를 호출하지 않는다")
+        void report_whenReasonNull_rejectedByValidation() throws Exception {
+            // given
+            final Long userId = 1L;
+            final UserReportCreateRequest request = new UserReportCreateRequest(
+                    2L, null, "정상적인 사유 설명입니다"
+            );
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(
+                            post("/users/{userId}/reports", userId)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(request)))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("status").asInt()).isEqualTo(400);
+            then(userReportService).should(never()).report(any(), any());
+        }
+
+        @Test
+        @DisplayName("description이 공백이면 @Valid가 차단하고 service를 호출하지 않는다")
+        void report_whenDescriptionBlank_rejectedByValidation() throws Exception {
+            // given
+            final Long userId = 1L;
+            final UserReportCreateRequest request = new UserReportCreateRequest(
+                    2L, ReportReason.BAD_MANNERS, "   "
+            );
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(
+                            post("/users/{userId}/reports", userId)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(request)))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("status").asInt()).isEqualTo(400);
+            then(userReportService).should(never()).report(any(), any());
+        }
+
+        @Test
+        @DisplayName("description이 4자면 @Valid가 차단하고 service를 호출하지 않는다")
+        void report_whenDescriptionTooShort_rejectedByValidation() throws Exception {
+            // given
+            final Long userId = 1L;
+            final UserReportCreateRequest request = new UserReportCreateRequest(
+                    2L, ReportReason.BAD_MANNERS, "abcd"
+            );
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(
+                            post("/users/{userId}/reports", userId)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(request)))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("status").asInt()).isEqualTo(400);
+            then(userReportService).should(never()).report(any(), any());
         }
     }
 }

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willDoNothing;
+import static org.mockito.Mockito.never;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -71,6 +72,72 @@ class UserExpressionControllerTest {
             assertThat(body.get("data").get("id").asLong()).isEqualTo(10L);
             assertThat(body.get("data").get("expression").asText()).isEqualTo("Hello");
             assertThat(body.get("data").get("meaning").asText()).isEqualTo("안녕");
+        }
+
+        @Test
+        @DisplayName("expression이 공백이면 @Valid가 차단하고 service를 호출하지 않는다")
+        void create_whenExpressionBlank_rejectedByValidation() throws Exception {
+            // given
+            final Long userId = 1L;
+            final UserExpressionCreateRequest request =
+                    new UserExpressionCreateRequest("   ", "안녕");
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(
+                            post("/users/{userId}/expressions", userId)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(request)))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("status").asInt()).isEqualTo(400);
+            then(userExpressionService).should(never()).save(any(), any());
+        }
+
+        @Test
+        @DisplayName("meaning이 null이면 @Valid가 차단하고 service를 호출하지 않는다")
+        void create_whenMeaningNull_rejectedByValidation() throws Exception {
+            // given
+            final Long userId = 1L;
+            final UserExpressionCreateRequest request =
+                    new UserExpressionCreateRequest("Hello", null);
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(
+                            post("/users/{userId}/expressions", userId)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(request)))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("status").asInt()).isEqualTo(400);
+            then(userExpressionService).should(never()).save(any(), any());
+        }
+
+        @Test
+        @DisplayName("expression이 501자면 @Valid가 차단하고 service를 호출하지 않는다")
+        void create_whenExpressionTooLong_rejectedByValidation() throws Exception {
+            // given
+            final Long userId = 1L;
+            final UserExpressionCreateRequest request =
+                    new UserExpressionCreateRequest("a".repeat(501), "안녕");
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(
+                            post("/users/{userId}/expressions", userId)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(request)))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("status").asInt()).isEqualTo(400);
+            then(userExpressionService).should(never()).save(any(), any());
         }
     }
 

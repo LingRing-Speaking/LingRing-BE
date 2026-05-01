@@ -7,6 +7,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willDoNothing;
 import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.never;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -97,6 +98,48 @@ class UserBlockControllerTest {
                     .isEqualTo(ErrorCode.SELF_BLOCK_NOT_ALLOWED.getHttpStatus().value());
             assertThat(body.get("message").asText())
                     .isEqualTo(ErrorCode.SELF_BLOCK_NOT_ALLOWED.getMessage());
+        }
+
+        @Test
+        @DisplayName("blockedUserId가 null이면 @Valid가 차단하고 service를 호출하지 않는다")
+        void block_whenBlockedUserIdNull_rejectedByValidation() throws Exception {
+            // given
+            final Long userId = 1L;
+            final UserBlockCreateRequest request = new UserBlockCreateRequest(null);
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(
+                            post("/users/{userId}/blocks", userId)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(request)))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("status").asInt()).isEqualTo(400);
+            then(userBlockService).should(never()).block(any(), any());
+        }
+
+        @Test
+        @DisplayName("blockedUserId가 음수면 @Valid가 차단하고 service를 호출하지 않는다")
+        void block_whenBlockedUserIdNegative_rejectedByValidation() throws Exception {
+            // given
+            final Long userId = 1L;
+            final UserBlockCreateRequest request = new UserBlockCreateRequest(-1L);
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(
+                            post("/users/{userId}/blocks", userId)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(request)))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("status").asInt()).isEqualTo(400);
+            then(userBlockService).should(never()).block(any(), any());
         }
     }
 

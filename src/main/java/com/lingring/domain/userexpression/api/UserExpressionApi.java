@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,7 +41,7 @@ public interface UserExpressionApi {
     ApiResponse<UserExpressionResponse> create(
             @Parameter(description = "저장할 사용자 id", example = "1")
             @PathVariable("userId") final Long userId,
-            @RequestBody final UserExpressionCreateRequest request
+            @Valid @RequestBody final UserExpressionCreateRequest request
     );
 
     @Operation(
