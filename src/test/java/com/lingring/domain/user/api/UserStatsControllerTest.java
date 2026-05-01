@@ -8,9 +8,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.lingring.domain.user.domain.Level;
 import com.lingring.domain.user.dto.response.UserStatsResponse;
 import com.lingring.domain.user.service.UserStatsService;
+import com.lingring.global.auth.context.AuthContext;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.NotFoundException;
 import java.math.BigDecimal;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -35,8 +37,13 @@ class UserStatsControllerTest {
     @MockitoBean
     private UserStatsService userStatsService;
 
+    @AfterEach
+    void clearAuthContext() {
+        AuthContext.clear();
+    }
+
     @Nested
-    @DisplayName("GET /api/v1/users/{userId}/stats")
+    @DisplayName("GET /api/v1/me/stats")
     class GetStats {
 
         @Test
@@ -44,12 +51,13 @@ class UserStatsControllerTest {
         void getStats_whenExists_returns200WithBody() throws Exception {
             // given
             final Long userId = 1L;
+            AuthContext.set(userId);
             given(userStatsService.getByUserId(userId)).willReturn(new UserStatsResponse(
                     userId, Level.BEGINNER, new BigDecimal("36.5"), 0, 0, 0, null
             ));
 
             // when
-            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/users/{userId}/stats", userId)
+            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/me/stats")
                             .accept(MediaType.APPLICATION_JSON))
                     .andReturn()
                     .getResponse();
@@ -71,13 +79,14 @@ class UserStatsControllerTest {
         void getStats_whenNotFound_returnsErrorMessage() throws Exception {
             // given
             final Long userId = 999L;
+            AuthContext.set(userId);
             willThrow(new NotFoundException(
                     ErrorCode.USER_STATS_NOT_FOUND,
                     "userId가 %d인 사용자 통계를 찾을 수 없습니다.".formatted(userId)
             )).given(userStatsService).getByUserId(userId);
 
             // when
-            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/users/{userId}/stats", userId)
+            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/me/stats")
                             .accept(MediaType.APPLICATION_JSON))
                     .andReturn()
                     .getResponse();

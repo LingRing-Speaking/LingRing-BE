@@ -33,8 +33,8 @@ public class UserExpressionController implements UserExpressionApi {
     }
 
     @Override
-    public ApiResponse<Void> delete(final Long userId, final Long id) {
-        userExpressionService.delete(userId, id);
+    public ApiResponse<Void> delete(final Long userId, final Long expressionId) {
+        userExpressionService.delete(userId, expressionId);
         return ApiResponse.success(HttpStatus.NO_CONTENT);
     }
 }

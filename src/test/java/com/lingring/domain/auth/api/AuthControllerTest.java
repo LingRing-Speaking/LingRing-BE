@@ -6,19 +6,15 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import com.lingring.domain.auth.dto.request.RefreshRequest;
 import com.lingring.domain.auth.dto.request.SocialLoginRequest;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse.UserSummary;
-import com.lingring.domain.auth.dto.response.MeResponse;
 import com.lingring.domain.auth.dto.response.TokenPairResponse;
 import com.lingring.domain.auth.service.AuthService;
 import com.lingring.global.auth.context.AuthContext;
-import com.lingring.global.error.ErrorCode;
-import com.lingring.global.error.exception.UnauthorizedException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -170,50 +166,6 @@ class AuthControllerTest {
             final JsonNode body = objectMapper.readTree(response.getContentAsString());
             assertThat(body.get("status").asInt()).isEqualTo(400);
             then(authService).should(never()).refresh(any());
-        }
-    }
-
-    @Nested
-    @DisplayName("GET /api/v1/auth/me")
-    class Me {
-
-        @Test
-        @DisplayName("AuthContext의 userId로 me를 호출하고 200과 id/nickname을 반환한다")
-        void me_whenAuthenticated_returnsIdAndNickname() throws Exception {
-            // given
-            AuthContext.set(42L);
-            given(authService.me(42L)).willReturn(new MeResponse(42L, "링링이"));
-
-            // when
-            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/auth/me"))
-                    .andReturn()
-                    .getResponse();
-
-            // then
-            assertThat(response.getStatus()).isEqualTo(200);
-            final JsonNode body = objectMapper.readTree(response.getContentAsString());
-            assertThat(body.get("data").get("id").asLong()).isEqualTo(42L);
-            assertThat(body.get("data").get("nickname").asText()).isEqualTo("링링이");
-            then(authService).should().me(42L);
-        }
-
-        @Test
-        @DisplayName("service가 INVALID_TOKEN을 던지면 응답 body의 status는 401이다")
-        void me_whenServiceThrowsInvalidToken_returns401InBody() throws Exception {
-            // given
-            AuthContext.set(9_999_999L);
-            given(authService.me(9_999_999L)).willThrow(
-                    new UnauthorizedException(ErrorCode.INVALID_TOKEN, "test stub")
-            );
-
-            // when
-            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/auth/me"))
-                    .andReturn()
-                    .getResponse();
-
-            // then
-            final JsonNode body = objectMapper.readTree(response.getContentAsString());
-            assertThat(body.get("status").asInt()).isEqualTo(401);
         }
     }
 

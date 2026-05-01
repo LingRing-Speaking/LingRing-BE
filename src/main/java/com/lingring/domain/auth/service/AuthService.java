@@ -2,7 +2,6 @@ package com.lingring.domain.auth.service;
 
 import com.lingring.domain.auth.dto.request.SocialLoginRequest;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse;
-import com.lingring.domain.auth.dto.response.MeResponse;
 import com.lingring.domain.auth.dto.response.TokenPairResponse;
 import com.lingring.domain.auth.exception.NicknameConflictException;
 import com.lingring.domain.user.dao.UserRepository;
@@ -52,16 +51,6 @@ public class AuthService {
 
     public void logout(final Long userId) {
         tokenIssuer.invalidate(userId);
-    }
-
-    @Transactional(readOnly = true)
-    public MeResponse me(final Long userId) {
-        final User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UnauthorizedException(
-                        ErrorCode.INVALID_TOKEN,
-                        "토큰 소유자를 찾을 수 없습니다. 다시 로그인하세요."
-                ));
-        return MeResponse.from(user);
     }
 
     private User registerNewUser(

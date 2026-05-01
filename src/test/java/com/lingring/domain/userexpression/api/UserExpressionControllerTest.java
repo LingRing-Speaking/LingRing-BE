@@ -15,8 +15,10 @@ import com.lingring.domain.userexpression.dto.request.UserExpressionCreateReques
 import com.lingring.domain.userexpression.dto.response.UserExpressionListResponse;
 import com.lingring.domain.userexpression.dto.response.UserExpressionResponse;
 import com.lingring.domain.userexpression.service.UserExpressionService;
+import com.lingring.global.auth.context.AuthContext;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -41,8 +43,13 @@ class UserExpressionControllerTest {
     @MockitoBean
     private UserExpressionService userExpressionService;
 
+    @AfterEach
+    void clearAuthContext() {
+        AuthContext.clear();
+    }
+
     @Nested
-    @DisplayName("POST /api/v1/users/{userId}/expressions")
+    @DisplayName("POST /api/v1/expressions")
     class Create {
 
         @Test
@@ -50,6 +57,7 @@ class UserExpressionControllerTest {
         void create_whenValid_returns201WithBody() throws Exception {
             // given
             final Long userId = 1L;
+            AuthContext.set(userId);
             final UserExpressionCreateRequest request =
                     new UserExpressionCreateRequest("Hello", "안녕");
             given(userExpressionService.save(eq(userId), any(UserExpressionCreateRequest.class)))
@@ -59,7 +67,7 @@ class UserExpressionControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/api/v1/users/{userId}/expressions", userId)
+                            post("/api/v1/expressions")
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -79,12 +87,13 @@ class UserExpressionControllerTest {
         void create_whenExpressionBlank_rejectedByValidation() throws Exception {
             // given
             final Long userId = 1L;
+            AuthContext.set(userId);
             final UserExpressionCreateRequest request =
                     new UserExpressionCreateRequest("   ", "안녕");
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/api/v1/users/{userId}/expressions", userId)
+                            post("/api/v1/expressions")
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -101,12 +110,13 @@ class UserExpressionControllerTest {
         void create_whenMeaningNull_rejectedByValidation() throws Exception {
             // given
             final Long userId = 1L;
+            AuthContext.set(userId);
             final UserExpressionCreateRequest request =
                     new UserExpressionCreateRequest("Hello", null);
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/api/v1/users/{userId}/expressions", userId)
+                            post("/api/v1/expressions")
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -123,12 +133,13 @@ class UserExpressionControllerTest {
         void create_whenExpressionTooLong_rejectedByValidation() throws Exception {
             // given
             final Long userId = 1L;
+            AuthContext.set(userId);
             final UserExpressionCreateRequest request =
                     new UserExpressionCreateRequest("a".repeat(501), "안녕");
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/api/v1/users/{userId}/expressions", userId)
+                            post("/api/v1/expressions")
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -142,7 +153,7 @@ class UserExpressionControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /api/v1/users/{userId}/expressions")
+    @DisplayName("GET /api/v1/expressions")
     class GetAll {
 
         @Test
@@ -150,6 +161,7 @@ class UserExpressionControllerTest {
         void getAll_whenWithParams_returns200WithItemsAndHasNext() throws Exception {
             // given
             final Long userId = 1L;
+            AuthContext.set(userId);
             given(userExpressionService.getAllByUserId(userId, 0, 2)).willReturn(
                     new UserExpressionListResponse(
                             List.of(
@@ -162,7 +174,7 @@ class UserExpressionControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            get("/api/v1/users/{userId}/expressions", userId)
+                            get("/api/v1/expressions")
                                     .param("page", "0")
                                     .param("size", "2")
                                     .accept(MediaType.APPLICATION_JSON))
@@ -184,12 +196,13 @@ class UserExpressionControllerTest {
         void getAll_whenNoParams_usesDefaults() throws Exception {
             // given
             final Long userId = 1L;
+            AuthContext.set(userId);
             given(userExpressionService.getAllByUserId(userId, 0, 20)).willReturn(
                     new UserExpressionListResponse(List.of(), false)
             );
 
             // when
-            mockMvc.perform(get("/api/v1/users/{userId}/expressions", userId)
+            mockMvc.perform(get("/api/v1/expressions")
                     .accept(MediaType.APPLICATION_JSON));
 
             // then
@@ -198,7 +211,7 @@ class UserExpressionControllerTest {
     }
 
     @Nested
-    @DisplayName("DELETE /api/v1/users/{userId}/expressions/{id}")
+    @DisplayName("DELETE /api/v1/expressions/{expressionId}")
     class Delete {
 
         @Test
@@ -206,18 +219,19 @@ class UserExpressionControllerTest {
         void delete_whenSuccess_returns204() throws Exception {
             // given
             final Long userId = 1L;
-            final Long id = 10L;
-            willDoNothing().given(userExpressionService).delete(userId, id);
+            AuthContext.set(userId);
+            final Long expressionId = 10L;
+            willDoNothing().given(userExpressionService).delete(userId, expressionId);
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            delete("/api/v1/users/{userId}/expressions/{id}", userId, id))
+                            delete("/api/v1/expressions/{expressionId}", expressionId))
                     .andReturn()
                     .getResponse();
 
             // then
             assertThat(response.getStatus()).isEqualTo(204);
-            then(userExpressionService).should().delete(userId, id);
+            then(userExpressionService).should().delete(userId, expressionId);
         }
     }
 }
