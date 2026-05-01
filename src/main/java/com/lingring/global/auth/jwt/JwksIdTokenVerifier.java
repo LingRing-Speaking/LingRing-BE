@@ -1,5 +1,6 @@
 package com.lingring.global.auth.jwt;
 
+import com.lingring.domain.user.domain.Provider;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.IdpUnavailableException;
 import com.lingring.global.error.exception.UnauthorizedException;
@@ -17,22 +18,22 @@ import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 import java.text.ParseException;
 import java.util.Set;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
-@Component
-public class KakaoIdTokenVerifier implements IdTokenVerifier {
+public class JwksIdTokenVerifier implements IdTokenVerifier {
 
     private static final Set<String> REQUIRED_CLAIMS = Set.of("sub", "iat", "exp");
 
+    private final Provider provider;
     private final ConfigurableJWTProcessor<SecurityContext> processor;
 
-    public KakaoIdTokenVerifier(
-            @Value("${auth.kakao.iss}") final String iss,
-            @Value("${auth.kakao.aud}") final String aud,
-            final JWKSource<SecurityContext> kakaoJwkSource
+    public JwksIdTokenVerifier(
+            final Provider provider,
+            final String iss,
+            final String aud,
+            final JWKSource<SecurityContext> jwkSource
     ) {
-        this.processor = buildProcessor(iss, aud, kakaoJwkSource);
+        this.provider = provider;
+        this.processor = buildProcessor(iss, aud, jwkSource);
     }
 
     @Override
@@ -43,12 +44,12 @@ public class KakaoIdTokenVerifier implements IdTokenVerifier {
         } catch (final RemoteKeySourceException ex) {
             throw new IdpUnavailableException(
                     ErrorCode.IDP_UNAVAILABLE,
-                    "카카오 JWKS 조회에 실패했습니다: %s".formatted(ex.getMessage())
+                    "%s JWKS 조회에 실패했습니다: %s".formatted(provider.name(), ex.getMessage())
             );
         } catch (final BadJOSEException | JOSEException | ParseException ex) {
             throw new UnauthorizedException(
                     ErrorCode.INVALID_ID_TOKEN,
-                    "id_token 검증 실패: %s".formatted(ex.getMessage())
+                    "%s id_token 검증 실패: %s".formatted(provider.name(), ex.getMessage())
             );
         }
     }

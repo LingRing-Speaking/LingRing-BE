@@ -1,6 +1,5 @@
 package com.lingring.domain.auth.service;
 
-import com.lingring.domain.auth.dao.RefreshTokenRepository;
 import com.lingring.domain.auth.dto.request.SocialLoginRequest;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse;
 import com.lingring.domain.auth.exception.NicknameConflictException;
@@ -9,15 +8,10 @@ import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.global.auth.jwt.IdTokenVerifier;
-import com.lingring.global.auth.jwt.JwtProvider;
+import com.lingring.global.auth.jwt.IdTokenVerifiers;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
 import com.lingring.global.error.exception.NotFoundException;
-import com.lingring.global.error.exception.UnauthorizedException;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,62 +21,33 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private final IdTokenVerifier idTokenVerifier;
+    private final IdTokenVerifiers idTokenVerifiers;
     private final UserRepository userRepository;
-    private final JwtProvider jwtProvider;
-    private final RefreshTokenRepository refreshTokenRepository;
+    private final TokenIssuer tokenIssuer;
 
     public AuthTokenResponse socialLogin(final SocialLoginRequest request) {
-        validateRequest(request);
-        final Provider provider = parseProvider(request.provider());
-        if (provider != Provider.KAKAO) {
-            throw new BadRequestException(
-                    ErrorCode.NOT_SUPPORTED,
-                    "지원하지 않는 provider입니다: %s".formatted(request.provider())
-            );
-        }
-
-        final String providerUserId = idTokenVerifier.verify(request.idToken());
-
+        final Provider provider = Provider.from(request.provider());
+        final IdTokenVerifier verifier = idTokenVerifiers.resolve(provider);
+        final String providerUserId = verifier.verify(request.idToken());
         final User user = userRepository.findByProviderAndProviderUserId(provider, providerUserId)
                 .orElseGet(() -> registerNewUser(provider, providerUserId, request.nickname()));
 
-        return issueTokens(user);
+        final TokenIssuance issued = tokenIssuer.issueFor(user.getId());
+        return AuthTokenResponse.of(issued.accessToken(), issued.refreshToken(), user);
     }
 
     public AuthTokenResponse refresh(final String refreshToken) {
-        final Long userId = jwtProvider.parseRefreshToken(refreshToken);
-        final String storedHash = refreshTokenRepository.findByUserId(userId)
-                .orElseThrow(() -> new UnauthorizedException(
-                        ErrorCode.INVALID_TOKEN,
-                        "저장된 refresh token이 없습니다. 다시 로그인하세요."
-                ));
-
-        if (!hashOf(refreshToken).equals(storedHash)) {
-            refreshTokenRepository.deleteByUserId(userId);
-            throw new UnauthorizedException(
-                    ErrorCode.INVALID_TOKEN,
-                    "이미 갱신된 refresh token입니다. 보안을 위해 모든 세션을 무효화했습니다."
-            );
-        }
-
-        final User user = userRepository.findById(userId)
+        final TokenIssuance rotated = tokenIssuer.rotate(refreshToken);
+        final User user = userRepository.findById(rotated.userId())
                 .orElseThrow(() -> new NotFoundException(
                         ErrorCode.USER_NOT_FOUND,
-                        "ID가 %d인 사용자를 찾을 수 없습니다.".formatted(userId)
+                        "ID가 %d인 사용자를 찾을 수 없습니다.".formatted(rotated.userId())
                 ));
-
-        return issueTokens(user);
+        return AuthTokenResponse.of(rotated.accessToken(), rotated.refreshToken(), user);
     }
 
     public void logout(final Long userId) {
-        refreshTokenRepository.deleteByUserId(userId);
-    }
-
-    private void validateRequest(final SocialLoginRequest request) {
-        if (request.idToken() == null || request.idToken().isBlank()) {
-            throw new BadRequestException(ErrorCode.INVALID_INPUT_VALUE, "idToken이 비어있습니다.");
-        }
+        tokenIssuer.invalidate(userId);
     }
 
     private User registerNewUser(
@@ -102,35 +67,5 @@ public class AuthService {
         }
         final User user = User.createFromOAuth(provider, providerUserId, name, null);
         return userRepository.save(user);
-    }
-
-    private AuthTokenResponse issueTokens(final User user) {
-        final String access = jwtProvider.issueAccessToken(user.getId());
-        final String refresh = jwtProvider.issueRefreshToken(user.getId());
-        refreshTokenRepository.save(user.getId(), hashOf(refresh));
-        return AuthTokenResponse.of(access, refresh, user);
-    }
-
-    private static Provider parseProvider(final String provider) {
-        if (provider == null || provider.isBlank()) {
-            throw new BadRequestException(ErrorCode.INVALID_INPUT_VALUE, "provider가 비어있습니다.");
-        }
-        try {
-            return Provider.valueOf(provider.toUpperCase());
-        } catch (final IllegalArgumentException ex) {
-            throw new BadRequestException(
-                    ErrorCode.NOT_SUPPORTED,
-                    "지원하지 않는 provider입니다: %s".formatted(provider)
-            );
-        }
-    }
-
-    private static String hashOf(final String token) {
-        try {
-            final MessageDigest md = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(md.digest(token.getBytes(StandardCharsets.UTF_8)));
-        } catch (final NoSuchAlgorithmException ex) {
-            throw new IllegalStateException("SHA-256 not available", ex);
-        }
     }
 }

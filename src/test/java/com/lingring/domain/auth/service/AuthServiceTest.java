@@ -12,11 +12,13 @@ import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.global.auth.jwt.IdTokenVerifier;
+import com.lingring.global.auth.jwt.IdTokenVerifiers;
 import com.lingring.global.auth.jwt.JwtProvider;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
 import com.lingring.global.error.exception.UnauthorizedException;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -50,13 +52,23 @@ class AuthServiceTest extends ServiceIntegrationHelper {
 
         @Bean
         @Primary
-        public IdTokenVerifier stubIdTokenVerifier() {
-            return idToken -> {
+        public IdTokenVerifiers stubIdTokenVerifiers() {
+            final IdTokenVerifier kakao = idToken -> {
                 if (INVALID_ID_TOKEN.equals(idToken)) {
                     throw new UnauthorizedException(ErrorCode.INVALID_ID_TOKEN, "test stub: invalid");
                 }
                 return "kakao-sub-of:" + idToken;
             };
+            final IdTokenVerifier apple = idToken -> {
+                if (INVALID_ID_TOKEN.equals(idToken)) {
+                    throw new UnauthorizedException(ErrorCode.INVALID_ID_TOKEN, "test stub: invalid");
+                }
+                return "apple-sub-of:" + idToken;
+            };
+            return new IdTokenVerifiers(Map.of(
+                    Provider.KAKAO, kakao,
+                    Provider.APPLE, apple
+            ));
         }
     }
 
@@ -82,7 +94,7 @@ class AuthServiceTest extends ServiceIntegrationHelper {
             assertThat(userRepository.findByProviderAndProviderUserId(
                     Provider.KAKAO, "kakao-sub-of:" + VALID_ID_TOKEN
             )).isPresent();
-            assertThat(refreshTokenRepository.findByUserId(response.user().id())).isPresent();
+            assertThat(refreshTokenRepository.exists(response.user().id())).isTrue();
         }
 
         @Test
@@ -136,7 +148,86 @@ class AuthServiceTest extends ServiceIntegrationHelper {
 
             // then
             assertThat(response.user().nickname()).isEqualTo("링링이");
-            assertThat(refreshTokenRepository.findByUserId(response.user().id())).isPresent();
+            assertThat(refreshTokenRepository.exists(response.user().id())).isTrue();
+        }
+    }
+
+    @Nested
+    @DisplayName("socialLogin: Apple provider")
+    class SocialLoginApple {
+
+        @Test
+        @DisplayName("APPLE 신규 사용자는 nickname으로 가입되고 토큰을 받는다")
+        void socialLogin_whenAppleNewUserWithNickname_createsUserAndIssuesTokens() {
+            // given
+            final SocialLoginRequest request = new SocialLoginRequest(
+                    "apple", VALID_ID_TOKEN, null, "애플유저"
+            );
+
+            // when
+            final AuthTokenResponse response = authService.socialLogin(request);
+
+            // then
+            assertThat(response.accessToken()).isNotBlank();
+            assertThat(response.refreshToken()).isNotBlank();
+            assertThat(response.user().nickname()).isEqualTo("애플유저");
+            assertThat(userRepository.findByProviderAndProviderUserId(
+                    Provider.APPLE, "apple-sub-of:" + VALID_ID_TOKEN
+            )).isPresent();
+        }
+
+        @Test
+        @DisplayName("APPLE 기존 사용자는 nickname 없이도 토큰을 받는다")
+        void socialLogin_whenAppleExistingUser_returnsTokensWithoutNickname() {
+            // given — 사전 가입
+            authService.socialLogin(new SocialLoginRequest("apple", VALID_ID_TOKEN, null, "애플유저"));
+
+            // when
+            final AuthTokenResponse response = authService.socialLogin(
+                    new SocialLoginRequest("apple", VALID_ID_TOKEN, null, null)
+            );
+
+            // then
+            assertThat(response.user().nickname()).isEqualTo("애플유저");
+            assertThat(refreshTokenRepository.exists(response.user().id())).isTrue();
+        }
+
+        @Test
+        @DisplayName("APPLE id_token이 invalid면 UnauthorizedException이 전파된다")
+        void socialLogin_whenAppleIdTokenInvalid_propagatesUnauthorized() {
+            // given
+            final SocialLoginRequest request = new SocialLoginRequest(
+                    "apple", INVALID_ID_TOKEN, null, "애플유저"
+            );
+
+            // when & then
+            assertThatThrownBy(() -> authService.socialLogin(request))
+                    .isInstanceOf(UnauthorizedException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.INVALID_ID_TOKEN);
+        }
+
+        @Test
+        @DisplayName("같은 sub라도 provider가 다르면 별도의 사용자로 분리된다")
+        void socialLogin_whenSameSubDifferentProvider_createsSeparateUsers() {
+            // given — 카카오로 먼저 가입
+            final AuthTokenResponse kakaoResponse = authService.socialLogin(
+                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "카카오유저")
+            );
+
+            // when — 애플로 가입 (다른 nickname 필요 — name unique 제약)
+            final AuthTokenResponse appleResponse = authService.socialLogin(
+                    new SocialLoginRequest("apple", VALID_ID_TOKEN, null, "애플유저")
+            );
+
+            // then
+            assertThat(appleResponse.user().id()).isNotEqualTo(kakaoResponse.user().id());
+            assertThat(userRepository.findByProviderAndProviderUserId(
+                    Provider.KAKAO, "kakao-sub-of:" + VALID_ID_TOKEN
+            )).isPresent();
+            assertThat(userRepository.findByProviderAndProviderUserId(
+                    Provider.APPLE, "apple-sub-of:" + VALID_ID_TOKEN
+            )).isPresent();
         }
     }
 
@@ -157,21 +248,6 @@ class AuthServiceTest extends ServiceIntegrationHelper {
                     .isInstanceOf(BadRequestException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.NOT_SUPPORTED);
-        }
-
-        @Test
-        @DisplayName("idToken이 비어있으면 INVALID_INPUT_VALUE 예외가 발생한다")
-        void socialLogin_whenIdTokenBlank_throwsInvalidInputValue() {
-            // given
-            final SocialLoginRequest request = new SocialLoginRequest(
-                    "kakao", "", null, "닉네임"
-            );
-
-            // when & then
-            assertThatThrownBy(() -> authService.socialLogin(request))
-                    .isInstanceOf(BadRequestException.class)
-                    .extracting("errorCode")
-                    .isEqualTo(ErrorCode.INVALID_INPUT_VALUE);
         }
 
         @Test
@@ -208,7 +284,7 @@ class AuthServiceTest extends ServiceIntegrationHelper {
             // then
             assertThat(second.accessToken()).isNotBlank();
             assertThat(second.refreshToken()).isNotEqualTo(first.refreshToken());
-            assertThat(refreshTokenRepository.findByUserId(first.user().id())).isPresent();
+            assertThat(refreshTokenRepository.exists(first.user().id())).isTrue();
         }
 
         @Test
@@ -225,7 +301,7 @@ class AuthServiceTest extends ServiceIntegrationHelper {
                     .isInstanceOf(UnauthorizedException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.INVALID_TOKEN);
-            assertThat(refreshTokenRepository.findByUserId(first.user().id())).isEmpty();
+            assertThat(refreshTokenRepository.exists(first.user().id())).isFalse();
         }
 
         @Test
@@ -271,13 +347,13 @@ class AuthServiceTest extends ServiceIntegrationHelper {
             final AuthTokenResponse response = authService.socialLogin(
                     new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이")
             );
-            assertThat(refreshTokenRepository.findByUserId(response.user().id())).isPresent();
+            assertThat(refreshTokenRepository.exists(response.user().id())).isTrue();
 
             // when
             authService.logout(response.user().id());
 
             // then
-            assertThat(refreshTokenRepository.findByUserId(response.user().id())).isEmpty();
+            assertThat(refreshTokenRepository.exists(response.user().id())).isFalse();
         }
 
         @Test
