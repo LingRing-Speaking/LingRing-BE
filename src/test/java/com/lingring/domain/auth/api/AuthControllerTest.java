@@ -6,20 +6,25 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import com.lingring.domain.auth.dto.request.RefreshRequest;
 import com.lingring.domain.auth.dto.request.SocialLoginRequest;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse.UserSummary;
+import com.lingring.domain.auth.dto.response.MeResponse;
+import com.lingring.domain.auth.dto.response.TokenPairResponse;
 import com.lingring.domain.auth.service.AuthService;
 import com.lingring.global.auth.context.AuthContext;
+import com.lingring.global.error.ErrorCode;
+import com.lingring.global.error.exception.UnauthorizedException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -127,37 +132,88 @@ class AuthControllerTest {
     class Refresh {
 
         @Test
-        @DisplayName("Bearer 헤더의 refresh token으로 갱신을 위임하고 200을 반환한다")
-        void refresh_whenValidBearerHeader_delegatesToService() throws Exception {
+        @DisplayName("body의 refresh token으로 갱신을 위임하고 200과 새 토큰 쌍을 반환한다")
+        void refresh_whenValidBody_delegatesToService() throws Exception {
             // given
             final String refreshToken = "old-refresh-jwt";
             given(authService.refresh(eq(refreshToken))).willReturn(
-                    new AuthTokenResponse(
-                            "new-access",
-                            "new-refresh",
-                            new UserSummary(42L, "링링이", null)
-                    )
+                    new TokenPairResponse("new-access", "new-refresh")
             );
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(post("/auth/refresh")
-                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + refreshToken))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new RefreshRequest(refreshToken))))
                     .andReturn()
                     .getResponse();
 
             // then
             assertThat(response.getStatus()).isEqualTo(200);
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("data").get("accessToken").asText()).isEqualTo("new-access");
+            assertThat(body.get("data").get("refreshToken").asText()).isEqualTo("new-refresh");
+            assertThat(body.get("data").has("user")).isFalse();
             then(authService).should().refresh(refreshToken);
         }
 
         @Test
-        @DisplayName("Authorization 헤더가 없으면 service를 호출하지 않는다")
-        void refresh_whenNoHeader_doesNotCallService() throws Exception {
+        @DisplayName("refreshToken이 비어있으면 @Valid가 차단하고 service를 호출하지 않는다")
+        void refresh_whenRefreshTokenBlank_rejectedByValidation() throws Exception {
             // when
-            mockMvc.perform(post("/auth/refresh"));
+            final MockHttpServletResponse response = mockMvc.perform(post("/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new RefreshRequest(""))))
+                    .andReturn()
+                    .getResponse();
 
             // then
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("status").asInt()).isEqualTo(400);
             then(authService).should(never()).refresh(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /auth/me")
+    class Me {
+
+        @Test
+        @DisplayName("AuthContext의 userId로 me를 호출하고 200과 id/nickname을 반환한다")
+        void me_whenAuthenticated_returnsIdAndNickname() throws Exception {
+            // given
+            AuthContext.set(42L);
+            given(authService.me(42L)).willReturn(new MeResponse(42L, "링링이"));
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(get("/auth/me"))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            assertThat(response.getStatus()).isEqualTo(200);
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("data").get("id").asLong()).isEqualTo(42L);
+            assertThat(body.get("data").get("nickname").asText()).isEqualTo("링링이");
+            then(authService).should().me(42L);
+        }
+
+        @Test
+        @DisplayName("service가 INVALID_TOKEN을 던지면 응답 body의 status는 401이다")
+        void me_whenServiceThrowsInvalidToken_returns401InBody() throws Exception {
+            // given
+            AuthContext.set(9_999_999L);
+            given(authService.me(9_999_999L)).willThrow(
+                    new UnauthorizedException(ErrorCode.INVALID_TOKEN, "test stub")
+            );
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(get("/auth/me"))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("status").asInt()).isEqualTo(401);
         }
     }
 
