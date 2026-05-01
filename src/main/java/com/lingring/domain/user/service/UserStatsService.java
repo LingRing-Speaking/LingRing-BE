@@ -10,12 +10,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class UserStatsService {
 
     private final UserStatsRepository userStatsRepository;
 
+    @Transactional(readOnly = true)
     public UserStatsResponse getByUserId(final Long userId) {
         final UserStats userStats = userStatsRepository.findByUserId(userId)
                 .orElseThrow(() -> new NotFoundException(
