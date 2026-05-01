@@ -15,13 +15,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class RecommendedExpressionService {
 
     private final RecommendedExpressionRepository recommendedExpressionRepository;
     private final DateTimeProvider dateTimeProvider;
 
+    @Transactional(readOnly = true)
     public RecommendedExpressionResponse getDaily() {
         final long count = recommendedExpressionRepository.count();
         if (count == 0L) {

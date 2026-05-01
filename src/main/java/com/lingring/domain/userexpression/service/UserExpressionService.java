@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class UserExpressionService {
 
@@ -30,6 +29,7 @@ public class UserExpressionService {
         return UserExpressionResponse.from(saved);
     }
 
+    @Transactional(readOnly = true)
     public UserExpressionListResponse getAllByUserId(final Long userId, final int page, final int size) {
         final PageSize pageSize = PageSize.clamp(size);
         final Slice<UserExpression> slice = userExpressionRepository
