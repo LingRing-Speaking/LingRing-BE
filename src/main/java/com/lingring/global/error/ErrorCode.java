@@ -1,5 +1,6 @@
 package com.lingring.global.error;
 
+import static org.springframework.http.HttpStatus.BAD_GATEWAY;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
@@ -24,6 +25,13 @@ public enum ErrorCode {
     UNAUTHORIZED_ERROR(UNAUTHORIZED, "인증이 필요합니다. 로그인 후 다시 시도해주세요."),
     FORBIDDEN_ERROR(FORBIDDEN, "접근 권한이 없습니다."),
     LOGIN_INVALID_CREDENTIALS(BAD_REQUEST, "아이디 또는 비밀번호가 일치하지 않습니다."),
+
+    // Auth Error
+    INVALID_TOKEN(UNAUTHORIZED, "유효하지 않은 인증 토큰입니다."),
+    INVALID_ID_TOKEN(UNAUTHORIZED, "유효하지 않은 IdP 토큰입니다."),
+    IDP_UNAVAILABLE(BAD_GATEWAY, "IdP 인증 서버 통신에 실패했습니다. 잠시 후 다시 시도해주세요."),
+    NICKNAME_CONFLICT(CONFLICT, "이미 사용 중인 닉네임입니다."),
+    NICKNAME_REQUIRED(BAD_REQUEST, "신규 가입 시 nickname은 필수입니다."),
 
     // User Error
     INVALID_USER_NAME(BAD_REQUEST, "유효하지 않은 사용자 이름입니다."),

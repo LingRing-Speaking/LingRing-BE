@@ -17,6 +17,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     private static final String[] ALLOWED_ORIGIN_PATTERNS = {
             "http://localhost:5173",
+            "http://localhost:4173",
+            "capacitor://*",
             "https://lingring.site",
             "https://dev-lingring.site",
             "http://dev-lingring.site"

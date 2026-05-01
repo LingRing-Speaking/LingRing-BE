@@ -39,14 +39,32 @@ class NameTest {
     }
 
     @Test
-    @DisplayName("trim 후 길이가 15자를 초과하면 예외가 발생한다")
+    @DisplayName("trim 후 길이가 30자를 초과하면 예외가 발생한다")
     void rejectTooLong() {
-        final String tooLong = "a".repeat(16);
+        final String tooLong = "a".repeat(31);
 
         assertThatThrownBy(() -> new Name(tooLong))
             .isInstanceOf(InvalidValueException.class)
             .extracting("errorCode")
             .isEqualTo(ErrorCode.INVALID_USER_NAME);
+    }
+
+    @Test
+    @DisplayName("최대 길이(30자) 이름은 생성된다")
+    void acceptMaxLength() {
+        final String thirtyChars = "a".repeat(30);
+
+        final Name name = new Name(thirtyChars);
+
+        assertThat(name.getValue()).isEqualTo(thirtyChars);
+    }
+
+    @Test
+    @DisplayName("FE 랜덤 닉네임 형식(예: funny-otter-7891, 16자)이 허용된다")
+    void acceptFeNicknameFormat() {
+        final Name name = new Name("funny-otter-7891");
+
+        assertThat(name.getValue()).isEqualTo("funny-otter-7891");
     }
 
     @Test
