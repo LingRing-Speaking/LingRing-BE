@@ -4,6 +4,7 @@ import com.lingring.domain.auth.dto.request.RefreshRequest;
 import com.lingring.domain.auth.dto.request.SocialLoginRequest;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse;
 import com.lingring.domain.auth.dto.response.TokenPairResponse;
+import com.lingring.domain.auth.facade.SocialLoginFacade;
 import com.lingring.domain.auth.service.AuthService;
 import com.lingring.global.common.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -15,10 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController implements AuthApi {
 
     private final AuthService authService;
+    private final SocialLoginFacade socialLoginFacade;
 
     @Override
     public ApiResponse<AuthTokenResponse> socialLogin(final SocialLoginRequest request) {
-        return ApiResponse.success(HttpStatus.OK, authService.socialLogin(request));
+        return ApiResponse.success(HttpStatus.OK, socialLoginFacade.socialLogin(request));
     }
 
     @Override

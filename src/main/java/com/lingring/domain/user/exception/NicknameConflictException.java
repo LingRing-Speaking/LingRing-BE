@@ -1,4 +1,4 @@
-package com.lingring.domain.auth.exception;
+package com.lingring.domain.user.exception;
 
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.DomainException;
