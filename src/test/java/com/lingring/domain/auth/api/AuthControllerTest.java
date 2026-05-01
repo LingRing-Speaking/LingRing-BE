@@ -78,6 +78,48 @@ class AuthControllerTest {
             assertThat(body.get("data").get("user").get("id").asLong()).isEqualTo(42L);
             assertThat(body.get("data").get("user").get("nickname").asText()).isEqualTo("링링이");
         }
+
+        @Test
+        @DisplayName("idToken이 비어있으면 @Valid가 차단하고 service를 호출하지 않는다")
+        void socialLogin_whenIdTokenBlank_rejectedByValidation() throws Exception {
+            // given
+            final SocialLoginRequest request = new SocialLoginRequest(
+                    "kakao", "", null, "링링이"
+            );
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(post("/auth/social")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("status").asInt()).isEqualTo(400);
+            then(authService).should(never()).socialLogin(any());
+        }
+
+        @Test
+        @DisplayName("idToken이 누락되면 @Valid가 차단하고 service를 호출하지 않는다")
+        void socialLogin_whenIdTokenMissing_rejectedByValidation() throws Exception {
+            // given — idToken=null
+            final SocialLoginRequest request = new SocialLoginRequest(
+                    "kakao", null, null, "링링이"
+            );
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(post("/auth/social")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("status").asInt()).isEqualTo(400);
+            then(authService).should(never()).socialLogin(any());
+        }
     }
 
     @Nested

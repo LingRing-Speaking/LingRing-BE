@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,7 +50,7 @@ public interface AuthApi {
     @ResponseStatus(HttpStatus.OK)
     @PostMapping("/auth/social")
     ApiResponse<AuthTokenResponse> socialLogin(
-            @RequestBody final SocialLoginRequest request
+            @Valid @RequestBody final SocialLoginRequest request
     );
 
     @Operation(
