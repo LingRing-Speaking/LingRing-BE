@@ -1,12 +1,12 @@
 package com.lingring.domain.auth.dao;
 
-import java.util.Optional;
-
 public interface RefreshTokenRepository {
 
-    void save(Long userId, String tokenHash);
+    void save(Long userId, String refreshToken);
 
-    Optional<String> findByUserId(Long userId);
+    boolean exists(Long userId);
+
+    boolean matches(Long userId, String refreshToken);
 
     void deleteByUserId(Long userId);
 }

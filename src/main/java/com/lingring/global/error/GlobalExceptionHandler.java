@@ -9,6 +9,7 @@ import com.lingring.global.error.exception.InvalidValueException;
 import com.lingring.global.error.exception.NotFoundException;
 import com.lingring.global.error.exception.UnauthorizedException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -20,6 +21,12 @@ public class GlobalExceptionHandler {
     public ApiResponse<Void> handleBadRequestException(final BadRequestException e) {
         log.info(e.getMessage());
         return ApiResponse.error(e.getErrorCode());
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ApiResponse<Void> handleMethodArgumentNotValidException(final MethodArgumentNotValidException e) {
+        log.info("Validation failed: {}", e.getMessage());
+        return ApiResponse.error(ErrorCode.INVALID_INPUT_VALUE);
     }
 
     @ExceptionHandler(UnauthorizedException.class)
