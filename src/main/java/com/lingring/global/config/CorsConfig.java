@@ -9,7 +9,9 @@ public class CorsConfig implements WebMvcConfigurer {
 
     private static final String[] ALLOWED_ORIGIN_PATTERNS = {
             "http://localhost:5173",
+            "http://localhost:4173",
             "https://lingring.site",
+            "capacitor://*",
             "https://dev-lingring.site",
             "http://dev-lingring.site"
     };
