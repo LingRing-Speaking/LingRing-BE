@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.lingring.domain.auth.dao.RefreshTokenRepository;
 import com.lingring.domain.auth.dto.request.SocialLoginRequest;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse;
+import com.lingring.domain.auth.dto.response.MeResponse;
+import com.lingring.domain.auth.dto.response.TokenPairResponse;
 import com.lingring.domain.auth.exception.NicknameConflictException;
 import com.lingring.domain.user.dao.UserRepository;
 import com.lingring.domain.user.domain.Provider;
@@ -279,12 +281,29 @@ class AuthServiceTest extends ServiceIntegrationHelper {
             );
 
             // when
-            final AuthTokenResponse second = authService.refresh(first.refreshToken());
+            final TokenPairResponse second = authService.refresh(first.refreshToken());
 
             // then
             assertThat(second.accessToken()).isNotBlank();
             assertThat(second.refreshToken()).isNotEqualTo(first.refreshToken());
             assertThat(refreshTokenRepository.exists(first.user().id())).isTrue();
+        }
+
+        @Test
+        @DisplayName("토큰은 유효하지만 사용자가 삭제됐다면 INVALID_TOKEN을 던지고 세션을 무효화한다")
+        void refresh_whenUserDeleted_throwsInvalidTokenAndInvalidates() {
+            // given
+            final AuthTokenResponse first = authService.socialLogin(
+                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이")
+            );
+            userRepository.deleteById(first.user().id());
+
+            // when & then
+            assertThatThrownBy(() -> authService.refresh(first.refreshToken()))
+                    .isInstanceOf(UnauthorizedException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.INVALID_TOKEN);
+            assertThat(refreshTokenRepository.exists(first.user().id())).isFalse();
         }
 
         @Test
@@ -364,6 +383,40 @@ class AuthServiceTest extends ServiceIntegrationHelper {
 
             // when & then — should not throw
             authService.logout(unknownUserId);
+        }
+    }
+
+    @Nested
+    @DisplayName("me: 내 정보 조회")
+    class Me {
+
+        @Test
+        @DisplayName("기존 사용자는 id와 nickname을 반환한다")
+        void me_whenUserExists_returnsIdAndNickname() {
+            // given
+            final AuthTokenResponse signup = authService.socialLogin(
+                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이")
+            );
+
+            // when
+            final MeResponse response = authService.me(signup.user().id());
+
+            // then
+            assertThat(response.id()).isEqualTo(signup.user().id());
+            assertThat(response.nickname()).isEqualTo("링링이");
+        }
+
+        @Test
+        @DisplayName("사용자가 존재하지 않으면 INVALID_TOKEN을 던진다 (401)")
+        void me_whenUserNotFound_throwsInvalidToken() {
+            // given
+            final Long unknownUserId = 9_999_999L;
+
+            // when & then
+            assertThatThrownBy(() -> authService.me(unknownUserId))
+                    .isInstanceOf(UnauthorizedException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.INVALID_TOKEN);
         }
     }
 }

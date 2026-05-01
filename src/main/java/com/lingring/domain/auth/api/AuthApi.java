@@ -1,23 +1,23 @@
 package com.lingring.domain.auth.api;
 
+import com.lingring.domain.auth.dto.request.RefreshRequest;
 import com.lingring.domain.auth.dto.request.SocialLoginRequest;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse;
+import com.lingring.domain.auth.dto.response.MeResponse;
+import com.lingring.domain.auth.dto.response.TokenPairResponse;
 import com.lingring.global.auth.annotation.AuthUser;
-import com.lingring.global.auth.annotation.RefreshToken;
 import com.lingring.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
-@Tag(name = "Auth", description = "소셜 로그인·토큰 갱신·로그아웃 API")
+@Tag(name = "Auth", description = "소셜 로그인·토큰 갱신·로그아웃·내 정보 조회 API")
 public interface AuthApi {
 
     @Operation(
@@ -55,7 +55,7 @@ public interface AuthApi {
 
     @Operation(
             summary = "토큰 갱신",
-            description = "Authorization 헤더의 refresh token으로 신규 access/refresh 토큰 쌍을 발급한다 (회전)."
+            description = "요청 body의 refresh token으로 신규 access/refresh 토큰 쌍을 발급한다 (1회용 회전, stale 재사용 시 전체 세션 무효화)."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -64,20 +64,18 @@ public interface AuthApi {
                     useReturnTypeSchema = true
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    ref = "#/components/responses/BadRequest"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "401",
                     ref = "#/components/responses/Unauthorized"
             )
     })
     @ResponseStatus(HttpStatus.OK)
     @PostMapping("/auth/refresh")
-    ApiResponse<AuthTokenResponse> refresh(
-            @Parameter(
-                    in = ParameterIn.HEADER,
-                    name = HttpHeaders.AUTHORIZATION,
-                    required = true,
-                    description = "Bearer <refreshToken>"
-            )
-            @RefreshToken final String refreshToken
+    ApiResponse<TokenPairResponse> refresh(
+            @Valid @RequestBody final RefreshRequest request
     );
 
     @Operation(
@@ -97,6 +95,27 @@ public interface AuthApi {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PostMapping("/auth/logout")
     ApiResponse<Void> logout(
+            @AuthUser final Long userId
+    );
+
+    @Operation(
+            summary = "내 정보 조회",
+            description = "Access token 유효성 검증과 함께 소유자 정보(id, nickname)를 반환한다. FE 부팅 시 자동 로그인 흐름에서 사용."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "조회 성공",
+                    useReturnTypeSchema = true
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    ref = "#/components/responses/Unauthorized"
+            )
+    })
+    @ResponseStatus(HttpStatus.OK)
+    @GetMapping("/auth/me")
+    ApiResponse<MeResponse> me(
             @AuthUser final Long userId
     );
 }

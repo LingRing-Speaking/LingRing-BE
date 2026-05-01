@@ -16,9 +16,13 @@ public class LocalSessionRegistry {
 
     public void register(final Long userId, final WebSocketSession session) {
         final WebSocketSession previous = sessionsByUserId.put(userId, session);
-        if (previous != null && previous != session) {
+        if (hasDifferentPreviousSession(session, previous)) {
             closeQuietly(previous);
         }
+    }
+
+    private static boolean hasDifferentPreviousSession(final WebSocketSession session, final WebSocketSession previous) {
+        return previous != null && previous != session;
     }
 
     public boolean unregister(final Long userId, final WebSocketSession session) {
