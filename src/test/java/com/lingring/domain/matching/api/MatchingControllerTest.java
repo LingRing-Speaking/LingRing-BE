@@ -10,7 +10,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import com.lingring.domain.matching.dto.response.MatchingStatusResponse;
 import com.lingring.domain.matching.service.MatchingService;
+import com.lingring.global.auth.context.AuthContext;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -37,8 +39,13 @@ class MatchingControllerTest {
     @MockitoBean
     private MatchingService matchingService;
 
+    @AfterEach
+    void clearAuthContext() {
+        AuthContext.clear();
+    }
+
     @Nested
-    @DisplayName("POST /users/{userId}/matching")
+    @DisplayName("POST /api/v1/me/matching")
     class EnterQueue {
 
         @Test
@@ -46,11 +53,12 @@ class MatchingControllerTest {
         void enterQueue_returns204() throws Exception {
             // given
             final Long userId = 1L;
+            AuthContext.set(userId);
             willDoNothing().given(matchingService).enterQueue(userId);
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/users/{userId}/matching", userId))
+                            post("/api/v1/me/matching"))
                     .andReturn()
                     .getResponse();
 
@@ -61,7 +69,7 @@ class MatchingControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /users/{userId}/matching")
+    @DisplayName("GET /api/v1/me/matching")
     class GetStatus {
 
         @Test
@@ -69,12 +77,13 @@ class MatchingControllerTest {
         void getStatus_whenMatched_returnsMatched() throws Exception {
             // given
             final Long userId = 1L;
+            AuthContext.set(userId);
             given(matchingService.getStatus(userId))
                     .willReturn(MatchingStatusResponse.matched(2L, ROOM_ID));
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            get("/users/{userId}/matching", userId)
+                            get("/api/v1/me/matching")
                                     .accept(MediaType.APPLICATION_JSON))
                     .andReturn()
                     .getResponse();
@@ -92,12 +101,13 @@ class MatchingControllerTest {
         void getStatus_whenNone_returnsNone() throws Exception {
             // given
             final Long userId = 1L;
+            AuthContext.set(userId);
             given(matchingService.getStatus(userId))
                     .willReturn(MatchingStatusResponse.none());
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            get("/users/{userId}/matching", userId)
+                            get("/api/v1/me/matching")
                                     .accept(MediaType.APPLICATION_JSON))
                     .andReturn()
                     .getResponse();
@@ -110,7 +120,7 @@ class MatchingControllerTest {
     }
 
     @Nested
-    @DisplayName("DELETE /users/{userId}/matching")
+    @DisplayName("DELETE /api/v1/me/matching")
     class LeaveQueue {
 
         @Test
@@ -118,11 +128,12 @@ class MatchingControllerTest {
         void leaveQueue_returns204() throws Exception {
             // given
             final Long userId = 1L;
+            AuthContext.set(userId);
             willDoNothing().given(matchingService).leaveQueue(userId);
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            delete("/users/{userId}/matching", userId))
+                            delete("/api/v1/me/matching"))
                     .andReturn()
                     .getResponse();
 

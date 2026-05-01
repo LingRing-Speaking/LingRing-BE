@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.lingring.domain.auth.dao.RefreshTokenRepository;
 import com.lingring.domain.auth.dto.request.SocialLoginRequest;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse;
-import com.lingring.domain.auth.dto.response.MeResponse;
 import com.lingring.domain.auth.dto.response.TokenPairResponse;
 import com.lingring.domain.auth.exception.NicknameConflictException;
 import com.lingring.domain.user.dao.UserRepository;
@@ -386,37 +385,4 @@ class AuthServiceTest extends ServiceIntegrationHelper {
         }
     }
 
-    @Nested
-    @DisplayName("me: 내 정보 조회")
-    class Me {
-
-        @Test
-        @DisplayName("기존 사용자는 id와 nickname을 반환한다")
-        void me_whenUserExists_returnsIdAndNickname() {
-            // given
-            final AuthTokenResponse signup = authService.socialLogin(
-                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이")
-            );
-
-            // when
-            final MeResponse response = authService.me(signup.user().id());
-
-            // then
-            assertThat(response.id()).isEqualTo(signup.user().id());
-            assertThat(response.nickname()).isEqualTo("링링이");
-        }
-
-        @Test
-        @DisplayName("사용자가 존재하지 않으면 INVALID_TOKEN을 던진다 (401)")
-        void me_whenUserNotFound_throwsInvalidToken() {
-            // given
-            final Long unknownUserId = 9_999_999L;
-
-            // when & then
-            assertThatThrownBy(() -> authService.me(unknownUserId))
-                    .isInstanceOf(UnauthorizedException.class)
-                    .extracting("errorCode")
-                    .isEqualTo(ErrorCode.INVALID_TOKEN);
-        }
-    }
 }

@@ -5,21 +5,23 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
-import com.lingring.domain.user.dto.response.UserMyResponse;
+import com.lingring.domain.user.dto.response.MeResponse;
 import com.lingring.domain.user.service.UserService;
+import com.lingring.global.auth.context.AuthContext;
 import com.lingring.global.error.ErrorCode;
-import com.lingring.global.error.exception.NotFoundException;
+import com.lingring.global.error.exception.UnauthorizedException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 @WebMvcTest(UserController.class)
 class UserControllerTest {
@@ -33,19 +35,25 @@ class UserControllerTest {
     @MockitoBean
     private UserService userService;
 
+    @AfterEach
+    void clearAuthContext() {
+        AuthContext.clear();
+    }
+
     @Nested
-    @DisplayName("GET /users/{userId}/my")
-    class GetMy {
+    @DisplayName("GET /me")
+    class GetMe {
 
         @Test
-        @DisplayName("사용자가 존재하면 200 응답과 id, name을 반환한다")
-        void getMy_whenUserExists_returns200WithBody() throws Exception {
+        @DisplayName("사용자가 존재하면 200 응답과 id, nickname을 반환한다")
+        void getMe_whenUserExists_returns200WithBody() throws Exception {
             // given
             final Long userId = 1L;
-            given(userService.getMy(userId)).willReturn(new UserMyResponse(userId, "링링"));
+            AuthContext.set(userId);
+            given(userService.getMe(userId)).willReturn(new MeResponse(userId, "링링"));
 
             // when
-            final MockHttpServletResponse response = mockMvc.perform(get("/users/{userId}/my", userId)
+            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/me")
                             .accept(MediaType.APPLICATION_JSON))
                     .andReturn()
                     .getResponse();
@@ -55,29 +63,30 @@ class UserControllerTest {
             final JsonNode body = objectMapper.readTree(response.getContentAsString());
             assertThat(body.get("status").asInt()).isEqualTo(200);
             assertThat(body.get("data").get("id").asLong()).isEqualTo(userId);
-            assertThat(body.get("data").get("name").asText()).isEqualTo("링링");
+            assertThat(body.get("data").get("nickname").asText()).isEqualTo("링링");
         }
 
         @Test
-        @DisplayName("사용자가 없으면 USER_NOT_FOUND 에러 메시지를 body에 담아 반환한다")
-        void getMy_whenUserNotFound_returnsErrorMessage() throws Exception {
+        @DisplayName("사용자가 없으면 INVALID_TOKEN 에러 메시지를 body에 담아 401로 반환한다")
+        void getMe_whenUserNotFound_returnsErrorMessage() throws Exception {
             // given
             final Long userId = 999L;
-            willThrow(new NotFoundException(
-                    ErrorCode.USER_NOT_FOUND,
-                    "ID가 %d인 사용자를 찾을 수 없습니다.".formatted(userId)
-            )).given(userService).getMy(userId);
+            AuthContext.set(userId);
+            willThrow(new UnauthorizedException(
+                    ErrorCode.INVALID_TOKEN,
+                    "토큰 소유자를 찾을 수 없습니다. 다시 로그인하세요."
+            )).given(userService).getMe(userId);
 
             // when
-            final MockHttpServletResponse response = mockMvc.perform(get("/users/{userId}/my", userId)
+            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/me")
                             .accept(MediaType.APPLICATION_JSON))
                     .andReturn()
                     .getResponse();
 
             // then
             final JsonNode body = objectMapper.readTree(response.getContentAsString());
-            assertThat(body.get("status").asInt()).isEqualTo(ErrorCode.USER_NOT_FOUND.getHttpStatus().value());
-            assertThat(body.get("message").asText()).isEqualTo(ErrorCode.USER_NOT_FOUND.getMessage());
+            assertThat(body.get("status").asInt()).isEqualTo(ErrorCode.INVALID_TOKEN.getHttpStatus().value());
+            assertThat(body.get("message").asText()).isEqualTo(ErrorCode.INVALID_TOKEN.getMessage());
         }
     }
 }
