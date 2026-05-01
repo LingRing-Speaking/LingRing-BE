@@ -13,11 +13,14 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String BEARER_PREFIX = "Bearer ";
@@ -45,7 +48,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             final HttpServletResponse response,
             final FilterChain filterChain
     ) throws ServletException, IOException {
-        if (isPublic(request.getRequestURI())) {
+        if (isPreflight(request) || isPublic(request.getRequestURI())) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -55,6 +58,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             AuthContext.set(userId);
             filterChain.doFilter(request, response);
         } catch (final UnauthorizedException ex) {
+            log.warn("[auth] {} {} → 401: {}",
+                    request.getMethod(), request.getRequestURI(), ex.getMessage());
             writeError(response, ex.getErrorCode());
         } finally {
             AuthContext.clear();
@@ -84,5 +89,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private boolean isPublic(final String uri) {
         return PUBLIC_PATHS.stream()
                 .anyMatch(pattern -> antPathMatcher.match(pattern, uri));
+    }
+
+    private boolean isPreflight(final HttpServletRequest request) {
+        return HttpMethod.OPTIONS.matches(request.getMethod());
     }
 }
