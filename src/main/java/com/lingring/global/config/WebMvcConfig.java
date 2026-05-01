@@ -1,4 +1,4 @@
-package com.lingring.global.auth.config;
+package com.lingring.global.config;
 
 import com.lingring.global.auth.resolver.AuthUserArgumentResolver;
 import java.util.List;
@@ -9,7 +9,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 @RequiredArgsConstructor
-public class WebMvcAuthConfig implements WebMvcConfigurer {
+public class WebMvcConfig implements WebMvcConfigurer {
 
     private final AuthUserArgumentResolver authUserArgumentResolver;
 
