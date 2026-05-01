@@ -34,7 +34,7 @@ class UserControllerTest {
     private UserService userService;
 
     @Nested
-    @DisplayName("GET /users/{userId}/my")
+    @DisplayName("GET /api/v1/users/{userId}/my")
     class GetMy {
 
         @Test
@@ -45,7 +45,7 @@ class UserControllerTest {
             given(userService.getMy(userId)).willReturn(new UserMyResponse(userId, "링링"));
 
             // when
-            final MockHttpServletResponse response = mockMvc.perform(get("/users/{userId}/my", userId)
+            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/users/{userId}/my", userId)
                             .accept(MediaType.APPLICATION_JSON))
                     .andReturn()
                     .getResponse();
@@ -69,7 +69,7 @@ class UserControllerTest {
             )).given(userService).getMy(userId);
 
             // when
-            final MockHttpServletResponse response = mockMvc.perform(get("/users/{userId}/my", userId)
+            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/users/{userId}/my", userId)
                             .accept(MediaType.APPLICATION_JSON))
                     .andReturn()
                     .getResponse();

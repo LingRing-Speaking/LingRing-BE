@@ -41,7 +41,7 @@ class UserReportControllerTest {
     private UserReportService userReportService;
 
     @Nested
-    @DisplayName("POST /users/{userId}/reports")
+    @DisplayName("POST /api/v1/users/{userId}/reports")
     class Report {
 
         @Test
@@ -63,7 +63,7 @@ class UserReportControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/users/{userId}/reports", userId)
+                            post("/api/v1/users/{userId}/reports", userId)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -96,7 +96,7 @@ class UserReportControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/users/{userId}/reports", userId)
+                            post("/api/v1/users/{userId}/reports", userId)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -121,7 +121,7 @@ class UserReportControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/users/{userId}/reports", userId)
+                            post("/api/v1/users/{userId}/reports", userId)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -144,7 +144,7 @@ class UserReportControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/users/{userId}/reports", userId)
+                            post("/api/v1/users/{userId}/reports", userId)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -167,7 +167,7 @@ class UserReportControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/users/{userId}/reports", userId)
+                            post("/api/v1/users/{userId}/reports", userId)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -190,7 +190,7 @@ class UserReportControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/users/{userId}/reports", userId)
+                            post("/api/v1/users/{userId}/reports", userId)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request)))
                     .andReturn()

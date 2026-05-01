@@ -35,7 +35,7 @@ class RecommendedExpressionControllerTest {
     private RecommendedExpressionService recommendedExpressionService;
 
     @Nested
-    @DisplayName("GET /recommended-expressions/daily")
+    @DisplayName("GET /api/v1/recommended-expressions/daily")
     class GetDaily {
 
         @Test
@@ -50,7 +50,7 @@ class RecommendedExpressionControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            get("/recommended-expressions/daily")
+                            get("/api/v1/recommended-expressions/daily")
                                     .accept(MediaType.APPLICATION_JSON))
                     .andReturn()
                     .getResponse();
@@ -75,7 +75,7 @@ class RecommendedExpressionControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            get("/recommended-expressions/daily")
+                            get("/api/v1/recommended-expressions/daily")
                                     .accept(MediaType.APPLICATION_JSON))
                     .andReturn()
                     .getResponse();

@@ -38,7 +38,7 @@ class MatchingControllerTest {
     private MatchingService matchingService;
 
     @Nested
-    @DisplayName("POST /users/{userId}/matching")
+    @DisplayName("POST /api/v1/users/{userId}/matching")
     class EnterQueue {
 
         @Test
@@ -50,7 +50,7 @@ class MatchingControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/users/{userId}/matching", userId))
+                            post("/api/v1/users/{userId}/matching", userId))
                     .andReturn()
                     .getResponse();
 
@@ -61,7 +61,7 @@ class MatchingControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /users/{userId}/matching")
+    @DisplayName("GET /api/v1/users/{userId}/matching")
     class GetStatus {
 
         @Test
@@ -74,7 +74,7 @@ class MatchingControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            get("/users/{userId}/matching", userId)
+                            get("/api/v1/users/{userId}/matching", userId)
                                     .accept(MediaType.APPLICATION_JSON))
                     .andReturn()
                     .getResponse();
@@ -97,7 +97,7 @@ class MatchingControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            get("/users/{userId}/matching", userId)
+                            get("/api/v1/users/{userId}/matching", userId)
                                     .accept(MediaType.APPLICATION_JSON))
                     .andReturn()
                     .getResponse();
@@ -110,7 +110,7 @@ class MatchingControllerTest {
     }
 
     @Nested
-    @DisplayName("DELETE /users/{userId}/matching")
+    @DisplayName("DELETE /api/v1/users/{userId}/matching")
     class LeaveQueue {
 
         @Test
@@ -122,7 +122,7 @@ class MatchingControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            delete("/users/{userId}/matching", userId))
+                            delete("/api/v1/users/{userId}/matching", userId))
                     .andReturn()
                     .getResponse();
 

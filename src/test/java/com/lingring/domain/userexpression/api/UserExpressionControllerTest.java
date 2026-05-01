@@ -42,7 +42,7 @@ class UserExpressionControllerTest {
     private UserExpressionService userExpressionService;
 
     @Nested
-    @DisplayName("POST /users/{userId}/expressions")
+    @DisplayName("POST /api/v1/users/{userId}/expressions")
     class Create {
 
         @Test
@@ -59,7 +59,7 @@ class UserExpressionControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/users/{userId}/expressions", userId)
+                            post("/api/v1/users/{userId}/expressions", userId)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -84,7 +84,7 @@ class UserExpressionControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/users/{userId}/expressions", userId)
+                            post("/api/v1/users/{userId}/expressions", userId)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -106,7 +106,7 @@ class UserExpressionControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/users/{userId}/expressions", userId)
+                            post("/api/v1/users/{userId}/expressions", userId)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -128,7 +128,7 @@ class UserExpressionControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/users/{userId}/expressions", userId)
+                            post("/api/v1/users/{userId}/expressions", userId)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -142,7 +142,7 @@ class UserExpressionControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /users/{userId}/expressions")
+    @DisplayName("GET /api/v1/users/{userId}/expressions")
     class GetAll {
 
         @Test
@@ -162,7 +162,7 @@ class UserExpressionControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            get("/users/{userId}/expressions", userId)
+                            get("/api/v1/users/{userId}/expressions", userId)
                                     .param("page", "0")
                                     .param("size", "2")
                                     .accept(MediaType.APPLICATION_JSON))
@@ -189,7 +189,7 @@ class UserExpressionControllerTest {
             );
 
             // when
-            mockMvc.perform(get("/users/{userId}/expressions", userId)
+            mockMvc.perform(get("/api/v1/users/{userId}/expressions", userId)
                     .accept(MediaType.APPLICATION_JSON));
 
             // then
@@ -198,7 +198,7 @@ class UserExpressionControllerTest {
     }
 
     @Nested
-    @DisplayName("DELETE /users/{userId}/expressions/{id}")
+    @DisplayName("DELETE /api/v1/users/{userId}/expressions/{id}")
     class Delete {
 
         @Test
@@ -211,7 +211,7 @@ class UserExpressionControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            delete("/users/{userId}/expressions/{id}", userId, id))
+                            delete("/api/v1/users/{userId}/expressions/{id}", userId, id))
                     .andReturn()
                     .getResponse();
 

@@ -19,7 +19,7 @@ public interface MatchingApi {
     @Operation(
             summary = "매칭 대기열 입장",
             description = "userId의 사용자를 매칭 대기열에 적재한다. 매칭 자체는 백그라운드 워커가 주기적으로 수행하므로, "
-                    + "결과는 GET /users/{userId}/matching 폴링으로 확인한다. 이미 큐에 있어도 입장 시각이 갱신되며 (멱등) 이전 매칭 결과는 클리어된다."
+                    + "결과는 GET /api/v1/users/{userId}/matching 폴링으로 확인한다. 이미 큐에 있어도 입장 시각이 갱신되며 (멱등) 이전 매칭 결과는 클리어된다."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(

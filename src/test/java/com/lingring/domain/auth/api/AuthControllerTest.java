@@ -50,7 +50,7 @@ class AuthControllerTest {
     }
 
     @Nested
-    @DisplayName("POST /auth/social")
+    @DisplayName("POST /api/v1/auth/social")
     class SocialLogin {
 
         @Test
@@ -69,7 +69,7 @@ class AuthControllerTest {
             );
 
             // when
-            final MockHttpServletResponse response = mockMvc.perform(post("/auth/social")
+            final MockHttpServletResponse response = mockMvc.perform(post("/api/v1/auth/social")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -93,7 +93,7 @@ class AuthControllerTest {
             );
 
             // when
-            final MockHttpServletResponse response = mockMvc.perform(post("/auth/social")
+            final MockHttpServletResponse response = mockMvc.perform(post("/api/v1/auth/social")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -114,7 +114,7 @@ class AuthControllerTest {
             );
 
             // when
-            final MockHttpServletResponse response = mockMvc.perform(post("/auth/social")
+            final MockHttpServletResponse response = mockMvc.perform(post("/api/v1/auth/social")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -128,7 +128,7 @@ class AuthControllerTest {
     }
 
     @Nested
-    @DisplayName("POST /auth/refresh")
+    @DisplayName("POST /api/v1/auth/refresh")
     class Refresh {
 
         @Test
@@ -141,7 +141,7 @@ class AuthControllerTest {
             );
 
             // when
-            final MockHttpServletResponse response = mockMvc.perform(post("/auth/refresh")
+            final MockHttpServletResponse response = mockMvc.perform(post("/api/v1/auth/refresh")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(new RefreshRequest(refreshToken))))
                     .andReturn()
@@ -160,7 +160,7 @@ class AuthControllerTest {
         @DisplayName("refreshToken이 비어있으면 @Valid가 차단하고 service를 호출하지 않는다")
         void refresh_whenRefreshTokenBlank_rejectedByValidation() throws Exception {
             // when
-            final MockHttpServletResponse response = mockMvc.perform(post("/auth/refresh")
+            final MockHttpServletResponse response = mockMvc.perform(post("/api/v1/auth/refresh")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(new RefreshRequest(""))))
                     .andReturn()
@@ -174,7 +174,7 @@ class AuthControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /auth/me")
+    @DisplayName("GET /api/v1/auth/me")
     class Me {
 
         @Test
@@ -185,7 +185,7 @@ class AuthControllerTest {
             given(authService.me(42L)).willReturn(new MeResponse(42L, "링링이"));
 
             // when
-            final MockHttpServletResponse response = mockMvc.perform(get("/auth/me"))
+            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/auth/me"))
                     .andReturn()
                     .getResponse();
 
@@ -207,7 +207,7 @@ class AuthControllerTest {
             );
 
             // when
-            final MockHttpServletResponse response = mockMvc.perform(get("/auth/me"))
+            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/auth/me"))
                     .andReturn()
                     .getResponse();
 
@@ -218,7 +218,7 @@ class AuthControllerTest {
     }
 
     @Nested
-    @DisplayName("POST /auth/logout")
+    @DisplayName("POST /api/v1/auth/logout")
     class Logout {
 
         @Test
@@ -228,7 +228,7 @@ class AuthControllerTest {
             AuthContext.set(42L);
 
             // when
-            final MockHttpServletResponse response = mockMvc.perform(post("/auth/logout"))
+            final MockHttpServletResponse response = mockMvc.perform(post("/api/v1/auth/logout"))
                     .andReturn()
                     .getResponse();
 

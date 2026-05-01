@@ -36,7 +36,7 @@ class UserStatsControllerTest {
     private UserStatsService userStatsService;
 
     @Nested
-    @DisplayName("GET /users/{userId}/stats")
+    @DisplayName("GET /api/v1/users/{userId}/stats")
     class GetStats {
 
         @Test
@@ -49,7 +49,7 @@ class UserStatsControllerTest {
             ));
 
             // when
-            final MockHttpServletResponse response = mockMvc.perform(get("/users/{userId}/stats", userId)
+            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/users/{userId}/stats", userId)
                             .accept(MediaType.APPLICATION_JSON))
                     .andReturn()
                     .getResponse();
@@ -77,7 +77,7 @@ class UserStatsControllerTest {
             )).given(userStatsService).getByUserId(userId);
 
             // when
-            final MockHttpServletResponse response = mockMvc.perform(get("/users/{userId}/stats", userId)
+            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/users/{userId}/stats", userId)
                             .accept(MediaType.APPLICATION_JSON))
                     .andReturn()
                     .getResponse();

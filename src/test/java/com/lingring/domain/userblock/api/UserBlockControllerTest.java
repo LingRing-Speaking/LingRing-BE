@@ -45,7 +45,7 @@ class UserBlockControllerTest {
     private UserBlockService userBlockService;
 
     @Nested
-    @DisplayName("POST /users/{userId}/blocks")
+    @DisplayName("POST /api/v1/users/{userId}/blocks")
     class Block {
 
         @Test
@@ -59,7 +59,7 @@ class UserBlockControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/users/{userId}/blocks", userId)
+                            post("/api/v1/users/{userId}/blocks", userId)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -86,7 +86,7 @@ class UserBlockControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/users/{userId}/blocks", userId)
+                            post("/api/v1/users/{userId}/blocks", userId)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -109,7 +109,7 @@ class UserBlockControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/users/{userId}/blocks", userId)
+                            post("/api/v1/users/{userId}/blocks", userId)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -130,7 +130,7 @@ class UserBlockControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            post("/users/{userId}/blocks", userId)
+                            post("/api/v1/users/{userId}/blocks", userId)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request)))
                     .andReturn()
@@ -144,7 +144,7 @@ class UserBlockControllerTest {
     }
 
     @Nested
-    @DisplayName("DELETE /users/{userId}/blocks/{blockedUserId}")
+    @DisplayName("DELETE /api/v1/users/{userId}/blocks/{blockedUserId}")
     class Unblock {
 
         @Test
@@ -157,7 +157,7 @@ class UserBlockControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            delete("/users/{userId}/blocks/{blockedUserId}", userId, blockedUserId))
+                            delete("/api/v1/users/{userId}/blocks/{blockedUserId}", userId, blockedUserId))
                     .andReturn()
                     .getResponse();
 
@@ -168,7 +168,7 @@ class UserBlockControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /users/{userId}/blocks")
+    @DisplayName("GET /api/v1/users/{userId}/blocks")
     class GetAll {
 
         @Test
@@ -188,7 +188,7 @@ class UserBlockControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            get("/users/{userId}/blocks", userId)
+                            get("/api/v1/users/{userId}/blocks", userId)
                                     .param("page", "0")
                                     .param("size", "2")
                                     .accept(MediaType.APPLICATION_JSON))
@@ -212,7 +212,7 @@ class UserBlockControllerTest {
                     .willReturn(new UserBlockListResponse(List.of(), false));
 
             // when
-            mockMvc.perform(get("/users/{userId}/blocks", userId)
+            mockMvc.perform(get("/api/v1/users/{userId}/blocks", userId)
                     .accept(MediaType.APPLICATION_JSON));
 
             // then
