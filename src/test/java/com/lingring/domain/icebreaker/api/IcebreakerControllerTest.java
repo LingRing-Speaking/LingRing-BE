@@ -38,7 +38,7 @@ class IcebreakerControllerTest {
     private IcebreakerService icebreakerService;
 
     @Nested
-    @DisplayName("GET /icebreakers")
+    @DisplayName("GET /api/v1/icebreakers")
     class GetRandom {
 
         @Test
@@ -55,7 +55,7 @@ class IcebreakerControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            get("/icebreakers")
+                            get("/api/v1/icebreakers")
                                     .param("count", "3")
                                     .accept(MediaType.APPLICATION_JSON))
                     .andReturn()
@@ -83,7 +83,7 @@ class IcebreakerControllerTest {
             );
 
             // when
-            mockMvc.perform(get("/icebreakers").accept(MediaType.APPLICATION_JSON))
+            mockMvc.perform(get("/api/v1/icebreakers").accept(MediaType.APPLICATION_JSON))
                     .andReturn();
 
             // then
@@ -101,7 +101,7 @@ class IcebreakerControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            get("/icebreakers")
+                            get("/api/v1/icebreakers")
                                     .accept(MediaType.APPLICATION_JSON))
                     .andReturn()
                     .getResponse();

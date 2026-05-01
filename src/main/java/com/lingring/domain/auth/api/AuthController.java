@@ -3,7 +3,6 @@ package com.lingring.domain.auth.api;
 import com.lingring.domain.auth.dto.request.RefreshRequest;
 import com.lingring.domain.auth.dto.request.SocialLoginRequest;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse;
-import com.lingring.domain.auth.dto.response.MeResponse;
 import com.lingring.domain.auth.dto.response.TokenPairResponse;
 import com.lingring.domain.auth.service.AuthService;
 import com.lingring.global.common.response.ApiResponse;
@@ -31,10 +30,5 @@ public class AuthController implements AuthApi {
     public ApiResponse<Void> logout(final Long userId) {
         authService.logout(userId);
         return ApiResponse.success(HttpStatus.NO_CONTENT);
-    }
-
-    @Override
-    public ApiResponse<MeResponse> me(final Long userId) {
-        return ApiResponse.success(HttpStatus.OK, authService.me(userId));
     }
 }

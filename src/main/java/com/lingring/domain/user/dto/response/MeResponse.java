@@ -1,4 +1,4 @@
-package com.lingring.domain.auth.dto.response;
+package com.lingring.domain.user.dto.response;
 
 import com.lingring.domain.user.domain.User;
 
