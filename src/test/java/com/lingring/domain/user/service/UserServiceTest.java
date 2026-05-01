@@ -4,13 +4,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.lingring.domain.user.dao.UserRepository;
+import com.lingring.domain.user.dao.UserStatsRepository;
 import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.domain.user.dto.response.MeResponse;
+import com.lingring.domain.user.exception.NicknameConflictException;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.error.ErrorCode;
+import com.lingring.global.error.exception.BadRequestException;
 import com.lingring.global.error.exception.UnauthorizedException;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -23,6 +27,9 @@ class UserServiceTest extends ServiceIntegrationHelper {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private UserStatsRepository userStatsRepository;
 
     @Nested
     @DisplayName("getMe: 인증된 사용자 본인 정보 조회")
@@ -55,6 +62,106 @@ class UserServiceTest extends ServiceIntegrationHelper {
                     .isInstanceOf(UnauthorizedException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.INVALID_TOKEN);
+        }
+    }
+
+    @Nested
+    @DisplayName("findByProvider: provider + providerUserId 로 사용자 조회")
+    class FindByProvider {
+
+        @Test
+        @DisplayName("일치하는 사용자가 있으면 Optional<User>을 반환한다")
+        void findByProvider_whenExists_returnsUser() {
+            // given
+            final User saved = userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "sub-1", new Name("링링"), null)
+            );
+
+            // when
+            final Optional<User> found = userService.findByProvider(Provider.KAKAO, "sub-1");
+
+            // then
+            assertThat(found).isPresent();
+            assertThat(found.get().getId()).isEqualTo(saved.getId());
+        }
+
+        @Test
+        @DisplayName("일치하는 사용자가 없으면 Optional.empty를 반환한다")
+        void findByProvider_whenNotExists_returnsEmpty() {
+            // when
+            final Optional<User> found = userService.findByProvider(Provider.KAKAO, "no-such-sub");
+
+            // then
+            assertThat(found).isEmpty();
+        }
+
+        @Test
+        @DisplayName("provider가 다르면 매칭되지 않는다")
+        void findByProvider_whenDifferentProvider_returnsEmpty() {
+            // given — 카카오로 저장
+            userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "shared-sub", new Name("링링"), null)
+            );
+
+            // when — 같은 sub지만 애플로 조회
+            final Optional<User> found = userService.findByProvider(Provider.APPLE, "shared-sub");
+
+            // then
+            assertThat(found).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("register: 신규 사용자 가입")
+    class Register {
+
+        @Test
+        @DisplayName("유효한 입력이면 User를 저장하고 UserStats도 함께 생성한다")
+        void register_whenValid_savesUserAndUserStats() {
+            // when
+            final User user = userService.register(Provider.KAKAO, "new-sub", "링링이");
+
+            // then
+            assertThat(user.getId()).isNotNull();
+            assertThat(user.getProvider()).isEqualTo(Provider.KAKAO);
+            assertThat(user.getProviderUserId()).isEqualTo("new-sub");
+            assertThat(user.getName().getValue()).isEqualTo("링링이");
+            assertThat(userStatsRepository.findByUserId(user.getId())).isPresent();
+        }
+
+        @Test
+        @DisplayName("nickname이 null이면 NICKNAME_REQUIRED 예외가 발생한다")
+        void register_whenNicknameNull_throwsNicknameRequired() {
+            // when & then
+            assertThatThrownBy(() -> userService.register(Provider.KAKAO, "sub-1", null))
+                    .isInstanceOf(BadRequestException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.NICKNAME_REQUIRED);
+        }
+
+        @Test
+        @DisplayName("nickname이 공백이면 NICKNAME_REQUIRED 예외가 발생한다")
+        void register_whenNicknameBlank_throwsNicknameRequired() {
+            // when & then
+            assertThatThrownBy(() -> userService.register(Provider.KAKAO, "sub-1", "   "))
+                    .isInstanceOf(BadRequestException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.NICKNAME_REQUIRED);
+        }
+
+        @Test
+        @DisplayName("이미 사용 중인 nickname이면 NICKNAME_CONFLICT 예외가 발생한다")
+        void register_whenNicknameAlreadyTaken_throwsNicknameConflict() {
+            // given
+            userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "existing-sub", new Name("링링이"), null)
+            );
+
+            // when & then
+            assertThatThrownBy(() -> userService.register(Provider.APPLE, "new-sub", "링링이"))
+                    .isInstanceOf(NicknameConflictException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.NICKNAME_CONFLICT);
         }
     }
 }

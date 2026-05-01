@@ -7,14 +7,13 @@ import com.lingring.domain.auth.dao.RefreshTokenRepository;
 import com.lingring.domain.auth.dto.request.SocialLoginRequest;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse;
 import com.lingring.domain.auth.dto.response.TokenPairResponse;
-import com.lingring.domain.auth.exception.NicknameConflictException;
+import com.lingring.domain.auth.facade.SocialLoginFacade;
 import com.lingring.domain.user.dao.UserRepository;
 import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.global.auth.jwt.IdTokenVerifier;
 import com.lingring.global.auth.jwt.IdTokenVerifiers;
-import com.lingring.global.auth.jwt.JwtProvider;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
@@ -33,17 +32,16 @@ import org.springframework.context.annotation.Primary;
 class AuthServiceTest extends ServiceIntegrationHelper {
 
     private static final String VALID_ID_TOKEN = "valid-id-token";
-    private static final String OTHER_VALID_ID_TOKEN = "valid-id-token-2";
     private static final String INVALID_ID_TOKEN = "invalid-id-token";
 
     @Autowired
     private AuthService authService;
 
     @Autowired
-    private UserRepository userRepository;
+    private SocialLoginFacade socialLoginFacade;
 
     @Autowired
-    private JwtProvider jwtProvider;
+    private UserRepository userRepository;
 
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
@@ -60,210 +58,67 @@ class AuthServiceTest extends ServiceIntegrationHelper {
                 }
                 return "kakao-sub-of:" + idToken;
             };
-            final IdTokenVerifier apple = idToken -> {
-                if (INVALID_ID_TOKEN.equals(idToken)) {
-                    throw new UnauthorizedException(ErrorCode.INVALID_ID_TOKEN, "test stub: invalid");
-                }
-                return "apple-sub-of:" + idToken;
-            };
-            return new IdTokenVerifiers(Map.of(
-                    Provider.KAKAO, kakao,
-                    Provider.APPLE, apple
-            ));
+            return new IdTokenVerifiers(Map.of(Provider.KAKAO, kakao));
         }
     }
 
     @Nested
-    @DisplayName("socialLogin: 가입 흐름")
-    class SocialLoginSignup {
+    @DisplayName("verifyIdToken: id_token 검증")
+    class VerifyIdToken {
 
         @Test
-        @DisplayName("신규 사용자는 nickname으로 가입되고 access·refresh 토큰을 받는다")
-        void socialLogin_whenNewUserWithNickname_createsUserAndIssuesTokens() {
-            // given
-            final SocialLoginRequest request = new SocialLoginRequest(
-                    "kakao", VALID_ID_TOKEN, null, "링링이"
-            );
-
+        @DisplayName("유효한 id_token이면 provider와 providerUserId를 반환한다")
+        void verifyIdToken_whenValid_returnsProviderAndSub() {
             // when
-            final AuthTokenResponse response = authService.socialLogin(request);
+            final VerifiedIdToken verified = authService.verifyIdToken("kakao", VALID_ID_TOKEN);
 
             // then
-            assertThat(response.accessToken()).isNotBlank();
-            assertThat(response.refreshToken()).isNotBlank();
-            assertThat(response.user().nickname()).isEqualTo("링링이");
-            assertThat(userRepository.findByProviderAndProviderUserId(
-                    Provider.KAKAO, "kakao-sub-of:" + VALID_ID_TOKEN
-            )).isPresent();
-            assertThat(refreshTokenRepository.exists(response.user().id())).isTrue();
+            assertThat(verified.provider()).isEqualTo(Provider.KAKAO);
+            assertThat(verified.providerUserId()).isEqualTo("kakao-sub-of:" + VALID_ID_TOKEN);
         }
 
         @Test
-        @DisplayName("신규 사용자가 nickname을 보내지 않으면 NICKNAME_REQUIRED 예외가 발생한다")
-        void socialLogin_whenNewUserMissingNickname_throwsNicknameRequired() {
-            // given
-            final SocialLoginRequest request = new SocialLoginRequest(
-                    "kakao", VALID_ID_TOKEN, null, null
-            );
-
+        @DisplayName("id_token이 invalid면 UnauthorizedException이 전파된다")
+        void verifyIdToken_whenInvalid_throwsUnauthorized() {
             // when & then
-            assertThatThrownBy(() -> authService.socialLogin(request))
-                    .isInstanceOf(BadRequestException.class)
-                    .extracting("errorCode")
-                    .isEqualTo(ErrorCode.NICKNAME_REQUIRED);
-        }
-
-        @Test
-        @DisplayName("이미 사용 중인 nickname으로 신규 가입 시 NICKNAME_CONFLICT 예외가 발생한다")
-        void socialLogin_whenNicknameAlreadyTaken_throwsNicknameConflict() {
-            // given — pre-existing user with "링링이"
-            userRepository.save(User.createFromOAuth(
-                    Provider.KAKAO, "existing-sub", new Name("링링이"), null
-            ));
-            final SocialLoginRequest request = new SocialLoginRequest(
-                    "kakao", VALID_ID_TOKEN, null, "링링이"
-            );
-
-            // when & then
-            assertThatThrownBy(() -> authService.socialLogin(request))
-                    .isInstanceOf(NicknameConflictException.class)
-                    .extracting("errorCode")
-                    .isEqualTo(ErrorCode.NICKNAME_CONFLICT);
-        }
-    }
-
-    @Nested
-    @DisplayName("socialLogin: 로그인 흐름")
-    class SocialLoginExisting {
-
-        @Test
-        @DisplayName("기존 사용자는 sub로 매칭되어 nickname 없이도 토큰을 받는다")
-        void socialLogin_whenExistingUser_returnsTokensWithoutNickname() {
-            // given — 사전 가입
-            authService.socialLogin(new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이"));
-
-            // when — 같은 idToken으로 다시 로그인 (nickname 없이)
-            final AuthTokenResponse response = authService.socialLogin(
-                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, null)
-            );
-
-            // then
-            assertThat(response.user().nickname()).isEqualTo("링링이");
-            assertThat(refreshTokenRepository.exists(response.user().id())).isTrue();
-        }
-    }
-
-    @Nested
-    @DisplayName("socialLogin: Apple provider")
-    class SocialLoginApple {
-
-        @Test
-        @DisplayName("APPLE 신규 사용자는 nickname으로 가입되고 토큰을 받는다")
-        void socialLogin_whenAppleNewUserWithNickname_createsUserAndIssuesTokens() {
-            // given
-            final SocialLoginRequest request = new SocialLoginRequest(
-                    "apple", VALID_ID_TOKEN, null, "애플유저"
-            );
-
-            // when
-            final AuthTokenResponse response = authService.socialLogin(request);
-
-            // then
-            assertThat(response.accessToken()).isNotBlank();
-            assertThat(response.refreshToken()).isNotBlank();
-            assertThat(response.user().nickname()).isEqualTo("애플유저");
-            assertThat(userRepository.findByProviderAndProviderUserId(
-                    Provider.APPLE, "apple-sub-of:" + VALID_ID_TOKEN
-            )).isPresent();
-        }
-
-        @Test
-        @DisplayName("APPLE 기존 사용자는 nickname 없이도 토큰을 받는다")
-        void socialLogin_whenAppleExistingUser_returnsTokensWithoutNickname() {
-            // given — 사전 가입
-            authService.socialLogin(new SocialLoginRequest("apple", VALID_ID_TOKEN, null, "애플유저"));
-
-            // when
-            final AuthTokenResponse response = authService.socialLogin(
-                    new SocialLoginRequest("apple", VALID_ID_TOKEN, null, null)
-            );
-
-            // then
-            assertThat(response.user().nickname()).isEqualTo("애플유저");
-            assertThat(refreshTokenRepository.exists(response.user().id())).isTrue();
-        }
-
-        @Test
-        @DisplayName("APPLE id_token이 invalid면 UnauthorizedException이 전파된다")
-        void socialLogin_whenAppleIdTokenInvalid_propagatesUnauthorized() {
-            // given
-            final SocialLoginRequest request = new SocialLoginRequest(
-                    "apple", INVALID_ID_TOKEN, null, "애플유저"
-            );
-
-            // when & then
-            assertThatThrownBy(() -> authService.socialLogin(request))
+            assertThatThrownBy(() -> authService.verifyIdToken("kakao", INVALID_ID_TOKEN))
                     .isInstanceOf(UnauthorizedException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.INVALID_ID_TOKEN);
         }
 
         @Test
-        @DisplayName("같은 sub라도 provider가 다르면 별도의 사용자로 분리된다")
-        void socialLogin_whenSameSubDifferentProvider_createsSeparateUsers() {
-            // given — 카카오로 먼저 가입
-            final AuthTokenResponse kakaoResponse = authService.socialLogin(
-                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "카카오유저")
-            );
-
-            // when — 애플로 가입 (다른 nickname 필요 — name unique 제약)
-            final AuthTokenResponse appleResponse = authService.socialLogin(
-                    new SocialLoginRequest("apple", VALID_ID_TOKEN, null, "애플유저")
-            );
-
-            // then
-            assertThat(appleResponse.user().id()).isNotEqualTo(kakaoResponse.user().id());
-            assertThat(userRepository.findByProviderAndProviderUserId(
-                    Provider.KAKAO, "kakao-sub-of:" + VALID_ID_TOKEN
-            )).isPresent();
-            assertThat(userRepository.findByProviderAndProviderUserId(
-                    Provider.APPLE, "apple-sub-of:" + VALID_ID_TOKEN
-            )).isPresent();
-        }
-    }
-
-    @Nested
-    @DisplayName("socialLogin: 입력 검증")
-    class SocialLoginValidation {
-
-        @Test
         @DisplayName("provider가 지원되지 않으면 NOT_SUPPORTED 예외가 발생한다")
-        void socialLogin_whenUnsupportedProvider_throwsNotSupported() {
-            // given
-            final SocialLoginRequest request = new SocialLoginRequest(
-                    "facebook", VALID_ID_TOKEN, null, "닉네임"
-            );
-
+        void verifyIdToken_whenUnsupportedProvider_throwsNotSupported() {
             // when & then
-            assertThatThrownBy(() -> authService.socialLogin(request))
+            assertThatThrownBy(() -> authService.verifyIdToken("facebook", VALID_ID_TOKEN))
                     .isInstanceOf(BadRequestException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.NOT_SUPPORTED);
         }
+    }
+
+    @Nested
+    @DisplayName("issueTokensFor: User로 access·refresh 토큰을 발급한다")
+    class IssueTokensFor {
 
         @Test
-        @DisplayName("id_token 검증이 실패하면 IdTokenVerifier의 예외가 그대로 전파된다")
-        void socialLogin_whenIdTokenInvalid_propagatesVerifierException() {
+        @DisplayName("토큰 쌍을 발급하고 Redis에 refresh를 저장한다")
+        void issueTokensFor_whenCalled_returnsTokensAndPersistsRefresh() {
             // given
-            final SocialLoginRequest request = new SocialLoginRequest(
-                    "kakao", INVALID_ID_TOKEN, null, "닉네임"
+            final User user = userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "kakao-sub", new Name("링링이"), null)
             );
 
-            // when & then
-            assertThatThrownBy(() -> authService.socialLogin(request))
-                    .isInstanceOf(UnauthorizedException.class)
-                    .extracting("errorCode")
-                    .isEqualTo(ErrorCode.INVALID_ID_TOKEN);
+            // when
+            final AuthTokenResponse response = authService.issueTokensFor(user);
+
+            // then
+            assertThat(response.accessToken()).isNotBlank();
+            assertThat(response.refreshToken()).isNotBlank();
+            assertThat(response.user().id()).isEqualTo(user.getId());
+            assertThat(response.user().nickname()).isEqualTo("링링이");
+            assertThat(refreshTokenRepository.exists(user.getId())).isTrue();
         }
     }
 
@@ -275,7 +130,7 @@ class AuthServiceTest extends ServiceIntegrationHelper {
         @DisplayName("유효한 refresh token으로 새 토큰 쌍을 발급한다")
         void refresh_whenValidToken_issuesNewPair() {
             // given
-            final AuthTokenResponse first = authService.socialLogin(
+            final AuthTokenResponse first = socialLoginFacade.socialLogin(
                     new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이")
             );
 
@@ -292,7 +147,7 @@ class AuthServiceTest extends ServiceIntegrationHelper {
         @DisplayName("토큰은 유효하지만 사용자가 삭제됐다면 INVALID_TOKEN을 던지고 세션을 무효화한다")
         void refresh_whenUserDeleted_throwsInvalidTokenAndInvalidates() {
             // given
-            final AuthTokenResponse first = authService.socialLogin(
+            final AuthTokenResponse first = socialLoginFacade.socialLogin(
                     new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이")
             );
             userRepository.deleteById(first.user().id());
@@ -309,7 +164,7 @@ class AuthServiceTest extends ServiceIntegrationHelper {
         @DisplayName("이미 회전된(stale) refresh token을 재사용하면 모든 세션이 무효화되고 INVALID_TOKEN을 던진다")
         void refresh_whenStaleTokenReused_invalidatesAllAndThrows() {
             // given
-            final AuthTokenResponse first = authService.socialLogin(
+            final AuthTokenResponse first = socialLoginFacade.socialLogin(
                     new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이")
             );
             authService.refresh(first.refreshToken());
@@ -326,7 +181,7 @@ class AuthServiceTest extends ServiceIntegrationHelper {
         @DisplayName("Redis에 저장된 refresh가 없으면(로그아웃 후) INVALID_TOKEN을 던진다")
         void refresh_whenNoStoredToken_throws() {
             // given
-            final AuthTokenResponse first = authService.socialLogin(
+            final AuthTokenResponse first = socialLoginFacade.socialLogin(
                     new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이")
             );
             authService.logout(first.user().id());
@@ -342,7 +197,7 @@ class AuthServiceTest extends ServiceIntegrationHelper {
         @DisplayName("access token을 refresh로 보내면 INVALID_TOKEN을 던진다 (타입 검증)")
         void refresh_whenAccessTokenGiven_throws() {
             // given
-            final AuthTokenResponse first = authService.socialLogin(
+            final AuthTokenResponse first = socialLoginFacade.socialLogin(
                     new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이")
             );
 
@@ -362,7 +217,7 @@ class AuthServiceTest extends ServiceIntegrationHelper {
         @DisplayName("logout은 Redis의 refresh token을 삭제한다")
         void logout_deletesStoredRefreshToken() {
             // given
-            final AuthTokenResponse response = authService.socialLogin(
+            final AuthTokenResponse response = socialLoginFacade.socialLogin(
                     new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이")
             );
             assertThat(refreshTokenRepository.exists(response.user().id())).isTrue();
@@ -384,5 +239,4 @@ class AuthServiceTest extends ServiceIntegrationHelper {
             authService.logout(unknownUserId);
         }
     }
-
 }
