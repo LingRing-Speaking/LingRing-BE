@@ -53,7 +53,7 @@ public class KakaoIdTokenVerifier implements IdTokenVerifier {
         }
     }
 
-    private static ConfigurableJWTProcessor<SecurityContext> buildProcessor(
+    private ConfigurableJWTProcessor<SecurityContext> buildProcessor(
             final String iss,
             final String aud,
             final JWKSource<SecurityContext> jwkSource

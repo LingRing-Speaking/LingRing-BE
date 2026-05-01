@@ -3,15 +3,17 @@ package com.lingring.domain.auth.api;
 import com.lingring.domain.auth.dto.request.SocialLoginRequest;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse;
 import com.lingring.global.auth.annotation.AuthUser;
+import com.lingring.global.auth.annotation.RefreshToken;
 import com.lingring.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 @Tag(name = "Auth", description = "소셜 로그인·토큰 갱신·로그아웃 API")
@@ -68,7 +70,13 @@ public interface AuthApi {
     @ResponseStatus(HttpStatus.OK)
     @PostMapping("/auth/refresh")
     ApiResponse<AuthTokenResponse> refresh(
-            @RequestHeader(HttpHeaders.AUTHORIZATION) final String authorizationHeader
+            @Parameter(
+                    in = ParameterIn.HEADER,
+                    name = HttpHeaders.AUTHORIZATION,
+                    required = true,
+                    description = "Bearer <refreshToken>"
+            )
+            @RefreshToken final String refreshToken
     );
 
     @Operation(
