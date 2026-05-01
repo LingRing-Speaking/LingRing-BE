@@ -31,6 +31,7 @@
 # 서비스/컨트롤러
 - controller에서 swagger 명시를 하는 대신에, 별도의 api interface를 만든 후 해당 인터페이스에서 swagger 정보를 작성한다
 - @RequestMapping을 클래스 레벨에서 사용 금지
+- @Transactional을 클래스 레벨에서 사용 금지 — 메서드 단위로 붙이며, 읽기 메서드는 `@Transactional(readOnly = true)`, 쓰기 메서드는 `@Transactional`로 명시한다
         
 # 엔티티
 - @Column의 nullable=false인 경우 명시

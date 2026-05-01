@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class UserBlockService {
 
@@ -38,6 +37,7 @@ public class UserBlockService {
                 .ifPresent(userBlockRepository::delete);
     }
 
+    @Transactional(readOnly = true)
     public UserBlockListResponse getAllByUserId(final Long userId, final int page, final int size) {
         final PageSize pageSize = PageSize.clamp(size);
         final Slice<UserBlock> slice = userBlockRepository

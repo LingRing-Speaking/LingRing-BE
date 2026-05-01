@@ -18,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional
 @RequiredArgsConstructor
 public class AuthService {
 
@@ -26,6 +25,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final TokenIssuer tokenIssuer;
 
+    @Transactional
     public AuthTokenResponse socialLogin(final SocialLoginRequest request) {
         final Provider provider = Provider.from(request.provider());
         final IdTokenVerifier verifier = idTokenVerifiers.resolve(provider);
@@ -37,6 +37,7 @@ public class AuthService {
         return AuthTokenResponse.of(issued.accessToken(), issued.refreshToken(), user);
     }
 
+    @Transactional(readOnly = true)
     public TokenPairResponse refresh(final String refreshToken) {
         final TokenIssuance rotated = tokenIssuer.rotate(refreshToken);
         if (!userRepository.existsById(rotated.userId())) {
