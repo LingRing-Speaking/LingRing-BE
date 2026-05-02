@@ -5,25 +5,66 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.lingring.domain.call.dao.CallHistoryRepository;
 import com.lingring.domain.call.domain.CallHistory;
+import com.lingring.domain.call.event.CallEndedEvent;
 import com.lingring.domain.call.exception.CallHistoryNotFoundException;
+import com.lingring.domain.user.dao.UserStatsRepository;
+import com.lingring.domain.user.domain.UserStats;
 import com.lingring.global.config.ServiceIntegrationHelper;
+import com.lingring.global.util.DateTimeProvider;
+import com.lingring.global.util.FixedDateTimeProvider;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 
+@RecordApplicationEvents
+@Import(CallHistoryServiceTest.FixedDateTimeProviderConfig.class)
 class CallHistoryServiceTest extends ServiceIntegrationHelper {
 
-    private static final LocalDateTime STARTED_AT = LocalDateTime.of(2026, 5, 2, 10, 0);
+    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 5, 2, 10, 0);
+    private static final LocalDate TODAY = FIXED_NOW.toLocalDate();
 
     @Autowired
     private CallHistoryService callHistoryService;
 
     @Autowired
     private CallHistoryRepository callHistoryRepository;
+
+    @Autowired
+    private UserStatsRepository userStatsRepository;
+
+    @Autowired
+    private FixedDateTimeProvider fixedDateTimeProvider;
+
+    @Autowired
+    private ApplicationEvents events;
+
+    @BeforeEach
+    void resetClock() {
+        fixedDateTimeProvider.setFixedTime(FIXED_NOW);
+    }
+
+    @TestConfiguration
+    static class FixedDateTimeProviderConfig {
+
+        @Bean
+        @Primary
+        FixedDateTimeProvider dateTimeProvider() {
+            return new FixedDateTimeProvider(FIXED_NOW);
+        }
+    }
 
     @Nested
     @DisplayName("findByRoomId: 통화 기록 조회 (선택적)")
@@ -34,7 +75,7 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
         void findByRoomId_whenPresent_returnsCallHistory() {
             // given
             final UUID roomId = UUID.randomUUID();
-            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, STARTED_AT));
+            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
 
             // when
             final Optional<CallHistory> found = callHistoryService.findByRoomId(roomId);
@@ -64,7 +105,7 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
         void getByRoomId_whenPresent_returnsCallHistory() {
             // given
             final UUID roomId = UUID.randomUUID();
-            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, STARTED_AT));
+            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
 
             // when
             final CallHistory found = callHistoryService.getByRoomId(roomId);
@@ -91,7 +132,7 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
         void endCall_marksCallEnded() {
             // given
             final UUID roomId = UUID.randomUUID();
-            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, STARTED_AT));
+            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
 
             // when
             callHistoryService.endCall(roomId);
@@ -100,7 +141,7 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
             final Optional<CallHistory> ended = callHistoryRepository.findByRoomId(roomId);
             assertThat(ended).isPresent();
             assertThat(ended.get().isActive()).isFalse();
-            assertThat(ended.get().getEndedAt()).isNotNull();
+            assertThat(ended.get().getEndedAt()).isEqualTo(FIXED_NOW);
         }
 
         @Test
@@ -119,10 +160,11 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
         void endCall_whenAlreadyEnded_isIdempotent() {
             // given
             final UUID roomId = UUID.randomUUID();
-            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, STARTED_AT));
+            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
             callHistoryService.endCall(roomId);
             final LocalDateTime firstEndedAt = callHistoryRepository.findByRoomId(roomId)
                     .orElseThrow().getEndedAt();
+            fixedDateTimeProvider.setFixedTime(FIXED_NOW.plusHours(1));
 
             // when
             callHistoryService.endCall(roomId);
@@ -131,6 +173,131 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
             final CallHistory ended = callHistoryRepository.findByRoomId(roomId).orElseThrow();
             assertThat(ended.isActive()).isFalse();
             assertThat(ended.getEndedAt()).isEqualTo(firstEndedAt);
+        }
+    }
+
+    @Nested
+    @DisplayName("endCall 이벤트 발행")
+    class EndCallEventPublishing {
+
+        @Test
+        @DisplayName("진행 중인 통화 종료 시 CallEndedEvent를 한 번 발행한다 (페이로드: 두 사용자 ID, startedAt, endedAt)")
+        void endCall_publishesEventWithPayload() {
+            // given
+            final UUID roomId = UUID.randomUUID();
+            final LocalDateTime startedAt = FIXED_NOW.minusMinutes(5);
+            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, startedAt));
+
+            // when
+            callHistoryService.endCall(roomId);
+
+            // then
+            final List<CallEndedEvent> published = events.stream(CallEndedEvent.class).toList();
+            assertThat(published).hasSize(1);
+            assertThat(published.get(0).userAId()).isEqualTo(1L);
+            assertThat(published.get(0).userBId()).isEqualTo(2L);
+            assertThat(published.get(0).startedAt()).isEqualTo(startedAt);
+            assertThat(published.get(0).endedAt()).isEqualTo(FIXED_NOW);
+        }
+
+        @Test
+        @DisplayName("이미 종료된 통화에 호출하면 CallEndedEvent가 추가로 발행되지 않는다")
+        void endCall_whenAlreadyEnded_doesNotRepublishEvent() {
+            // given
+            final UUID roomId = UUID.randomUUID();
+            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
+            callHistoryService.endCall(roomId);
+
+            // when
+            callHistoryService.endCall(roomId);
+
+            // then
+            final List<CallEndedEvent> published = events.stream(CallEndedEvent.class).toList();
+            assertThat(published).hasSize(1);
+        }
+    }
+
+    @Nested
+    @DisplayName("endCall + UserStats 갱신 통합")
+    class EndCallUpdatesUserStats {
+
+        @Test
+        @DisplayName("통화 시간이 1분 이상이면 양쪽 사용자의 totalCallCount/currentStreakDays/lastStudyDate가 갱신된다")
+        void endCall_whenDurationOverOneMinute_updatesBothUsersStats() {
+            // given: 두 사용자의 stats 사전 저장
+            userStatsRepository.save(UserStats.create(1L));
+            userStatsRepository.save(UserStats.create(2L));
+            final UUID roomId = UUID.randomUUID();
+            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(2)));
+
+            // when
+            callHistoryService.endCall(roomId);
+
+            // then
+            final UserStats statsA = userStatsRepository.findByUserId(1L).orElseThrow();
+            final UserStats statsB = userStatsRepository.findByUserId(2L).orElseThrow();
+            assertThat(statsA.getTotalCallCount()).isEqualTo(1);
+            assertThat(statsA.getCurrentStreakDays()).isEqualTo(1);
+            assertThat(statsA.getLastStudyDate()).isEqualTo(TODAY);
+            assertThat(statsB.getTotalCallCount()).isEqualTo(1);
+            assertThat(statsB.getCurrentStreakDays()).isEqualTo(1);
+            assertThat(statsB.getLastStudyDate()).isEqualTo(TODAY);
+        }
+
+        @Test
+        @DisplayName("통화 시간이 1분 미만이면 어느 사용자의 stats도 갱신되지 않는다")
+        void endCall_whenDurationUnderOneMinute_doesNotUpdateStats() {
+            // given
+            userStatsRepository.save(UserStats.create(1L));
+            userStatsRepository.save(UserStats.create(2L));
+            final UUID roomId = UUID.randomUUID();
+            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, FIXED_NOW.minusSeconds(30)));
+
+            // when
+            callHistoryService.endCall(roomId);
+
+            // then
+            final UserStats statsA = userStatsRepository.findByUserId(1L).orElseThrow();
+            final UserStats statsB = userStatsRepository.findByUserId(2L).orElseThrow();
+            assertThat(statsA.getTotalCallCount()).isZero();
+            assertThat(statsA.getLastStudyDate()).isNull();
+            assertThat(statsB.getTotalCallCount()).isZero();
+            assertThat(statsB.getLastStudyDate()).isNull();
+        }
+
+        @Test
+        @DisplayName("통화 시간이 정확히 1분이면 stats가 갱신된다 (>= 60초 경계 포함)")
+        void endCall_whenDurationExactlyOneMinute_updatesStats() {
+            // given
+            userStatsRepository.save(UserStats.create(1L));
+            userStatsRepository.save(UserStats.create(2L));
+            final UUID roomId = UUID.randomUUID();
+            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, FIXED_NOW.minusSeconds(60)));
+
+            // when
+            callHistoryService.endCall(roomId);
+
+            // then
+            assertThat(userStatsRepository.findByUserId(1L).orElseThrow().getTotalCallCount()).isEqualTo(1);
+            assertThat(userStatsRepository.findByUserId(2L).orElseThrow().getTotalCallCount()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("이미 종료된 통화에 다시 호출하면 stats가 추가로 갱신되지 않는다 (이벤트 미발행)")
+        void endCall_whenAlreadyEnded_doesNotUpdateStatsAgain() {
+            // given
+            userStatsRepository.save(UserStats.create(1L));
+            userStatsRepository.save(UserStats.create(2L));
+            final UUID roomId = UUID.randomUUID();
+            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(2)));
+            callHistoryService.endCall(roomId);
+
+            // when
+            callHistoryService.endCall(roomId);
+
+            // then
+            assertThat(userStatsRepository.findByUserId(1L).orElseThrow().getTotalCallCount()).isEqualTo(1);
+            assertThat(userStatsRepository.findByUserId(2L).orElseThrow().getTotalCallCount()).isEqualTo(1);
         }
     }
 }

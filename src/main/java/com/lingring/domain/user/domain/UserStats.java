@@ -65,4 +65,20 @@ public class UserStats extends BaseTimeEntity {
     public static UserStats create(@NonNull final Long userId) {
         return new UserStats(userId);
     }
+
+    public void increaseTotalCallCount() {
+        this.totalCallCount += 1;
+    }
+
+    public void increaseStreakDays() {
+        this.currentStreakDays += 1;
+    }
+
+    public void resetStreakDaysToOne() {
+        this.currentStreakDays = 1;
+    }
+
+    public void updateLastStudyDate(@NonNull final LocalDate date) {
+        this.lastStudyDate = date;
+    }
 }
