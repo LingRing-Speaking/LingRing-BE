@@ -1,6 +1,7 @@
 package com.lingring.domain.user.api;
 
 import com.lingring.domain.user.dto.response.MeResponse;
+import com.lingring.domain.user.dto.response.UserProfileResponse;
 import com.lingring.domain.user.service.UserService;
 import com.lingring.global.common.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -16,5 +17,10 @@ public class UserController implements UserApi {
     @Override
     public ApiResponse<MeResponse> getMe(final Long userId) {
         return ApiResponse.success(HttpStatus.OK, userService.getMe(userId));
+    }
+
+    @Override
+    public ApiResponse<UserProfileResponse> getUserProfile(final Long userId) {
+        return ApiResponse.success(HttpStatus.OK, userService.getUserProfile(userId));
     }
 }
