@@ -45,4 +45,9 @@ public class UserExpressionService {
                     userStatsRepository.decrementExpressionCount(userId);
                 });
     }
+
+    @Transactional
+    public void deleteByUserId(final Long userId) {
+        userExpressionRepository.deleteByUserId(userId);
+    }
 }

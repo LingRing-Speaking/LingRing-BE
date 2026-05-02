@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -24,4 +25,8 @@ public interface UserBlockRepository extends JpaRepository<UserBlock, Long> {
 
     @Query("SELECT ub.userId FROM UserBlock ub WHERE ub.blockedUserId = :blockedUserId")
     List<Long> findUserIdsByBlockedUserId(@Param("blockedUserId") Long blockedUserId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM UserBlock ub WHERE ub.userId = :userId")
+    int deleteByUserId(@Param("userId") Long userId);
 }

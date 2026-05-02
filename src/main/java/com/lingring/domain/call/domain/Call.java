@@ -45,10 +45,10 @@ public class Call extends BaseTimeEntity {
     @Column(name = "room_id", nullable = false, length = 36)
     private UUID roomId;
 
-    @Column(name = "user_a_id", nullable = false)
+    @Column(name = "user_a_id")
     private Long userAId;
 
-    @Column(name = "user_b_id", nullable = false)
+    @Column(name = "user_b_id")
     private Long userBId;
 
     @Column(name = "started_at", nullable = false)
