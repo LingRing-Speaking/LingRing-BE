@@ -22,19 +22,19 @@ import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(
-        name = "call_history",
+        name = "calls",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_call_room_id",
+                name = "uk_calls_room_id",
                 columnNames = "room_id"
         ),
         indexes = {
-                @Index(name = "idx_call_user_a_id", columnList = "user_a_id"),
-                @Index(name = "idx_call_user_b_id", columnList = "user_b_id")
+                @Index(name = "idx_calls_user_a_id", columnList = "user_a_id"),
+                @Index(name = "idx_calls_user_b_id", columnList = "user_b_id")
         }
 )
 @Getter
 @NoArgsConstructor(access = PROTECTED)
-public class CallHistory extends BaseTimeEntity {
+public class Call extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
@@ -57,7 +57,7 @@ public class CallHistory extends BaseTimeEntity {
     @Column(name = "ended_at")
     private LocalDateTime endedAt;
 
-    private CallHistory(
+    private Call(
             @NonNull final UUID roomId,
             @NonNull final Long userAId,
             @NonNull final Long userBId,
@@ -69,7 +69,7 @@ public class CallHistory extends BaseTimeEntity {
         this.startedAt = startedAt;
     }
 
-    public static CallHistory start(
+    public static Call start(
             @NonNull final Long firstUserId,
             @NonNull final Long secondUserId,
             @NonNull final UUID roomId,
@@ -77,7 +77,7 @@ public class CallHistory extends BaseTimeEntity {
     ) {
         final Long userAId = Math.min(firstUserId, secondUserId);
         final Long userBId = Math.max(firstUserId, secondUserId);
-        return new CallHistory(roomId, userAId, userBId, startedAt);
+        return new Call(roomId, userAId, userBId, startedAt);
     }
 
     public void end(@NonNull final LocalDateTime endedAt) {

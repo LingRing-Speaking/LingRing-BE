@@ -1,7 +1,7 @@
 package com.lingring.domain.signaling.facade;
 
-import com.lingring.domain.call.domain.CallHistory;
-import com.lingring.domain.call.service.CallHistoryService;
+import com.lingring.domain.call.domain.Call;
+import com.lingring.domain.call.service.CallService;
 import com.lingring.domain.signaling.domain.SignalingMessage;
 import com.lingring.domain.signaling.domain.SignalingMessageType;
 import com.lingring.domain.signaling.service.SignalingMessageRouter;
@@ -17,25 +17,25 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class SignalingFacade {
 
-    private final CallHistoryService callHistoryService;
+    private final CallService callService;
     private final SignalingMessageRouter messageRouter;
     private final SignalingReadyCoordinator readyCoordinator;
 
     public void dispatch(final Long senderId, final UUID roomId, final SignalingMessage message) {
-        final CallHistory callHistory = callHistoryService.getByRoomId(roomId);
+        final Call call = callService.getByRoomId(roomId);
 
         final SignalingMessageType type = message.type();
         if (type == SignalingMessageType.JOIN) {
-            readyCoordinator.recordJoinAndAnnounceIfReady(callHistory, senderId);
+            readyCoordinator.recordJoinAndAnnounceIfReady(call, senderId);
             return;
         }
         if (isForwardable(type)) {
-            messageRouter.forwardToCounterpart(callHistory, senderId, message);
+            messageRouter.forwardToCounterpart(call, senderId, message);
             return;
         }
         if (type == SignalingMessageType.HANGUP) {
-            messageRouter.forwardToCounterpart(callHistory, senderId, message);
-            callHistoryService.endCall(roomId);
+            messageRouter.forwardToCounterpart(call, senderId, message);
+            callService.endCall(roomId);
             readyCoordinator.cleanupRoom(roomId);
             return;
         }
@@ -47,19 +47,19 @@ public class SignalingFacade {
         if (roomId == null) {
             return;
         }
-        final Optional<CallHistory> callHistoryOpt = callHistoryService.findByRoomId(roomId);
-        if (callHistoryOpt.isEmpty()) {
+        final Optional<Call> callOpt = callService.findByRoomId(roomId);
+        if (callOpt.isEmpty()) {
             return;
         }
-        final CallHistory callHistory = callHistoryOpt.get();
-        if (!callHistory.involves(userId)) {
+        final Call call = callOpt.get();
+        if (!call.involves(userId)) {
             return;
         }
-        if (!callHistory.isActive()) {
+        if (!call.isActive()) {
             return;
         }
-        messageRouter.publishHangup(callHistory, userId);
-        callHistoryService.endCall(roomId);
+        messageRouter.publishHangup(call, userId);
+        callService.endCall(roomId);
         readyCoordinator.cleanupRoom(roomId);
     }
 

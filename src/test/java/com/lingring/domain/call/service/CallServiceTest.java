@@ -3,10 +3,10 @@ package com.lingring.domain.call.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.lingring.domain.call.dao.CallHistoryRepository;
-import com.lingring.domain.call.domain.CallHistory;
+import com.lingring.domain.call.dao.CallRepository;
+import com.lingring.domain.call.domain.Call;
 import com.lingring.domain.call.event.CallEndedEvent;
-import com.lingring.domain.call.exception.CallHistoryNotFoundException;
+import com.lingring.domain.call.exception.CallNotFoundException;
 import com.lingring.domain.user.dao.UserStatsRepository;
 import com.lingring.domain.user.domain.UserStats;
 import com.lingring.global.config.ServiceIntegrationHelper;
@@ -30,17 +30,17 @@ import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.test.context.event.RecordApplicationEvents;
 
 @RecordApplicationEvents
-@Import(CallHistoryServiceTest.FixedDateTimeProviderConfig.class)
-class CallHistoryServiceTest extends ServiceIntegrationHelper {
+@Import(CallServiceTest.FixedDateTimeProviderConfig.class)
+class CallServiceTest extends ServiceIntegrationHelper {
 
     private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 5, 2, 10, 0);
     private static final LocalDate TODAY = FIXED_NOW.toLocalDate();
 
     @Autowired
-    private CallHistoryService callHistoryService;
+    private CallService callService;
 
     @Autowired
-    private CallHistoryRepository callHistoryRepository;
+    private CallRepository callRepository;
 
     @Autowired
     private UserStatsRepository userStatsRepository;
@@ -67,18 +67,18 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
     }
 
     @Nested
-    @DisplayName("findByRoomId: 통화 기록 조회 (선택적)")
+    @DisplayName("findByRoomId: 통화 조회 (선택적)")
     class FindByRoomId {
 
         @Test
-        @DisplayName("roomId에 통화 기록이 있으면 Optional에 담아 반환한다")
-        void findByRoomId_whenPresent_returnsCallHistory() {
+        @DisplayName("roomId에 통화가 있으면 Optional에 담아 반환한다")
+        void findByRoomId_whenPresent_returnsCall() {
             // given
             final UUID roomId = UUID.randomUUID();
-            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
+            callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
 
             // when
-            final Optional<CallHistory> found = callHistoryService.findByRoomId(roomId);
+            final Optional<Call> found = callService.findByRoomId(roomId);
 
             // then
             assertThat(found).isPresent();
@@ -86,10 +86,10 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
         }
 
         @Test
-        @DisplayName("roomId에 통화 기록이 없으면 빈 Optional을 반환한다")
+        @DisplayName("roomId에 통화가 없으면 빈 Optional을 반환한다")
         void findByRoomId_whenAbsent_returnsEmpty() {
             // when
-            final Optional<CallHistory> found = callHistoryService.findByRoomId(UUID.randomUUID());
+            final Optional<Call> found = callService.findByRoomId(UUID.randomUUID());
 
             // then
             assertThat(found).isEmpty();
@@ -97,29 +97,29 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
     }
 
     @Nested
-    @DisplayName("getByRoomId: 통화 기록 조회 (필수)")
+    @DisplayName("getByRoomId: 통화 조회 (필수)")
     class GetByRoomId {
 
         @Test
-        @DisplayName("roomId에 통화 기록이 있으면 CallHistory를 반환한다")
-        void getByRoomId_whenPresent_returnsCallHistory() {
+        @DisplayName("roomId에 통화가 있으면 Call을 반환한다")
+        void getByRoomId_whenPresent_returnsCall() {
             // given
             final UUID roomId = UUID.randomUUID();
-            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
+            callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
 
             // when
-            final CallHistory found = callHistoryService.getByRoomId(roomId);
+            final Call found = callService.getByRoomId(roomId);
 
             // then
             assertThat(found.getRoomId()).isEqualTo(roomId);
         }
 
         @Test
-        @DisplayName("roomId에 통화 기록이 없으면 CallHistoryNotFoundException을 던진다")
+        @DisplayName("roomId에 통화가 없으면 CallNotFoundException을 던진다")
         void getByRoomId_whenAbsent_throws() {
             // when & then
-            assertThatThrownBy(() -> callHistoryService.getByRoomId(UUID.randomUUID()))
-                    .isInstanceOf(CallHistoryNotFoundException.class);
+            assertThatThrownBy(() -> callService.getByRoomId(UUID.randomUUID()))
+                    .isInstanceOf(CallNotFoundException.class);
         }
     }
 
@@ -128,49 +128,49 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
     class EndCall {
 
         @Test
-        @DisplayName("진행 중인 통화 기록에 호출하면 isActive=false가 되고 endedAt이 기록된다")
+        @DisplayName("진행 중인 통화에 호출하면 isActive=false가 되고 endedAt이 기록된다")
         void endCall_marksCallEnded() {
             // given
             final UUID roomId = UUID.randomUUID();
-            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
+            callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
 
             // when
-            callHistoryService.endCall(roomId);
+            callService.endCall(roomId);
 
             // then
-            final Optional<CallHistory> ended = callHistoryRepository.findByRoomId(roomId);
+            final Optional<Call> ended = callRepository.findByRoomId(roomId);
             assertThat(ended).isPresent();
             assertThat(ended.get().isActive()).isFalse();
             assertThat(ended.get().getEndedAt()).isEqualTo(FIXED_NOW);
         }
 
         @Test
-        @DisplayName("존재하지 않는 roomId면 CallHistoryNotFoundException을 던진다")
+        @DisplayName("존재하지 않는 roomId면 CallNotFoundException을 던진다")
         void endCall_whenRoomIdNotFound_throws() {
             // given
             final UUID unknownRoomId = UUID.randomUUID();
 
             // when & then
-            assertThatThrownBy(() -> callHistoryService.endCall(unknownRoomId))
-                    .isInstanceOf(CallHistoryNotFoundException.class);
+            assertThatThrownBy(() -> callService.endCall(unknownRoomId))
+                    .isInstanceOf(CallNotFoundException.class);
         }
 
         @Test
-        @DisplayName("이미 종료된 통화 기록에 다시 호출해도 endedAt이 변하지 않는다 (멱등)")
+        @DisplayName("이미 종료된 통화에 다시 호출해도 endedAt이 변하지 않는다 (멱등)")
         void endCall_whenAlreadyEnded_isIdempotent() {
             // given
             final UUID roomId = UUID.randomUUID();
-            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
-            callHistoryService.endCall(roomId);
-            final LocalDateTime firstEndedAt = callHistoryRepository.findByRoomId(roomId)
+            callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
+            callService.endCall(roomId);
+            final LocalDateTime firstEndedAt = callRepository.findByRoomId(roomId)
                     .orElseThrow().getEndedAt();
             fixedDateTimeProvider.setFixedTime(FIXED_NOW.plusHours(1));
 
             // when
-            callHistoryService.endCall(roomId);
+            callService.endCall(roomId);
 
             // then
-            final CallHistory ended = callHistoryRepository.findByRoomId(roomId).orElseThrow();
+            final Call ended = callRepository.findByRoomId(roomId).orElseThrow();
             assertThat(ended.isActive()).isFalse();
             assertThat(ended.getEndedAt()).isEqualTo(firstEndedAt);
         }
@@ -186,10 +186,10 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
             // given
             final UUID roomId = UUID.randomUUID();
             final LocalDateTime startedAt = FIXED_NOW.minusMinutes(5);
-            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, startedAt));
+            callRepository.save(Call.start(1L, 2L, roomId, startedAt));
 
             // when
-            callHistoryService.endCall(roomId);
+            callService.endCall(roomId);
 
             // then
             final List<CallEndedEvent> published = events.stream(CallEndedEvent.class).toList();
@@ -205,11 +205,11 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
         void endCall_whenAlreadyEnded_doesNotRepublishEvent() {
             // given
             final UUID roomId = UUID.randomUUID();
-            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
-            callHistoryService.endCall(roomId);
+            callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
+            callService.endCall(roomId);
 
             // when
-            callHistoryService.endCall(roomId);
+            callService.endCall(roomId);
 
             // then
             final List<CallEndedEvent> published = events.stream(CallEndedEvent.class).toList();
@@ -228,10 +228,10 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
             userStatsRepository.save(UserStats.create(1L));
             userStatsRepository.save(UserStats.create(2L));
             final UUID roomId = UUID.randomUUID();
-            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(2)));
+            callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(2)));
 
             // when
-            callHistoryService.endCall(roomId);
+            callService.endCall(roomId);
 
             // then
             final UserStats statsA = userStatsRepository.findByUserId(1L).orElseThrow();
@@ -251,10 +251,10 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
             userStatsRepository.save(UserStats.create(1L));
             userStatsRepository.save(UserStats.create(2L));
             final UUID roomId = UUID.randomUUID();
-            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, FIXED_NOW.minusSeconds(30)));
+            callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW.minusSeconds(30)));
 
             // when
-            callHistoryService.endCall(roomId);
+            callService.endCall(roomId);
 
             // then
             final UserStats statsA = userStatsRepository.findByUserId(1L).orElseThrow();
@@ -272,10 +272,10 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
             userStatsRepository.save(UserStats.create(1L));
             userStatsRepository.save(UserStats.create(2L));
             final UUID roomId = UUID.randomUUID();
-            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, FIXED_NOW.minusSeconds(60)));
+            callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW.minusSeconds(60)));
 
             // when
-            callHistoryService.endCall(roomId);
+            callService.endCall(roomId);
 
             // then
             assertThat(userStatsRepository.findByUserId(1L).orElseThrow().getTotalCallCount()).isEqualTo(1);
@@ -289,11 +289,11 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
             userStatsRepository.save(UserStats.create(1L));
             userStatsRepository.save(UserStats.create(2L));
             final UUID roomId = UUID.randomUUID();
-            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(2)));
-            callHistoryService.endCall(roomId);
+            callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(2)));
+            callService.endCall(roomId);
 
             // when
-            callHistoryService.endCall(roomId);
+            callService.endCall(roomId);
 
             // then
             assertThat(userStatsRepository.findByUserId(1L).orElseThrow().getTotalCallCount()).isEqualTo(1);

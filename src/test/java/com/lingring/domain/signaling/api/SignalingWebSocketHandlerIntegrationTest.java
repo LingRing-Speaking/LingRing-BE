@@ -3,8 +3,8 @@ package com.lingring.domain.signaling.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.lingring.domain.call.dao.CallHistoryRepository;
-import com.lingring.domain.call.domain.CallHistory;
+import com.lingring.domain.call.dao.CallRepository;
+import com.lingring.domain.call.domain.Call;
 import com.lingring.domain.signaling.domain.SignalingMessage;
 import com.lingring.domain.signaling.domain.SignalingMessageType;
 import com.lingring.global.config.DataInitializer;
@@ -49,7 +49,7 @@ class SignalingWebSocketHandlerIntegrationTest {
     private RedisConnectionFactory redisConnectionFactory;
 
     @Autowired
-    private CallHistoryRepository callHistoryRepository;
+    private CallRepository callRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -65,7 +65,7 @@ class SignalingWebSocketHandlerIntegrationTest {
     void fullSignalingHandshake() throws Exception {
         // given
         final UUID roomId = UUID.randomUUID();
-        callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, STARTED_AT));
+        callRepository.save(Call.start(1L, 2L, roomId, STARTED_AT));
 
         final CollectingHandler handlerA = new CollectingHandler(objectMapper);
         final CollectingHandler handlerB = new CollectingHandler(objectMapper);
@@ -105,9 +105,9 @@ class SignalingWebSocketHandlerIntegrationTest {
         final SignalingMessage hangupForB = handlerB.awaitNext();
         assertThat(hangupForB.type()).isEqualTo(SignalingMessageType.HANGUP);
 
-        // CallHistory가 종료 상태로 전이됨
+        // Call이 종료 상태로 전이됨
         Awaitility.await().atMost(Duration.ofSeconds(AWAIT_SECONDS))
-                .untilAsserted(() -> assertThat(callHistoryRepository.findByRoomId(roomId).orElseThrow().isActive())
+                .untilAsserted(() -> assertThat(callRepository.findByRoomId(roomId).orElseThrow().isActive())
                         .isFalse());
 
         sessionA.close();
@@ -115,11 +115,11 @@ class SignalingWebSocketHandlerIntegrationTest {
     }
 
     @Test
-    @DisplayName("일방적 disconnect 시 상대에게 HANGUP이 전달되고 CallHistory가 종료된다")
+    @DisplayName("일방적 disconnect 시 상대에게 HANGUP이 전달되고 Call이 종료된다")
     void disconnect_propagatesHangupAndEndsCall() throws Exception {
         // given
         final UUID roomId = UUID.randomUUID();
-        callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, STARTED_AT));
+        callRepository.save(Call.start(1L, 2L, roomId, STARTED_AT));
 
         final CollectingHandler handlerA = new CollectingHandler(objectMapper);
         final CollectingHandler handlerB = new CollectingHandler(objectMapper);
@@ -135,7 +135,7 @@ class SignalingWebSocketHandlerIntegrationTest {
         assertThat(hangupForB.type()).isEqualTo(SignalingMessageType.HANGUP);
 
         Awaitility.await().atMost(Duration.ofSeconds(AWAIT_SECONDS))
-                .untilAsserted(() -> assertThat(callHistoryRepository.findByRoomId(roomId).orElseThrow().isActive())
+                .untilAsserted(() -> assertThat(callRepository.findByRoomId(roomId).orElseThrow().isActive())
                         .isFalse());
 
         sessionB.close();
@@ -146,7 +146,7 @@ class SignalingWebSocketHandlerIntegrationTest {
     void reconnectWithinGracePeriod_keepsCallAlive() throws Exception {
         // given: 통화 생성 후 user 1이 연결, JOIN까지 진행해 set에 진입
         final UUID roomId = UUID.randomUUID();
-        callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, STARTED_AT));
+        callRepository.save(Call.start(1L, 2L, roomId, STARTED_AT));
 
         final CollectingHandler handlerA1 = new CollectingHandler(objectMapper);
         final CollectingHandler handlerA2 = new CollectingHandler(objectMapper);
@@ -172,7 +172,7 @@ class SignalingWebSocketHandlerIntegrationTest {
 
         // grace 만료 시간을 넘겨도 통화가 종료되지 않아야 함
         Thread.sleep(1500);
-        assertThat(callHistoryRepository.findByRoomId(roomId).orElseThrow().isActive())
+        assertThat(callRepository.findByRoomId(roomId).orElseThrow().isActive())
                 .isTrue();
 
         sessionA2.close();
@@ -184,7 +184,7 @@ class SignalingWebSocketHandlerIntegrationTest {
     void duplicateSessionDoesNotTriggerCleanup() throws Exception {
         // given
         final UUID roomId = UUID.randomUUID();
-        callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, STARTED_AT));
+        callRepository.save(Call.start(1L, 2L, roomId, STARTED_AT));
 
         final CollectingHandler handlerA1 = new CollectingHandler(objectMapper);
         final CollectingHandler handlerA2 = new CollectingHandler(objectMapper);
@@ -209,7 +209,7 @@ class SignalingWebSocketHandlerIntegrationTest {
         assertThat(readyForB.type()).isEqualTo(SignalingMessageType.READY);
 
         // 통화는 종료되지 않아야 함
-        assertThat(callHistoryRepository.findByRoomId(roomId).orElseThrow().isActive())
+        assertThat(callRepository.findByRoomId(roomId).orElseThrow().isActive())
                 .isTrue();
 
         sessionA2.close();
@@ -230,7 +230,7 @@ class SignalingWebSocketHandlerIntegrationTest {
     void connect_whenNotParticipant_handshakeFails() {
         // given
         final UUID roomId = UUID.randomUUID();
-        callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, STARTED_AT));
+        callRepository.save(Call.start(1L, 2L, roomId, STARTED_AT));
 
         // when & then
         assertThatThrownBy(() -> connect(99L, roomId, new CollectingHandler(objectMapper)))

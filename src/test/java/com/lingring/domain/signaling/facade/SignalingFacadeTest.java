@@ -3,9 +3,9 @@ package com.lingring.domain.signaling.facade;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.lingring.domain.call.dao.CallHistoryRepository;
-import com.lingring.domain.call.domain.CallHistory;
-import com.lingring.domain.call.exception.CallHistoryNotFoundException;
+import com.lingring.domain.call.dao.CallRepository;
+import com.lingring.domain.call.domain.Call;
+import com.lingring.domain.call.exception.CallNotFoundException;
 import com.lingring.domain.signaling.domain.SignalingMessage;
 import com.lingring.domain.signaling.domain.SignalingMessageType;
 import com.lingring.global.config.ServiceIntegrationHelper;
@@ -27,7 +27,7 @@ class SignalingFacadeTest extends ServiceIntegrationHelper {
     private SignalingFacade signalingFacade;
 
     @Autowired
-    private CallHistoryRepository callHistoryRepository;
+    private CallRepository callRepository;
 
     @Autowired
     private StringRedisTemplate redisTemplate;
@@ -37,24 +37,24 @@ class SignalingFacadeTest extends ServiceIntegrationHelper {
     class Dispatch {
 
         @Test
-        @DisplayName("CallHistory가 없으면 CallHistoryNotFoundException을 던진다 (핸드셰이크 invariant 위반)")
-        void dispatch_whenCallHistoryNotFound_throws() {
+        @DisplayName("Call이 없으면 CallNotFoundException을 던진다 (핸드셰이크 invariant 위반)")
+        void dispatch_whenCallNotFound_throws() {
             // given
             final SignalingMessage message = new SignalingMessage(
                     SignalingMessageType.OFFER, null, null, null);
 
             // when & then
             assertThatThrownBy(() -> signalingFacade.dispatch(1L, UUID.randomUUID(), message))
-                    .isInstanceOf(CallHistoryNotFoundException.class);
+                    .isInstanceOf(CallNotFoundException.class);
         }
 
         @Test
-        @DisplayName("HANGUP을 받으면 CallHistory가 종료 상태로 전이된다")
+        @DisplayName("HANGUP을 받으면 Call이 종료 상태로 전이된다")
         @Transactional
         void dispatch_whenHangup_endsCall() {
             // given
             final UUID roomId = UUID.randomUUID();
-            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, STARTED_AT));
+            callRepository.save(Call.start(1L, 2L, roomId, STARTED_AT));
             final SignalingMessage hangup = new SignalingMessage(
                     SignalingMessageType.HANGUP, null, null, null);
 
@@ -62,7 +62,7 @@ class SignalingFacadeTest extends ServiceIntegrationHelper {
             signalingFacade.dispatch(1L, roomId, hangup);
 
             // then
-            final CallHistory updated = callHistoryRepository.findByRoomId(roomId).orElseThrow();
+            final Call updated = callRepository.findByRoomId(roomId).orElseThrow();
             assertThat(updated.isActive()).isFalse();
             assertThat(updated.getEndedAt()).isNotNull();
         }
@@ -72,7 +72,7 @@ class SignalingFacadeTest extends ServiceIntegrationHelper {
         void dispatch_whenHangup_cleansUpRoom() {
             // given
             final UUID roomId = UUID.randomUUID();
-            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, STARTED_AT));
+            callRepository.save(Call.start(1L, 2L, roomId, STARTED_AT));
             redisTemplate.opsForSet().add(SignalingChannels.joinedSetKey(roomId), "1", "2");
             redisTemplate.opsForValue().set(SignalingChannels.readyLockKey(roomId), "1");
             final SignalingMessage hangup = new SignalingMessage(
@@ -92,18 +92,18 @@ class SignalingFacadeTest extends ServiceIntegrationHelper {
     class HandleDisconnect {
 
         @Test
-        @DisplayName("참여자가 disconnect하면 CallHistory가 종료된다")
+        @DisplayName("참여자가 disconnect하면 Call이 종료된다")
         @Transactional
         void handleDisconnect_endsCall() {
             // given
             final UUID roomId = UUID.randomUUID();
-            callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, STARTED_AT));
+            callRepository.save(Call.start(1L, 2L, roomId, STARTED_AT));
 
             // when
             signalingFacade.handleDisconnect(1L, roomId);
 
             // then
-            final CallHistory updated = callHistoryRepository.findByRoomId(roomId).orElseThrow();
+            final Call updated = callRepository.findByRoomId(roomId).orElseThrow();
             assertThat(updated.isActive()).isFalse();
         }
 
@@ -115,8 +115,8 @@ class SignalingFacadeTest extends ServiceIntegrationHelper {
         }
 
         @Test
-        @DisplayName("CallHistory가 없으면 아무 동작도 하지 않는다 (이미 종료된 통화)")
-        void handleDisconnect_whenCallHistoryAbsent_doesNothing() {
+        @DisplayName("Call이 없으면 아무 동작도 하지 않는다 (이미 종료된 통화)")
+        void handleDisconnect_whenCallAbsent_doesNothing() {
             // when & then
             signalingFacade.handleDisconnect(1L, UUID.randomUUID());
         }

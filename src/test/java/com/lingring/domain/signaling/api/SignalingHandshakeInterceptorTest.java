@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
-import com.lingring.domain.call.dao.CallHistoryRepository;
-import com.lingring.domain.call.domain.CallHistory;
+import com.lingring.domain.call.dao.CallRepository;
+import com.lingring.domain.call.domain.Call;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -29,13 +29,13 @@ class SignalingHandshakeInterceptorTest {
     private static final UUID ROOM_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
     private static final LocalDateTime STARTED_AT = LocalDateTime.of(2026, 4, 27, 10, 0);
 
-    private CallHistoryRepository callHistoryRepository;
+    private CallRepository callRepository;
     private SignalingHandshakeInterceptor interceptor;
 
     @BeforeEach
     void setUp() {
-        callHistoryRepository = mock(CallHistoryRepository.class);
-        interceptor = new SignalingHandshakeInterceptor(callHistoryRepository);
+        callRepository = mock(CallRepository.class);
+        interceptor = new SignalingHandshakeInterceptor(callRepository);
     }
 
     @Nested
@@ -46,8 +46,8 @@ class SignalingHandshakeInterceptorTest {
         @DisplayName("정상 핸드셰이크 시 attributes에 userId/roomId 저장하고 true 반환")
         void valid_setsAttributesAndReturnsTrue() {
             // given
-            given(callHistoryRepository.findByRoomId(ROOM_ID))
-                    .willReturn(Optional.of(CallHistory.start(1L, 2L, ROOM_ID, STARTED_AT)));
+            given(callRepository.findByRoomId(ROOM_ID))
+                    .willReturn(Optional.of(Call.start(1L, 2L, ROOM_ID, STARTED_AT)));
             final ServerHttpRequest request = buildRequest("userId=1&roomId=" + ROOM_ID);
             final ServerHttpResponse response = buildResponse();
             final Map<String, Object> attributes = new HashMap<>();
@@ -126,10 +126,10 @@ class SignalingHandshakeInterceptorTest {
         }
 
         @Test
-        @DisplayName("CallHistory 미존재 시 404 반환")
-        void callHistoryNotFound_returns404() {
+        @DisplayName("Call 미존재 시 404 반환")
+        void callNotFound_returns404() {
             // given
-            given(callHistoryRepository.findByRoomId(ROOM_ID)).willReturn(Optional.empty());
+            given(callRepository.findByRoomId(ROOM_ID)).willReturn(Optional.empty());
             final ServerHttpRequest request = buildRequest("userId=1&roomId=" + ROOM_ID);
             final MockHttpServletResponse rawResponse = new MockHttpServletResponse();
             final ServerHttpResponse response = new ServletServerHttpResponse(rawResponse);
@@ -146,8 +146,8 @@ class SignalingHandshakeInterceptorTest {
         @DisplayName("통화 비참여자 접근 시 403 반환")
         void notParticipant_returns403() {
             // given
-            given(callHistoryRepository.findByRoomId(ROOM_ID))
-                    .willReturn(Optional.of(CallHistory.start(1L, 2L, ROOM_ID, STARTED_AT)));
+            given(callRepository.findByRoomId(ROOM_ID))
+                    .willReturn(Optional.of(Call.start(1L, 2L, ROOM_ID, STARTED_AT)));
             final ServerHttpRequest request = buildRequest("userId=99&roomId=" + ROOM_ID);
             final MockHttpServletResponse rawResponse = new MockHttpServletResponse();
             final ServerHttpResponse response = new ServletServerHttpResponse(rawResponse);
