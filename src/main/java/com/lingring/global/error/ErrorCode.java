@@ -65,6 +65,10 @@ public enum ErrorCode {
     MATCH_NOT_FOUND(NOT_FOUND, "매칭을 찾을 수 없습니다."),
     MATCH_PARTICIPANT_MISMATCH(FORBIDDEN, "해당 매칭의 참여자가 아닙니다."),
 
+    // Call Error
+    CALL_HISTORY_NOT_FOUND(NOT_FOUND, "통화 기록을 찾을 수 없습니다."),
+    CALL_PARTICIPANT_MISMATCH(FORBIDDEN, "해당 통화의 참여자가 아닙니다."),
+
     // Signaling Error
     SIGNALING_INVALID_USER(BAD_REQUEST, "시그널링 연결에 유효하지 않은 사용자입니다."),
     SIGNALING_INVALID_PAYLOAD(BAD_REQUEST, "유효하지 않은 시그널링 메시지입니다."),
