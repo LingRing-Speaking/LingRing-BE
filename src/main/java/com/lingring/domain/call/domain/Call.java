@@ -1,14 +1,12 @@
-package com.lingring.domain.matching.domain;
+package com.lingring.domain.call.domain;
 
-import static jakarta.persistence.EnumType.STRING;
 import static jakarta.persistence.GenerationType.IDENTITY;
 import static lombok.AccessLevel.PROTECTED;
 
-import com.lingring.domain.matching.exception.MatchParticipantMismatchException;
+import com.lingring.domain.call.exception.CallParticipantMismatchException;
 import com.lingring.global.common.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
@@ -24,19 +22,19 @@ import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(
-        name = "match_call",
+        name = "calls",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_match_room_id",
+                name = "uk_calls_room_id",
                 columnNames = "room_id"
         ),
         indexes = {
-                @Index(name = "idx_match_user_a_id", columnList = "user_a_id"),
-                @Index(name = "idx_match_user_b_id", columnList = "user_b_id")
+                @Index(name = "idx_calls_user_a_id", columnList = "user_a_id"),
+                @Index(name = "idx_calls_user_b_id", columnList = "user_b_id")
         }
 )
 @Getter
 @NoArgsConstructor(access = PROTECTED)
-public class Match extends BaseTimeEntity {
+public class Call extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = IDENTITY)
@@ -53,31 +51,25 @@ public class Match extends BaseTimeEntity {
     @Column(name = "user_b_id", nullable = false)
     private Long userBId;
 
-    @Enumerated(STRING)
-    @Column(name = "status", nullable = false, length = 16)
-    private MatchStatus status;
-
     @Column(name = "started_at", nullable = false)
     private LocalDateTime startedAt;
 
     @Column(name = "ended_at")
     private LocalDateTime endedAt;
 
-    private Match(
+    private Call(
             @NonNull final UUID roomId,
             @NonNull final Long userAId,
             @NonNull final Long userBId,
-            @NonNull final MatchStatus status,
             @NonNull final LocalDateTime startedAt
     ) {
         this.roomId = roomId;
         this.userAId = userAId;
         this.userBId = userBId;
-        this.status = status;
         this.startedAt = startedAt;
     }
 
-    public static Match start(
+    public static Call start(
             @NonNull final Long firstUserId,
             @NonNull final Long secondUserId,
             @NonNull final UUID roomId,
@@ -85,15 +77,18 @@ public class Match extends BaseTimeEntity {
     ) {
         final Long userAId = Math.min(firstUserId, secondUserId);
         final Long userBId = Math.max(firstUserId, secondUserId);
-        return new Match(roomId, userAId, userBId, MatchStatus.STARTED, startedAt);
+        return new Call(roomId, userAId, userBId, startedAt);
     }
 
     public void end(@NonNull final LocalDateTime endedAt) {
-        if (status == MatchStatus.ENDED) {
+        if (!isActive()) {
             return;
         }
-        this.status = MatchStatus.ENDED;
         this.endedAt = endedAt;
+    }
+
+    public boolean isActive() {
+        return endedAt == null;
     }
 
     public boolean involves(@NonNull final Long userId) {
@@ -115,6 +110,6 @@ public class Match extends BaseTimeEntity {
         if (userBId.equals(userId)) {
             return userAId;
         }
-        throw new MatchParticipantMismatchException(roomId, userId);
+        throw new CallParticipantMismatchException(roomId, userId);
     }
 }

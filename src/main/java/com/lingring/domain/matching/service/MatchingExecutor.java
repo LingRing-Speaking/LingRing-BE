@@ -1,8 +1,8 @@
 package com.lingring.domain.matching.service;
 
-import com.lingring.domain.matching.dao.MatchRepository;
+import com.lingring.domain.call.dao.CallRepository;
+import com.lingring.domain.call.domain.Call;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
-import com.lingring.domain.matching.domain.Match;
 import com.lingring.domain.matching.domain.MatchingCandidate;
 import com.lingring.domain.matching.domain.MatchingQueue;
 import com.lingring.domain.matching.domain.policy.MatchingPolicies;
@@ -23,7 +23,7 @@ public class MatchingExecutor {
     private static final int MATCHING_SIZE = 2;
 
     private final MatchingQueueRepository matchingQueueRepository;
-    private final MatchRepository matchRepository;
+    private final CallRepository callRepository;
     private final MatchingPolicies matchingPolicies;
     private final RoomIdGenerator roomIdGenerator;
     private final DateTimeProvider dateTimeProvider;
@@ -56,7 +56,7 @@ public class MatchingExecutor {
             return;
         }
         final LocalDateTime now = dateTimeProvider.now();
-        matchRepository.save(Match.start(self.userId(), partnerId, roomId, now));
+        callRepository.save(Call.start(self.userId(), partnerId, roomId, now));
         consumed.add(self.userId());
         consumed.add(partnerId);
     }

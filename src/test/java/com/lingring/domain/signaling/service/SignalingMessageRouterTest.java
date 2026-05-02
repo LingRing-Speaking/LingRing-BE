@@ -3,7 +3,7 @@ package com.lingring.domain.signaling.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.then;
 
-import com.lingring.domain.matching.domain.Match;
+import com.lingring.domain.call.domain.Call;
 import com.lingring.domain.signaling.domain.SignalingMessage;
 import com.lingring.domain.signaling.domain.SignalingMessageType;
 import com.lingring.global.config.ServiceIntegrationHelper;
@@ -36,12 +36,12 @@ class SignalingMessageRouterTest extends ServiceIntegrationHelper {
         void forward_setsRoutingAndPublishes() {
             // given
             final UUID roomId = UUID.randomUUID();
-            final Match match = Match.start(1L, 2L, roomId, STARTED_AT);
+            final Call call = Call.start(1L, 2L, roomId, STARTED_AT);
             final SignalingMessage offer = new SignalingMessage(
                     SignalingMessageType.OFFER, null, null, null);
 
             // when
-            messageRouter.forwardToCounterpart(match, 1L, offer);
+            messageRouter.forwardToCounterpart(call, 1L, offer);
 
             // then
             final ArgumentCaptor<UUID> roomIdCaptor = ArgumentCaptor.forClass(UUID.class);
@@ -63,10 +63,10 @@ class SignalingMessageRouterTest extends ServiceIntegrationHelper {
         void publishHangup_synthesizesHangupMessage() {
             // given
             final UUID roomId = UUID.randomUUID();
-            final Match match = Match.start(1L, 2L, roomId, STARTED_AT);
+            final Call call = Call.start(1L, 2L, roomId, STARTED_AT);
 
             // when
-            messageRouter.publishHangup(match, 1L);
+            messageRouter.publishHangup(call, 1L);
 
             // then
             final ArgumentCaptor<UUID> roomIdCaptor = ArgumentCaptor.forClass(UUID.class);
