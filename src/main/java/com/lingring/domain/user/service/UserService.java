@@ -46,6 +46,20 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
+    public User getById(final Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(
+                        ErrorCode.USER_NOT_FOUND,
+                        "ID가 %d인 사용자를 찾을 수 없습니다.".formatted(userId)
+                ));
+    }
+
+    @Transactional
+    public void delete(final User user) {
+        userRepository.delete(user);
+    }
+
+    @Transactional(readOnly = true)
     public Optional<User> findByProvider(final Provider provider, final String providerUserId) {
         return userRepository.findByProviderAndProviderUserId(provider, providerUserId);
     }

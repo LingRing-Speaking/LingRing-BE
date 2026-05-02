@@ -24,4 +24,8 @@ public interface UserStatsRepository extends JpaRepository<UserStats, Long> {
             + "SET u.expressionCount = u.expressionCount - 1 "
             + "WHERE u.userId = :userId")
     int decrementExpressionCount(@Param("userId") Long userId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM UserStats u WHERE u.userId = :userId")
+    int deleteByUserId(@Param("userId") Long userId);
 }
