@@ -11,7 +11,10 @@ import com.lingring.domain.user.dao.UserStatsRepository;
 import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.UserStats;
+import com.lingring.domain.user.domain.WithdrawReason;
 import com.lingring.domain.user.domain.vo.Name;
+import com.lingring.domain.withdrawallog.dao.WithdrawalLogRepository;
+import com.lingring.domain.withdrawallog.domain.WithdrawalLog;
 import com.lingring.domain.userblock.dao.UserBlockRepository;
 import com.lingring.domain.userblock.domain.UserBlock;
 import com.lingring.domain.userexpression.dao.UserExpressionRepository;
@@ -23,6 +26,7 @@ import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.NotFoundException;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -55,6 +59,9 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
 
+    @Autowired
+    private WithdrawalLogRepository withdrawalLogRepository;
+
     @Nested
     @DisplayName("withdraw: 회원탈퇴 시 도메인별 정리 작업")
     class Withdraw {
@@ -66,7 +73,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             final User me = saveUser("링링", "kakao-me");
 
             // when
-            userWithdrawalFacade.withdraw(me.getId());
+            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             assertThat(userRepository.findById(me.getId())).isEmpty();
@@ -82,7 +89,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             userStatsRepository.save(UserStats.create(other.getId()));
 
             // when
-            userWithdrawalFacade.withdraw(me.getId());
+            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             assertThat(userStatsRepository.findByUserId(me.getId())).isEmpty();
@@ -100,7 +107,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             userExpressionRepository.save(UserExpression.create(other.getId(), "expr-other", "meaning-other"));
 
             // when
-            userWithdrawalFacade.withdraw(me.getId());
+            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             assertThat(userExpressionRepository.findAllByUserIdOrderByCreatedAtDesc(
@@ -122,7 +129,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             userBlockRepository.save(UserBlock.create(b.getId(), me.getId()));
 
             // when
-            userWithdrawalFacade.withdraw(me.getId());
+            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             assertThat(userBlockRepository.findBlockedUserIdsByUserId(me.getId())).isEmpty();
@@ -147,7 +154,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             final boolean meIsAInCallB = callB.getUserAId().equals(me.getId());
 
             // when
-            userWithdrawalFacade.withdraw(me.getId());
+            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             final Call reloadedA = callRepository.findById(callA.getId()).orElseThrow();
@@ -180,7 +187,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             ));
 
             // when
-            userWithdrawalFacade.withdraw(me.getId());
+            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             final Call reloaded = callRepository.findById(call.getId()).orElseThrow();
@@ -202,7 +209,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             ));
 
             // when
-            userWithdrawalFacade.withdraw(me.getId());
+            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             final UserReport reloaded = userReportRepository.findById(saved.getId()).orElseThrow();
@@ -226,7 +233,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             ));
 
             // when
-            userWithdrawalFacade.withdraw(me.getId());
+            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             final UserReport reloaded = userReportRepository.findById(saved.getId()).orElseThrow();
@@ -242,7 +249,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             refreshTokenRepository.save(me.getId(), "refresh-token-value");
 
             // when
-            userWithdrawalFacade.withdraw(me.getId());
+            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             assertThat(refreshTokenRepository.exists(me.getId())).isFalse();
@@ -255,10 +262,43 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             final Long missingId = 9_999_999L;
 
             // when & then
-            assertThatThrownBy(() -> userWithdrawalFacade.withdraw(missingId))
+            assertThatThrownBy(() -> userWithdrawalFacade.withdraw(missingId, WithdrawReason.NO_GOOD_MATCH, null))
                     .isInstanceOf(NotFoundException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.USER_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("OTHER 사유와 description을 같이 보내면 WithdrawalLog에 description이 저장된다")
+        void withdraw_whenReasonIsOtherWithDescription_savesWithdrawalLogWithDescription() {
+            // given
+            final User me = saveUser("링링", "kakao-me");
+            final String description = "더 이상 사용할 일이 없어요";
+
+            // when
+            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.OTHER, description);
+
+            // then
+            final List<WithdrawalLog> logs = withdrawalLogRepository.findAll();
+            assertThat(logs).hasSize(1);
+            assertThat(logs.get(0).getReason()).isEqualTo(WithdrawReason.OTHER);
+            assertThat(logs.get(0).getDescription().getValue()).isEqualTo(description);
+        }
+
+        @Test
+        @DisplayName("OTHER 아닌 사유로 호출하면 description이 들어와도 WithdrawalLog에는 description이 null로 저장된다")
+        void withdraw_whenReasonIsNotOther_savesWithdrawalLogWithNullDescription() {
+            // given
+            final User me = saveUser("링링", "kakao-me");
+
+            // when
+            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.RARELY_USE, "이건 무시됨");
+
+            // then
+            final List<WithdrawalLog> logs = withdrawalLogRepository.findAll();
+            assertThat(logs).hasSize(1);
+            assertThat(logs.get(0).getReason()).isEqualTo(WithdrawReason.RARELY_USE);
+            assertThat(logs.get(0).getDescription()).isNull();
         }
     }
 

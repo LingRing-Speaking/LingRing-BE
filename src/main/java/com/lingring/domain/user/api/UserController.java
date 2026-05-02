@@ -29,7 +29,7 @@ public class UserController implements UserApi {
 
     @Override
     public ApiResponse<Void> withdraw(final Long userId, final WithdrawRequest request) {
-        userWithdrawalFacade.withdraw(userId);
+        userWithdrawalFacade.withdraw(userId, request.reason(), request.description());
         return ApiResponse.success(HttpStatus.NO_CONTENT);
     }
 }

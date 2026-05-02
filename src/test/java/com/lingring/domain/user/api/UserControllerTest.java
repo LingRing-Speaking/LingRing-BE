@@ -185,7 +185,7 @@ class UserControllerTest {
 
             // then
             assertThat(response.getStatus()).isEqualTo(204);
-            then(userWithdrawalFacade).should(only()).withdraw(userId);
+            then(userWithdrawalFacade).should(only()).withdraw(userId, WithdrawReason.NO_GOOD_MATCH, null);
         }
 
         @Test
@@ -193,9 +193,10 @@ class UserControllerTest {
         void withdraw_whenOtherWithDescription_returns204() throws Exception {
             // given
             final Long userId = 1L;
+            final String description = "더 이상 사용할 일이 없어요";
             AuthContext.set(userId);
             final String body = objectMapper.writeValueAsString(
-                    new WithdrawRequest(WithdrawReason.OTHER, "더 이상 사용할 일이 없어요")
+                    new WithdrawRequest(WithdrawReason.OTHER, description)
             );
 
             // when
@@ -208,7 +209,7 @@ class UserControllerTest {
 
             // then
             assertThat(response.getStatus()).isEqualTo(204);
-            then(userWithdrawalFacade).should(only()).withdraw(userId);
+            then(userWithdrawalFacade).should(only()).withdraw(userId, WithdrawReason.OTHER, description);
         }
 
         @Test
@@ -270,7 +271,7 @@ class UserControllerTest {
             willThrow(new NotFoundException(
                     ErrorCode.USER_NOT_FOUND,
                     "ID가 %d인 사용자를 찾을 수 없습니다.".formatted(userId)
-            )).given(userWithdrawalFacade).withdraw(userId);
+            )).given(userWithdrawalFacade).withdraw(userId, WithdrawReason.NO_GOOD_MATCH, null);
             final String body = objectMapper.writeValueAsString(
                     new WithdrawRequest(WithdrawReason.NO_GOOD_MATCH, null)
             );
