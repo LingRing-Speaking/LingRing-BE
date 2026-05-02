@@ -1,7 +1,7 @@
 package com.lingring.domain.signaling.api;
 
-import com.lingring.domain.matching.dao.MatchRepository;
-import com.lingring.domain.matching.domain.Match;
+import com.lingring.domain.call.dao.CallHistoryRepository;
+import com.lingring.domain.call.domain.CallHistory;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import java.util.Optional;
@@ -19,7 +19,7 @@ import org.springframework.web.socket.server.HandshakeInterceptor;
 @RequiredArgsConstructor
 public class SignalingHandshakeInterceptor implements HandshakeInterceptor {
 
-    private final MatchRepository matchRepository;
+    private final CallHistoryRepository callHistoryRepository;
 
     @Override
     public boolean beforeHandshake(
@@ -46,12 +46,12 @@ public class SignalingHandshakeInterceptor implements HandshakeInterceptor {
             return false;
         }
 
-        final Optional<Match> match = matchRepository.findByRoomId(roomId);
-        if (match.isEmpty()) {
+        final Optional<CallHistory> callHistory = callHistoryRepository.findByRoomId(roomId);
+        if (callHistory.isEmpty()) {
             response.setStatusCode(HttpStatus.NOT_FOUND);
             return false;
         }
-        if (!match.get().involves(userId)) {
+        if (!callHistory.get().involves(userId)) {
             response.setStatusCode(HttpStatus.FORBIDDEN);
             return false;
         }

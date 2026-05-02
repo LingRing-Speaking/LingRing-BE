@@ -1,8 +1,7 @@
 package com.lingring.domain.signaling.facade;
 
-import com.lingring.domain.matching.domain.Match;
-import com.lingring.domain.matching.domain.MatchStatus;
-import com.lingring.domain.matching.service.MatchingService;
+import com.lingring.domain.call.domain.CallHistory;
+import com.lingring.domain.call.service.CallHistoryService;
 import com.lingring.domain.signaling.domain.SignalingMessage;
 import com.lingring.domain.signaling.domain.SignalingMessageType;
 import com.lingring.domain.signaling.service.SignalingMessageRouter;
@@ -18,25 +17,25 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class SignalingFacade {
 
-    private final MatchingService matchingService;
+    private final CallHistoryService callHistoryService;
     private final SignalingMessageRouter messageRouter;
     private final SignalingReadyCoordinator readyCoordinator;
 
     public void dispatch(final Long senderId, final UUID roomId, final SignalingMessage message) {
-        final Match match = matchingService.getByRoomId(roomId);
+        final CallHistory callHistory = callHistoryService.getByRoomId(roomId);
 
         final SignalingMessageType type = message.type();
         if (type == SignalingMessageType.JOIN) {
-            readyCoordinator.recordJoinAndAnnounceIfReady(match, senderId);
+            readyCoordinator.recordJoinAndAnnounceIfReady(callHistory, senderId);
             return;
         }
         if (isForwardable(type)) {
-            messageRouter.forwardToCounterpart(match, senderId, message);
+            messageRouter.forwardToCounterpart(callHistory, senderId, message);
             return;
         }
         if (type == SignalingMessageType.HANGUP) {
-            messageRouter.forwardToCounterpart(match, senderId, message);
-            matchingService.endMatch(roomId);
+            messageRouter.forwardToCounterpart(callHistory, senderId, message);
+            callHistoryService.endCall(roomId);
             readyCoordinator.cleanupRoom(roomId);
             return;
         }
@@ -48,19 +47,19 @@ public class SignalingFacade {
         if (roomId == null) {
             return;
         }
-        final Optional<Match> matchOpt = matchingService.findByRoomId(roomId);
-        if (matchOpt.isEmpty()) {
+        final Optional<CallHistory> callHistoryOpt = callHistoryService.findByRoomId(roomId);
+        if (callHistoryOpt.isEmpty()) {
             return;
         }
-        final Match match = matchOpt.get();
-        if (!match.involves(userId)) {
+        final CallHistory callHistory = callHistoryOpt.get();
+        if (!callHistory.involves(userId)) {
             return;
         }
-        if (match.getStatus() == MatchStatus.ENDED) {
+        if (!callHistory.isActive()) {
             return;
         }
-        messageRouter.publishHangup(match, userId);
-        matchingService.endMatch(roomId);
+        messageRouter.publishHangup(callHistory, userId);
+        callHistoryService.endCall(roomId);
         readyCoordinator.cleanupRoom(roomId);
     }
 

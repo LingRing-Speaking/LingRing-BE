@@ -1,6 +1,6 @@
 package com.lingring.domain.signaling.service;
 
-import com.lingring.domain.matching.domain.Match;
+import com.lingring.domain.call.domain.CallHistory;
 import com.lingring.domain.signaling.domain.SignalingMessage;
 import com.lingring.domain.signaling.domain.SignalingMessageType;
 import com.lingring.infrastructure.redis.SignalingChannels;
@@ -23,8 +23,8 @@ public class SignalingReadyCoordinator {
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
 
-    public void recordJoinAndAnnounceIfReady(final Match match, final Long senderId) {
-        final String joinedKey = SignalingChannels.joinedSetKey(match.getRoomId());
+    public void recordJoinAndAnnounceIfReady(final CallHistory callHistory, final Long senderId) {
+        final String joinedKey = SignalingChannels.joinedSetKey(callHistory.getRoomId());
         redisTemplate.opsForSet().add(joinedKey, senderId.toString());
         redisTemplate.expire(joinedKey, JOINED_SET_TTL);
 
@@ -32,10 +32,10 @@ public class SignalingReadyCoordinator {
         if (size == null || size < EXPECTED_PARTICIPANTS) {
             return;
         }
-        if (!acquireReadyLock(match.getRoomId())) {
+        if (!acquireReadyLock(callHistory.getRoomId())) {
             return;
         }
-        publishReady(match);
+        publishReady(callHistory);
     }
 
     public void cleanupRoom(final UUID roomId) {
@@ -49,13 +49,13 @@ public class SignalingReadyCoordinator {
         return Boolean.TRUE.equals(acquired);
     }
 
-    private void publishReady(final Match match) {
+    private void publishReady(final CallHistory callHistory) {
         final ObjectNode payload = objectMapper.createObjectNode()
-                .put("callerUserId", match.callerUserId())
-                .put("calleeUserId", match.calleeUserId());
-        signalingPublisher.publish(match.getRoomId(), new SignalingMessage(
-                SignalingMessageType.READY, null, match.callerUserId(), payload));
-        signalingPublisher.publish(match.getRoomId(), new SignalingMessage(
-                SignalingMessageType.READY, null, match.calleeUserId(), payload));
+                .put("callerUserId", callHistory.callerUserId())
+                .put("calleeUserId", callHistory.calleeUserId());
+        signalingPublisher.publish(callHistory.getRoomId(), new SignalingMessage(
+                SignalingMessageType.READY, null, callHistory.callerUserId(), payload));
+        signalingPublisher.publish(callHistory.getRoomId(), new SignalingMessage(
+                SignalingMessageType.READY, null, callHistory.calleeUserId(), payload));
     }
 }

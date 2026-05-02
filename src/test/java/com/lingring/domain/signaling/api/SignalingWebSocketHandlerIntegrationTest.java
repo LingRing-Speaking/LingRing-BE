@@ -3,9 +3,8 @@ package com.lingring.domain.signaling.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.lingring.domain.matching.dao.MatchRepository;
-import com.lingring.domain.matching.domain.Match;
-import com.lingring.domain.matching.domain.MatchStatus;
+import com.lingring.domain.call.dao.CallHistoryRepository;
+import com.lingring.domain.call.domain.CallHistory;
 import com.lingring.domain.signaling.domain.SignalingMessage;
 import com.lingring.domain.signaling.domain.SignalingMessageType;
 import com.lingring.global.config.DataInitializer;
@@ -50,7 +49,7 @@ class SignalingWebSocketHandlerIntegrationTest {
     private RedisConnectionFactory redisConnectionFactory;
 
     @Autowired
-    private MatchRepository matchRepository;
+    private CallHistoryRepository callHistoryRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -66,7 +65,7 @@ class SignalingWebSocketHandlerIntegrationTest {
     void fullSignalingHandshake() throws Exception {
         // given
         final UUID roomId = UUID.randomUUID();
-        matchRepository.save(Match.start(1L, 2L, roomId, STARTED_AT));
+        callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, STARTED_AT));
 
         final CollectingHandler handlerA = new CollectingHandler(objectMapper);
         final CollectingHandler handlerB = new CollectingHandler(objectMapper);
@@ -106,21 +105,21 @@ class SignalingWebSocketHandlerIntegrationTest {
         final SignalingMessage hangupForB = handlerB.awaitNext();
         assertThat(hangupForB.type()).isEqualTo(SignalingMessageType.HANGUP);
 
-        // Match가 ENDED로 전이됨
+        // CallHistory가 종료 상태로 전이됨
         Awaitility.await().atMost(Duration.ofSeconds(AWAIT_SECONDS))
-                .untilAsserted(() -> assertThat(matchRepository.findByRoomId(roomId).orElseThrow().getStatus())
-                        .isEqualTo(MatchStatus.ENDED));
+                .untilAsserted(() -> assertThat(callHistoryRepository.findByRoomId(roomId).orElseThrow().isActive())
+                        .isFalse());
 
         sessionA.close();
         sessionB.close();
     }
 
     @Test
-    @DisplayName("일방적 disconnect 시 상대에게 HANGUP이 전달되고 Match가 ENDED로 전이된다")
-    void disconnect_propagatesHangupAndEndsMatch() throws Exception {
+    @DisplayName("일방적 disconnect 시 상대에게 HANGUP이 전달되고 CallHistory가 종료된다")
+    void disconnect_propagatesHangupAndEndsCall() throws Exception {
         // given
         final UUID roomId = UUID.randomUUID();
-        matchRepository.save(Match.start(1L, 2L, roomId, STARTED_AT));
+        callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, STARTED_AT));
 
         final CollectingHandler handlerA = new CollectingHandler(objectMapper);
         final CollectingHandler handlerB = new CollectingHandler(objectMapper);
@@ -136,18 +135,18 @@ class SignalingWebSocketHandlerIntegrationTest {
         assertThat(hangupForB.type()).isEqualTo(SignalingMessageType.HANGUP);
 
         Awaitility.await().atMost(Duration.ofSeconds(AWAIT_SECONDS))
-                .untilAsserted(() -> assertThat(matchRepository.findByRoomId(roomId).orElseThrow().getStatus())
-                        .isEqualTo(MatchStatus.ENDED));
+                .untilAsserted(() -> assertThat(callHistoryRepository.findByRoomId(roomId).orElseThrow().isActive())
+                        .isFalse());
 
         sessionB.close();
     }
 
     @Test
-    @DisplayName("grace period 안에 재연결하면 매치가 종료되지 않는다")
-    void reconnectWithinGracePeriod_keepsMatchAlive() throws Exception {
-        // given: 매치 생성 후 user 1이 연결, JOIN까지 진행해 set에 진입
+    @DisplayName("grace period 안에 재연결하면 통화가 종료되지 않는다")
+    void reconnectWithinGracePeriod_keepsCallAlive() throws Exception {
+        // given: 통화 생성 후 user 1이 연결, JOIN까지 진행해 set에 진입
         final UUID roomId = UUID.randomUUID();
-        matchRepository.save(Match.start(1L, 2L, roomId, STARTED_AT));
+        callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, STARTED_AT));
 
         final CollectingHandler handlerA1 = new CollectingHandler(objectMapper);
         final CollectingHandler handlerA2 = new CollectingHandler(objectMapper);
@@ -165,27 +164,27 @@ class SignalingWebSocketHandlerIntegrationTest {
         final WebSocketSession sessionA2 = connect(1L, roomId, handlerA2);
         sendMessage(sessionB, new SignalingMessage(SignalingMessageType.JOIN, null, null, null));
 
-        // then: 매치는 살아 있고 READY가 양쪽에 도달
+        // then: 통화는 살아 있고 READY가 양쪽에 도달
         final SignalingMessage readyForA2 = handlerA2.awaitNext();
         final SignalingMessage readyForB = handlerB.awaitNext();
         assertThat(readyForA2.type()).isEqualTo(SignalingMessageType.READY);
         assertThat(readyForB.type()).isEqualTo(SignalingMessageType.READY);
 
-        // grace 만료 시간을 넘겨도 매치가 ENDED로 전이되지 않아야 함
+        // grace 만료 시간을 넘겨도 통화가 종료되지 않아야 함
         Thread.sleep(1500);
-        assertThat(matchRepository.findByRoomId(roomId).orElseThrow().getStatus())
-                .isNotEqualTo(MatchStatus.ENDED);
+        assertThat(callHistoryRepository.findByRoomId(roomId).orElseThrow().isActive())
+                .isTrue();
 
         sessionA2.close();
         sessionB.close();
     }
 
     @Test
-    @DisplayName("같은 user가 WS를 두 번 열어도 첫 세션 close가 매치를 종료시키지 않고 READY가 정상 발행된다")
+    @DisplayName("같은 user가 WS를 두 번 열어도 첫 세션 close가 통화를 종료시키지 않고 READY가 정상 발행된다")
     void duplicateSessionDoesNotTriggerCleanup() throws Exception {
         // given
         final UUID roomId = UUID.randomUUID();
-        matchRepository.save(Match.start(1L, 2L, roomId, STARTED_AT));
+        callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, STARTED_AT));
 
         final CollectingHandler handlerA1 = new CollectingHandler(objectMapper);
         final CollectingHandler handlerA2 = new CollectingHandler(objectMapper);
@@ -209,9 +208,9 @@ class SignalingWebSocketHandlerIntegrationTest {
         assertThat(readyForA2.type()).isEqualTo(SignalingMessageType.READY);
         assertThat(readyForB.type()).isEqualTo(SignalingMessageType.READY);
 
-        // 매치는 종료되지 않아야 함
-        assertThat(matchRepository.findByRoomId(roomId).orElseThrow().getStatus())
-                .isNotEqualTo(MatchStatus.ENDED);
+        // 통화는 종료되지 않아야 함
+        assertThat(callHistoryRepository.findByRoomId(roomId).orElseThrow().isActive())
+                .isTrue();
 
         sessionA2.close();
         sessionB.close();
@@ -227,11 +226,11 @@ class SignalingWebSocketHandlerIntegrationTest {
     }
 
     @Test
-    @DisplayName("매칭 비참여자가 연결을 시도하면 핸드셰이크가 실패한다")
+    @DisplayName("통화 비참여자가 연결을 시도하면 핸드셰이크가 실패한다")
     void connect_whenNotParticipant_handshakeFails() {
         // given
         final UUID roomId = UUID.randomUUID();
-        matchRepository.save(Match.start(1L, 2L, roomId, STARTED_AT));
+        callHistoryRepository.save(CallHistory.start(1L, 2L, roomId, STARTED_AT));
 
         // when & then
         assertThatThrownBy(() -> connect(99L, roomId, new CollectingHandler(objectMapper)))

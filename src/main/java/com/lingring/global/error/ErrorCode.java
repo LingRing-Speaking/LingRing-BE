@@ -61,10 +61,6 @@ public enum ErrorCode {
     SELF_REPORT_NOT_ALLOWED(BAD_REQUEST, "자기 자신을 신고할 수 없습니다."),
     INVALID_REPORT_DESCRIPTION(BAD_REQUEST, "유효하지 않은 신고 상세 내용입니다."),
 
-    // Matching Error
-    MATCH_NOT_FOUND(NOT_FOUND, "매칭을 찾을 수 없습니다."),
-    MATCH_PARTICIPANT_MISMATCH(FORBIDDEN, "해당 매칭의 참여자가 아닙니다."),
-
     // Call Error
     CALL_HISTORY_NOT_FOUND(NOT_FOUND, "통화 기록을 찾을 수 없습니다."),
     CALL_PARTICIPANT_MISMATCH(FORBIDDEN, "해당 통화의 참여자가 아닙니다."),

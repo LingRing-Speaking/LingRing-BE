@@ -55,18 +55,18 @@ CONSTRAINT `fk_user_expression_user` FOREIGN KEY (`user_id`) REFERENCES `user`(`
 -- call_history: 통화 기록
 -- ============================================
 CREATE TABLE `call_history` (
-`id`               BIGINT   NOT NULL AUTO_INCREMENT,
-`user_a_id`        BIGINT   NOT NULL,
-`user_b_id`        BIGINT   NOT NULL,
-`status`           ENUM('IN_PROGRESS', 'COMPLETED', 'FAILED') NOT NULL DEFAULT 'IN_PROGRESS',
-`duration_seconds` INT      NULL,
-`started_at`       DATETIME NOT NULL,
-`ended_at`         DATETIME NULL,
-`created_at`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-`updated_at`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+`id`         BIGINT       NOT NULL AUTO_INCREMENT,
+`room_id`    VARCHAR(36)  NOT NULL,
+`user_a_id`  BIGINT       NOT NULL,
+`user_b_id`  BIGINT       NOT NULL,
+`started_at` DATETIME     NOT NULL,
+`ended_at`   DATETIME     NULL,
+`created_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+`updated_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 PRIMARY KEY (`id`),
-KEY `idx_call_history_user_a_started` (`user_a_id`, `started_at` DESC),
-KEY `idx_call_history_user_b_started` (`user_b_id`, `started_at` DESC),
+UNIQUE KEY `uk_call_room_id` (`room_id`),
+KEY `idx_call_user_a_id` (`user_a_id`),
+KEY `idx_call_user_b_id` (`user_b_id`),
 CONSTRAINT `fk_call_history_user_a` FOREIGN KEY (`user_a_id`) REFERENCES `user`(`id`),
 CONSTRAINT `fk_call_history_user_b` FOREIGN KEY (`user_b_id`) REFERENCES `user`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
