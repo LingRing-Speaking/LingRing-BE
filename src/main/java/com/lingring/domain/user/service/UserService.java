@@ -7,9 +7,11 @@ import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.UserStats;
 import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.domain.user.dto.response.MeResponse;
+import com.lingring.domain.user.dto.response.UserProfileResponse;
 import com.lingring.domain.user.exception.NicknameConflictException;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
+import com.lingring.global.error.exception.NotFoundException;
 import com.lingring.global.error.exception.UnauthorizedException;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +33,16 @@ public class UserService {
                         "토큰 소유자를 찾을 수 없습니다. 다시 로그인하세요."
                 ));
         return MeResponse.from(user);
+    }
+
+    @Transactional(readOnly = true)
+    public UserProfileResponse getUserProfile(final Long userId) {
+        return userRepository.findProfileById(userId)
+                .map(UserProfileResponse::from)
+                .orElseThrow(() -> new NotFoundException(
+                        ErrorCode.USER_NOT_FOUND,
+                        "ID가 %d인 사용자를 찾을 수 없습니다.".formatted(userId)
+                ));
     }
 
     @Transactional(readOnly = true)

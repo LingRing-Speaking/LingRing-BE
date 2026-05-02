@@ -5,11 +5,15 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
+import com.lingring.domain.user.domain.Level;
 import com.lingring.domain.user.dto.response.MeResponse;
+import com.lingring.domain.user.dto.response.UserProfileResponse;
 import com.lingring.domain.user.service.UserService;
 import com.lingring.global.auth.context.AuthContext;
 import com.lingring.global.error.ErrorCode;
+import com.lingring.global.error.exception.NotFoundException;
 import com.lingring.global.error.exception.UnauthorizedException;
+import java.math.BigDecimal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -87,6 +91,63 @@ class UserControllerTest {
             final JsonNode body = objectMapper.readTree(response.getContentAsString());
             assertThat(body.get("status").asInt()).isEqualTo(ErrorCode.INVALID_TOKEN.getHttpStatus().value());
             assertThat(body.get("message").asText()).isEqualTo(ErrorCode.INVALID_TOKEN.getMessage());
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/users/{userId}")
+    class GetUserProfile {
+
+        @Test
+        @DisplayName("사용자가 존재하면 200 응답과 id, nickname, level, mannerTemperature를 반환한다")
+        void getUserProfile_whenUserExists_returns200WithBody() throws Exception {
+            // given
+            final Long callerId = 1L;
+            final Long targetId = 7L;
+            AuthContext.set(callerId);
+            given(userService.getUserProfile(targetId)).willReturn(new UserProfileResponse(
+                    targetId, "Sophie", Level.ADVANCED, new BigDecimal("38.5")
+            ));
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/users/{userId}", targetId)
+                            .accept(MediaType.APPLICATION_JSON))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            assertThat(response.getStatus()).isEqualTo(200);
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("status").asInt()).isEqualTo(200);
+            assertThat(body.get("data").get("id").asLong()).isEqualTo(targetId);
+            assertThat(body.get("data").get("nickname").asText()).isEqualTo("Sophie");
+            assertThat(body.get("data").get("level").asText()).isEqualTo("ADVANCED");
+            assertThat(body.get("data").get("mannerTemperature").decimalValue())
+                    .isEqualByComparingTo(new BigDecimal("38.5"));
+        }
+
+        @Test
+        @DisplayName("사용자가 없으면 USER_NOT_FOUND 에러 메시지를 body에 담아 404로 반환한다")
+        void getUserProfile_whenUserNotFound_returnsErrorMessage() throws Exception {
+            // given
+            final Long callerId = 1L;
+            final Long targetId = 999L;
+            AuthContext.set(callerId);
+            willThrow(new NotFoundException(
+                    ErrorCode.USER_NOT_FOUND,
+                    "ID가 %d인 사용자를 찾을 수 없습니다.".formatted(targetId)
+            )).given(userService).getUserProfile(targetId);
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/users/{userId}", targetId)
+                            .accept(MediaType.APPLICATION_JSON))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("status").asInt()).isEqualTo(ErrorCode.USER_NOT_FOUND.getHttpStatus().value());
+            assertThat(body.get("message").asText()).isEqualTo(ErrorCode.USER_NOT_FOUND.getMessage());
         }
     }
 }
