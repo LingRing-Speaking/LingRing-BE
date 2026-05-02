@@ -7,12 +7,15 @@ import com.lingring.domain.user.dao.UserRepository;
 import com.lingring.domain.user.dao.UserStatsRepository;
 import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
+import com.lingring.domain.user.domain.UserStats;
 import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.domain.user.dto.response.MeResponse;
+import com.lingring.domain.user.dto.response.UserProfileResponse;
 import com.lingring.domain.user.exception.NicknameConflictException;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
+import com.lingring.global.error.exception.NotFoundException;
 import com.lingring.global.error.exception.UnauthorizedException;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -62,6 +65,58 @@ class UserServiceTest extends ServiceIntegrationHelper {
                     .isInstanceOf(UnauthorizedException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.INVALID_TOKEN);
+        }
+    }
+
+    @Nested
+    @DisplayName("getUserProfile: userId로 타인 프로필 조회")
+    class GetUserProfile {
+
+        @Test
+        @DisplayName("user와 stats가 모두 존재하면 id, nickname, level, mannerTemperature를 반환한다")
+        void getUserProfile_whenUserAndStatsExist_returnsResponse() {
+            // given
+            final User saved = userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "kakao-sub-profile", new Name("Sophie"), null)
+            );
+            userStatsRepository.save(UserStats.create(saved.getId()));
+
+            // when
+            final UserProfileResponse response = userService.getUserProfile(saved.getId());
+
+            // then
+            assertThat(response.id()).isEqualTo(saved.getId());
+            assertThat(response.nickname()).isEqualTo("Sophie");
+            assertThat(response.level()).isNotNull();
+            assertThat(response.mannerTemperature()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("user가 존재하지 않으면 USER_NOT_FOUND 예외가 발생한다 (404)")
+        void getUserProfile_whenUserNotFound_throwsNotFound() {
+            // given
+            final Long missingId = 9_999_999L;
+
+            // when & then
+            assertThatThrownBy(() -> userService.getUserProfile(missingId))
+                    .isInstanceOf(NotFoundException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.USER_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("user는 있지만 stats가 없으면 USER_NOT_FOUND 예외가 발생한다 (404)")
+        void getUserProfile_whenStatsMissing_throwsUserNotFound() {
+            // given
+            final User saved = userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "kakao-sub-no-stats", new Name("NoStats"), null)
+            );
+
+            // when & then
+            assertThatThrownBy(() -> userService.getUserProfile(saved.getId()))
+                    .isInstanceOf(NotFoundException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.USER_NOT_FOUND);
         }
     }
 
