@@ -1,20 +1,12 @@
 package com.lingring.domain.matching.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.lingring.domain.matching.dao.MatchRepository;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
-import com.lingring.domain.matching.domain.Match;
-import com.lingring.domain.matching.domain.MatchStatus;
 import com.lingring.domain.matching.domain.MatchingPollStatus;
-import com.lingring.domain.matching.domain.MatchingResult;
 import com.lingring.domain.matching.dto.response.MatchingStatusResponse;
-import com.lingring.domain.matching.exception.MatchNotFoundException;
 import com.lingring.domain.matching.scheduler.MatchingWorker;
 import com.lingring.global.config.ServiceIntegrationHelper;
-import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -29,9 +21,6 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
 
     @Autowired
     private MatchingQueueRepository matchingQueueRepository;
-
-    @Autowired
-    private MatchRepository matchRepository;
 
     @MockitoBean
     @SuppressWarnings("unused")
@@ -167,118 +156,6 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
         void leave_whenNotInQueue_doesNotThrow() {
             // when & then
             matchingService.leaveQueue(99L);
-        }
-    }
-
-    @Nested
-    @DisplayName("findByRoomId: 매칭 조회")
-    class FindByRoomId {
-
-        @Test
-        @DisplayName("roomId에 매칭이 존재하면 Optional에 담아 반환한다")
-        void findByRoomId_whenPresent_returnsMatch() {
-            // given
-            final UUID roomId = UUID.randomUUID();
-            final LocalDateTime startedAt = LocalDateTime.of(2026, 4, 28, 10, 0);
-            matchRepository.save(Match.start(1L, 2L, roomId, startedAt));
-
-            // when
-            final Optional<Match> found = matchingService.findByRoomId(roomId);
-
-            // then
-            assertThat(found).isPresent();
-            assertThat(found.get().getRoomId()).isEqualTo(roomId);
-        }
-
-        @Test
-        @DisplayName("roomId에 매칭이 없으면 빈 Optional을 반환한다")
-        void findByRoomId_whenAbsent_returnsEmpty() {
-            // when
-            final Optional<Match> found = matchingService.findByRoomId(UUID.randomUUID());
-
-            // then
-            assertThat(found).isEmpty();
-        }
-    }
-
-    @Nested
-    @DisplayName("getByRoomId: 매칭 조회 (필수)")
-    class GetByRoomId {
-
-        @Test
-        @DisplayName("roomId에 매칭이 존재하면 Match를 반환한다")
-        void getByRoomId_whenPresent_returnsMatch() {
-            // given
-            final UUID roomId = UUID.randomUUID();
-            final LocalDateTime startedAt = LocalDateTime.of(2026, 4, 28, 10, 0);
-            matchRepository.save(Match.start(1L, 2L, roomId, startedAt));
-
-            // when
-            final Match found = matchingService.getByRoomId(roomId);
-
-            // then
-            assertThat(found.getRoomId()).isEqualTo(roomId);
-        }
-
-        @Test
-        @DisplayName("roomId에 매칭이 없으면 MatchNotFoundException을 던진다")
-        void getByRoomId_whenAbsent_throws() {
-            // when & then
-            assertThatThrownBy(() -> matchingService.getByRoomId(UUID.randomUUID()))
-                    .isInstanceOf(MatchNotFoundException.class);
-        }
-    }
-
-    @Nested
-    @DisplayName("endMatch: 매칭 종료")
-    class EndMatch {
-
-        @Test
-        @DisplayName("STARTED 상태인 Match를 ENDED로 변경하고 endedAt을 기록한다")
-        void endMatch_changesStatusToEnded() {
-            // given
-            final UUID roomId = UUID.randomUUID();
-            final LocalDateTime startedAt = LocalDateTime.of(2026, 4, 28, 10, 0);
-            matchRepository.save(Match.start(1L, 2L, roomId, startedAt));
-
-            // when
-            matchingService.endMatch(roomId);
-
-            // then
-            final Optional<Match> ended = matchRepository.findByRoomId(roomId);
-            assertThat(ended).isPresent();
-            assertThat(ended.get().getStatus()).isEqualTo(MatchStatus.ENDED);
-            assertThat(ended.get().getEndedAt()).isNotNull();
-        }
-
-        @Test
-        @DisplayName("존재하지 않는 roomId면 MatchNotFoundException을 던진다")
-        void endMatch_whenRoomIdNotFound_throws() {
-            // given
-            final UUID unknownRoomId = UUID.randomUUID();
-
-            // when & then
-            assertThatThrownBy(() -> matchingService.endMatch(unknownRoomId))
-                    .isInstanceOf(MatchNotFoundException.class);
-        }
-
-        @Test
-        @DisplayName("이미 종료된 Match에 다시 호출해도 endedAt이 변하지 않는다 (멱등)")
-        void endMatch_whenAlreadyEnded_isIdempotent() {
-            // given
-            final UUID roomId = UUID.randomUUID();
-            final LocalDateTime startedAt = LocalDateTime.of(2026, 4, 28, 10, 0);
-            matchRepository.save(Match.start(1L, 2L, roomId, startedAt));
-            matchingService.endMatch(roomId);
-            final LocalDateTime firstEndedAt = matchRepository.findByRoomId(roomId).get().getEndedAt();
-
-            // when
-            matchingService.endMatch(roomId);
-
-            // then
-            final Match ended = matchRepository.findByRoomId(roomId).orElseThrow();
-            assertThat(ended.getStatus()).isEqualTo(MatchStatus.ENDED);
-            assertThat(ended.getEndedAt()).isEqualTo(firstEndedAt);
         }
     }
 }

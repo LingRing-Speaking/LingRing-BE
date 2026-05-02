@@ -1,8 +1,7 @@
 package com.lingring.domain.signaling.facade;
 
-import com.lingring.domain.matching.domain.Match;
-import com.lingring.domain.matching.domain.MatchStatus;
-import com.lingring.domain.matching.service.MatchingService;
+import com.lingring.domain.call.domain.Call;
+import com.lingring.domain.call.service.CallService;
 import com.lingring.domain.signaling.domain.SignalingMessage;
 import com.lingring.domain.signaling.domain.SignalingMessageType;
 import com.lingring.domain.signaling.service.SignalingMessageRouter;
@@ -18,25 +17,25 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class SignalingFacade {
 
-    private final MatchingService matchingService;
+    private final CallService callService;
     private final SignalingMessageRouter messageRouter;
     private final SignalingReadyCoordinator readyCoordinator;
 
     public void dispatch(final Long senderId, final UUID roomId, final SignalingMessage message) {
-        final Match match = matchingService.getByRoomId(roomId);
+        final Call call = callService.getByRoomId(roomId);
 
         final SignalingMessageType type = message.type();
         if (type == SignalingMessageType.JOIN) {
-            readyCoordinator.recordJoinAndAnnounceIfReady(match, senderId);
+            readyCoordinator.recordJoinAndAnnounceIfReady(call, senderId);
             return;
         }
         if (isForwardable(type)) {
-            messageRouter.forwardToCounterpart(match, senderId, message);
+            messageRouter.forwardToCounterpart(call, senderId, message);
             return;
         }
         if (type == SignalingMessageType.HANGUP) {
-            messageRouter.forwardToCounterpart(match, senderId, message);
-            matchingService.endMatch(roomId);
+            messageRouter.forwardToCounterpart(call, senderId, message);
+            callService.endCall(roomId);
             readyCoordinator.cleanupRoom(roomId);
             return;
         }
@@ -48,19 +47,19 @@ public class SignalingFacade {
         if (roomId == null) {
             return;
         }
-        final Optional<Match> matchOpt = matchingService.findByRoomId(roomId);
-        if (matchOpt.isEmpty()) {
+        final Optional<Call> callOpt = callService.findByRoomId(roomId);
+        if (callOpt.isEmpty()) {
             return;
         }
-        final Match match = matchOpt.get();
-        if (!match.involves(userId)) {
+        final Call call = callOpt.get();
+        if (!call.involves(userId)) {
             return;
         }
-        if (match.getStatus() == MatchStatus.ENDED) {
+        if (!call.isActive()) {
             return;
         }
-        messageRouter.publishHangup(match, userId);
-        matchingService.endMatch(roomId);
+        messageRouter.publishHangup(call, userId);
+        callService.endCall(roomId);
         readyCoordinator.cleanupRoom(roomId);
     }
 

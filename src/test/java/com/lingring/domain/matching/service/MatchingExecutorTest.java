@@ -2,10 +2,9 @@ package com.lingring.domain.matching.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.lingring.domain.matching.dao.MatchRepository;
+import com.lingring.domain.call.dao.CallRepository;
+import com.lingring.domain.call.domain.Call;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
-import com.lingring.domain.matching.domain.Match;
-import com.lingring.domain.matching.domain.MatchStatus;
 import com.lingring.domain.matching.domain.MatchingResult;
 import com.lingring.domain.matching.scheduler.MatchingWorker;
 import com.lingring.domain.userblock.dao.UserBlockRepository;
@@ -30,7 +29,7 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
     private MatchingQueueRepository matchingQueueRepository;
 
     @Autowired
-    private MatchRepository matchRepository;
+    private CallRepository callRepository;
 
     @Autowired
     private UserBlockRepository userBlockRepository;
@@ -90,8 +89,8 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
         }
 
         @Test
-        @DisplayName("페어링 성사 시 Match 엔티티가 STARTED 상태로 영속화된다")
-        void executeRound_persistsMatchEntity() {
+        @DisplayName("페어링 성사 시 Call 엔티티가 isActive=true 상태로 영속화된다")
+        void executeRound_persistsCallEntity() {
             // given
             matchingQueueRepository.enqueue(1L, BASE);
             matchingQueueRepository.enqueue(2L, BASE.plusSeconds(1));
@@ -102,12 +101,12 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
             // then
             final Optional<MatchingResult> result = matchingQueueRepository.findResult(1L);
             assertThat(result).isPresent();
-            final Optional<Match> match = matchRepository.findByRoomId(result.get().roomId());
-            assertThat(match).isPresent();
-            assertThat(match.get().getStatus()).isEqualTo(MatchStatus.STARTED);
-            assertThat(match.get().getUserAId()).isEqualTo(1L);
-            assertThat(match.get().getUserBId()).isEqualTo(2L);
-            assertThat(match.get().getEndedAt()).isNull();
+            final Optional<Call> call = callRepository.findByRoomId(result.get().roomId());
+            assertThat(call).isPresent();
+            assertThat(call.get().isActive()).isTrue();
+            assertThat(call.get().getUserAId()).isEqualTo(1L);
+            assertThat(call.get().getUserBId()).isEqualTo(2L);
+            assertThat(call.get().getEndedAt()).isNull();
         }
 
         @Test

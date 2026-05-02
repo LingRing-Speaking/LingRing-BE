@@ -52,37 +52,37 @@ CONSTRAINT `fk_user_expression_user` FOREIGN KEY (`user_id`) REFERENCES `user`(`
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- call_history: 통화 기록
+-- calls: 통화
 -- ============================================
-CREATE TABLE `call_history` (
-`id`               BIGINT   NOT NULL AUTO_INCREMENT,
-`user_a_id`        BIGINT   NOT NULL,
-`user_b_id`        BIGINT   NOT NULL,
-`status`           ENUM('IN_PROGRESS', 'COMPLETED', 'FAILED') NOT NULL DEFAULT 'IN_PROGRESS',
-`duration_seconds` INT      NULL,
-`started_at`       DATETIME NOT NULL,
-`ended_at`         DATETIME NULL,
-`created_at`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-`updated_at`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+CREATE TABLE `calls` (
+`id`         BIGINT       NOT NULL AUTO_INCREMENT,
+`room_id`    VARCHAR(36)  NOT NULL,
+`user_a_id`  BIGINT       NOT NULL,
+`user_b_id`  BIGINT       NOT NULL,
+`started_at` DATETIME     NOT NULL,
+`ended_at`   DATETIME     NULL,
+`created_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+`updated_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 PRIMARY KEY (`id`),
-KEY `idx_call_history_user_a_started` (`user_a_id`, `started_at` DESC),
-KEY `idx_call_history_user_b_started` (`user_b_id`, `started_at` DESC),
-CONSTRAINT `fk_call_history_user_a` FOREIGN KEY (`user_a_id`) REFERENCES `user`(`id`),
-CONSTRAINT `fk_call_history_user_b` FOREIGN KEY (`user_b_id`) REFERENCES `user`(`id`)
+UNIQUE KEY `uk_calls_room_id` (`room_id`),
+KEY `idx_calls_user_a_id` (`user_a_id`),
+KEY `idx_calls_user_b_id` (`user_b_id`),
+CONSTRAINT `fk_calls_user_a` FOREIGN KEY (`user_a_id`) REFERENCES `user`(`id`),
+CONSTRAINT `fk_calls_user_b` FOREIGN KEY (`user_b_id`) REFERENCES `user`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
 -- call_content: 통화 내용 (1:1)
 -- ============================================
 CREATE TABLE `call_content` (
-`id`              BIGINT   NOT NULL AUTO_INCREMENT,
-`call_history_id` BIGINT   NOT NULL,
-`content`         LONGTEXT NOT NULL,
-`created_at`      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-`updated_at`      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+`id`         BIGINT   NOT NULL AUTO_INCREMENT,
+`call_id`    BIGINT   NOT NULL,
+`content`    LONGTEXT NOT NULL,
+`created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+`updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 PRIMARY KEY (`id`),
-UNIQUE KEY `uk_call_content_call_history_id` (`call_history_id`),
-CONSTRAINT `fk_call_content_call_history` FOREIGN KEY (`call_history_id`) REFERENCES `call_history`(`id`)
+UNIQUE KEY `uk_call_content_call_id` (`call_id`),
+CONSTRAINT `fk_call_content_call` FOREIGN KEY (`call_id`) REFERENCES `calls`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
@@ -125,15 +125,15 @@ CONSTRAINT `fk_user_report_reported_user` FOREIGN KEY (`reported_user_id`) REFER
 CREATE TABLE `call_analyze` (
 `id`               BIGINT   NOT NULL AUTO_INCREMENT,
 `user_id`          BIGINT   NOT NULL,
-`call_history_id`  BIGINT   NOT NULL,
+`call_id`          BIGINT   NOT NULL,
 `good_points_json` JSON     NULL,
 `feedback_json`    JSON     NULL,
 `status`           ENUM('PENDING', 'COMPLETED', 'FAILED') NOT NULL DEFAULT 'PENDING',
 `created_at`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 `updated_at`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 PRIMARY KEY (`id`),
-UNIQUE KEY `uk_call_analyze_call_user` (`call_history_id`, `user_id`),
+UNIQUE KEY `uk_call_analyze_call_user` (`call_id`, `user_id`),
 KEY `idx_call_analyze_user_created` (`user_id`, `created_at` DESC),
 CONSTRAINT `fk_call_analyze_user` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`),
-CONSTRAINT `fk_call_analyze_call_history` FOREIGN KEY (`call_history_id`) REFERENCES `call_history`(`id`)
+CONSTRAINT `fk_call_analyze_call` FOREIGN KEY (`call_id`) REFERENCES `calls`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

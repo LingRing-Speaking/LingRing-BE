@@ -2,7 +2,7 @@ package com.lingring.domain.signaling.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.lingring.domain.matching.domain.Match;
+import com.lingring.domain.call.domain.Call;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.infrastructure.redis.SignalingChannels;
 import java.time.LocalDateTime;
@@ -32,10 +32,10 @@ class SignalingReadyCoordinatorTest extends ServiceIntegrationHelper {
         void onlyOneJoin_addsToJoinedSetOnly() {
             // given
             final UUID roomId = UUID.randomUUID();
-            final Match match = Match.start(1L, 2L, roomId, STARTED_AT);
+            final Call call = Call.start(1L, 2L, roomId, STARTED_AT);
 
             // when
-            readyCoordinator.recordJoinAndAnnounceIfReady(match, 1L);
+            readyCoordinator.recordJoinAndAnnounceIfReady(call, 1L);
 
             // then
             assertThat(redisTemplate.opsForSet().size(SignalingChannels.joinedSetKey(roomId)))
@@ -48,11 +48,11 @@ class SignalingReadyCoordinatorTest extends ServiceIntegrationHelper {
         void bothJoin_acquiresReadyLock() {
             // given
             final UUID roomId = UUID.randomUUID();
-            final Match match = Match.start(1L, 2L, roomId, STARTED_AT);
+            final Call call = Call.start(1L, 2L, roomId, STARTED_AT);
 
             // when
-            readyCoordinator.recordJoinAndAnnounceIfReady(match, 1L);
-            readyCoordinator.recordJoinAndAnnounceIfReady(match, 2L);
+            readyCoordinator.recordJoinAndAnnounceIfReady(call, 1L);
+            readyCoordinator.recordJoinAndAnnounceIfReady(call, 2L);
 
             // then
             assertThat(redisTemplate.opsForSet().size(SignalingChannels.joinedSetKey(roomId)))
