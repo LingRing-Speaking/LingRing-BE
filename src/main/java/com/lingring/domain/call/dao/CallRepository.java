@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -30,4 +31,13 @@ public interface CallRepository extends JpaRepository<Call, Long> {
             @Param("userId") Long userId,
             Pageable pageable
     );
+
+    @Modifying(clearAutomatically = true)
+    @Query("""
+            UPDATE Call c
+               SET c.userAId = CASE WHEN c.userAId = :userId THEN null ELSE c.userAId END,
+                   c.userBId = CASE WHEN c.userBId = :userId THEN null ELSE c.userBId END
+             WHERE c.userAId = :userId OR c.userBId = :userId
+            """)
+    int anonymizeUser(@Param("userId") Long userId);
 }

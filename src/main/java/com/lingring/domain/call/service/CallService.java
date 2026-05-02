@@ -45,6 +45,11 @@ public class CallService {
     }
 
     @Transactional
+    public void anonymizeUser(final Long userId) {
+        callRepository.anonymizeUser(userId);
+    }
+
+    @Transactional
     public void endCall(final UUID roomId) {
         final Call call = callRepository.findByRoomId(roomId)
                 .orElseThrow(() -> new CallNotFoundException(roomId));
