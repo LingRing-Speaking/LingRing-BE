@@ -81,4 +81,12 @@ public class UserStats extends BaseTimeEntity {
     public void updateLastStudyDate(@NonNull final LocalDate date) {
         this.lastStudyDate = date;
     }
+
+    public boolean hasStudiedOn(@NonNull final LocalDate date) {
+        return date.equals(lastStudyDate);
+    }
+
+    public boolean isContinuingStreakOn(@NonNull final LocalDate today) {
+        return lastStudyDate != null && lastStudyDate.equals(today.minusDays(1));
+    }
 }

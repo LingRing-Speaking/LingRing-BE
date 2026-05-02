@@ -37,15 +37,19 @@ public class UserStatsService {
         final UserStats userStats = findByUserId(userId);
 
         userStats.increaseTotalCallCount();
-        if (today.equals(userStats.getLastStudyDate())) {
+        if (userStats.hasStudiedOn(today)) {
             return;
         }
-        if (isContinuingStreak(userStats, today)) {
-            userStats.increaseStreakDays();
-        } else {
-            userStats.resetStreakDaysToOne();
-        }
+        advanceStreak(userStats, today);
         userStats.updateLastStudyDate(today);
+    }
+
+    private void advanceStreak(final UserStats userStats, final LocalDate today) {
+        if (userStats.isContinuingStreakOn(today)) {
+            userStats.increaseStreakDays();
+            return;
+        }
+        userStats.resetStreakDaysToOne();
     }
 
     private UserStats findByUserId(final Long userId) {
@@ -54,10 +58,5 @@ public class UserStatsService {
                         ErrorCode.USER_STATS_NOT_FOUND,
                         "userId가 %d인 사용자 통계를 찾을 수 없습니다.".formatted(userId)
                 ));
-    }
-
-    private boolean isContinuingStreak(final UserStats userStats, final LocalDate today) {
-        final LocalDate last = userStats.getLastStudyDate();
-        return last != null && last.equals(today.minusDays(1));
     }
 }
