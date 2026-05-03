@@ -47,3 +47,4 @@ CLAUDE.local.md
 .env.local
 
 docker-compose.yml
+docker-compose*
