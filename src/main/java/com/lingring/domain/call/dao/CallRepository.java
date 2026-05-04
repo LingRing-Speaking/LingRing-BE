@@ -20,15 +20,17 @@ public interface CallRepository extends JpaRepository<Call, Long> {
                    u.id AS partnerId,
                    u.name.value AS partnerName,
                    c.startedAt AS startedAt,
-                   c.endedAt AS endedAt
+                   c.durationSec AS durationSec
             FROM Call c, User u
             WHERE c.endedAt IS NOT NULL
+              AND c.durationSec >= :minDurationSec
               AND ((c.userAId = :userId AND u.id = c.userBId)
                    OR (c.userBId = :userId AND u.id = c.userAId))
             ORDER BY c.startedAt DESC
             """)
     Slice<CallSummaryProjection> findEndedSummariesByUserId(
             @Param("userId") Long userId,
+            @Param("minDurationSec") long minDurationSec,
             Pageable pageable
     );
 

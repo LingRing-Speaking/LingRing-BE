@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.Getter;
@@ -57,6 +58,9 @@ public class Call extends BaseTimeEntity {
     @Column(name = "ended_at")
     private LocalDateTime endedAt;
 
+    @Column(name = "duration_sec")
+    private Long durationSec;
+
     private Call(
             @NonNull final UUID roomId,
             @NonNull final Long userAId,
@@ -85,6 +89,7 @@ public class Call extends BaseTimeEntity {
             return;
         }
         this.endedAt = endedAt;
+        this.durationSec = Duration.between(startedAt, endedAt).getSeconds();
     }
 
     public boolean isActive() {

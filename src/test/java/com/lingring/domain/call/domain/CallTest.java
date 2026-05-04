@@ -75,6 +75,19 @@ class CallTest {
         }
 
         @Test
+        @DisplayName("end 호출 시 durationSec이 endedAt - startedAt 초로 계산되어 저장된다")
+        void end_setsDurationSec() {
+            // given
+            final Call call = Call.start(1L, 2L, ROOM_ID, STARTED_AT);
+
+            // when
+            call.end(STARTED_AT.plusSeconds(312));
+
+            // then
+            assertThat(call.getDurationSec()).isEqualTo(312L);
+        }
+
+        @Test
         @DisplayName("이미 종료된 통화에 end를 호출해도 endedAt이 변하지 않는다 (멱등)")
         void end_whenAlreadyEnded_isIdempotent() {
             // given
@@ -89,6 +102,21 @@ class CallTest {
             // then
             assertThat(call.isActive()).isFalse();
             assertThat(call.getEndedAt()).isEqualTo(firstEnd);
+        }
+
+        @Test
+        @DisplayName("이미 종료된 통화에 end를 다시 호출해도 durationSec이 변하지 않는다 (멱등)")
+        void end_whenAlreadyEnded_doesNotRecomputeDurationSec() {
+            // given
+            final Call call = Call.start(1L, 2L, ROOM_ID, STARTED_AT);
+            call.end(STARTED_AT.plusMinutes(5));
+            final Long firstDurationSec = call.getDurationSec();
+
+            // when
+            call.end(STARTED_AT.plusMinutes(10));
+
+            // then
+            assertThat(call.getDurationSec()).isEqualTo(firstDurationSec);
         }
     }
 
