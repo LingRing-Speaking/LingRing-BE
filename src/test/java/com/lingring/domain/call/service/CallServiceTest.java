@@ -436,6 +436,39 @@ class CallServiceTest extends ServiceIntegrationHelper {
             assertThat(response.hasNext()).isTrue();
         }
 
+        @Test
+        @DisplayName("1분 미만 통화는 목록에서 제외된다")
+        void getCallsByUserId_excludesCallsUnderOneMinute() {
+            // given
+            final Long me = saveUser("유저").getId();
+            final Long partner = saveUser("Sophie").getId();
+            saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(10).plusSeconds(30));
+            final Call longEnough = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(5), FIXED_NOW.minusMinutes(5).plusMinutes(2));
+
+            // when
+            final CallsResponse response = callService.getCallsByUserId(me, 0, 20);
+
+            // then
+            assertThat(response.items()).hasSize(1);
+            assertThat(response.items().get(0).id()).isEqualTo(longEnough.getId());
+        }
+
+        @Test
+        @DisplayName("정확히 1분(60초) 통화는 목록에 포함된다 (>= 60초 경계)")
+        void getCallsByUserId_includesCallExactlyOneMinute() {
+            // given
+            final Long me = saveUser("유저").getId();
+            final Long partner = saveUser("Sophie").getId();
+            final Call exactlyOneMin = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(10).plusSeconds(60));
+
+            // when
+            final CallsResponse response = callService.getCallsByUserId(me, 0, 20);
+
+            // then
+            assertThat(response.items()).hasSize(1);
+            assertThat(response.items().get(0).id()).isEqualTo(exactlyOneMin.getId());
+        }
+
         private User saveUser(final String name) {
             return userRepository.save(
                     User.createFromOAuth(Provider.KAKAO, "sub-" + name + "-" + UUID.randomUUID(), new Name(name), null)

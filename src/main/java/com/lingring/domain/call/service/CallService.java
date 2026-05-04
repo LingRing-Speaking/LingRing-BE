@@ -3,6 +3,7 @@ package com.lingring.domain.call.service;
 import com.lingring.domain.call.dao.CallRepository;
 import com.lingring.domain.call.dao.dto.CallSummaryProjection;
 import com.lingring.domain.call.domain.Call;
+import com.lingring.domain.call.domain.policy.CallVisibilityPolicy;
 import com.lingring.domain.call.dto.response.CallsResponse;
 import com.lingring.domain.call.event.CallEndedEvent;
 import com.lingring.domain.call.exception.CallNotFoundException;
@@ -34,7 +35,8 @@ public class CallService {
     @Transactional(readOnly = true)
     public CallsResponse getCallsByUserId(final Long userId, final int page, final int size) {
         final PageSize pageSize = PageSize.clamp(size);
-        final Slice<CallSummaryProjection> slice = callRepository.findEndedSummariesByUserId(userId, PageRequest.of(page, pageSize.value()));
+        final Slice<CallSummaryProjection> slice = callRepository.findEndedSummariesByUserId(
+                userId, CallVisibilityPolicy.MIN_DURATION_SEC, PageRequest.of(page, pageSize.value()));
         return CallsResponse.from(slice);
     }
 
