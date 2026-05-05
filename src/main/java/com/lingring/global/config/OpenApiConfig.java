@@ -20,6 +20,8 @@ public class OpenApiConfig {
                         .addResponses("Forbidden", new ApiResponse()
                                 .description("접근 권한이 없습니다."))
                         .addResponses("NotFound", new ApiResponse()
-                                .description("요청한 리소스를 찾을 수 없습니다.")));
+                                .description("요청한 리소스를 찾을 수 없습니다."))
+                        .addResponses("Conflict", new ApiResponse()
+                                .description("리소스 상태와 충돌하는 요청입니다.")));
     }
 }

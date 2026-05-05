@@ -4,6 +4,7 @@ import static jakarta.persistence.GenerationType.IDENTITY;
 import static lombok.AccessLevel.PROTECTED;
 
 import com.lingring.domain.user.domain.vo.Name;
+import com.lingring.domain.user.domain.vo.ProfileImage;
 import com.lingring.global.common.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
@@ -51,14 +52,14 @@ public class User extends BaseTimeEntity {
     @Embedded
     private Name name;
 
-    @Column(name = "profile_image", length = 500)
-    private String profileImage;
+    @Embedded
+    private ProfileImage profileImage;
 
     private User(
             @NonNull final Provider provider,
             @NonNull final String providerUserId,
             @NonNull final Name name,
-            final String profileImage
+            final ProfileImage profileImage
     ) {
         this.provider = provider;
         this.providerUserId = providerUserId;
@@ -70,8 +71,16 @@ public class User extends BaseTimeEntity {
             @NonNull final Provider provider,
             @NonNull final String providerUserId,
             @NonNull final Name name,
-            final String profileImage
+            final String profileImageUrl
     ) {
-        return new User(provider, providerUserId, name, profileImage);
+        return new User(provider, providerUserId, name, ProfileImage.fromNullable(profileImageUrl));
+    }
+
+    public void changeName(@NonNull final Name newName) {
+        this.name = newName;
+    }
+
+    public void changeProfileImage(@NonNull final ProfileImage newProfileImage) {
+        this.profileImage = newProfileImage;
     }
 }
