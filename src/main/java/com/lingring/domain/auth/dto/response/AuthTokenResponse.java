@@ -28,6 +28,6 @@ public record AuthTokenResponse(
         return profileImage.getValue();
     }
 
-    public record UserSummary(Long id, String nickname, String profileImageUrl) {
+    public record UserSummary(Long id, String nickname, String profileImage) {
     }
 }

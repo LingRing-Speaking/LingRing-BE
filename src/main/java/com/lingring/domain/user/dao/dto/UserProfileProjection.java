@@ -8,6 +8,8 @@ public interface UserProfileProjection {
 
     String getNickname();
 
+    String getProfileImage();
+
     String getLevel();
 
     BigDecimal getMannerTemperature();

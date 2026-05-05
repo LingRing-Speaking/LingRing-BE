@@ -66,12 +66,13 @@ class UserControllerTest {
     class GetMe {
 
         @Test
-        @DisplayName("사용자가 존재하면 200 응답과 id, nickname을 반환한다")
+        @DisplayName("사용자가 존재하면 200 응답과 id, nickname, profileImage를 반환한다")
         void getMe_whenUserExists_returns200WithBody() throws Exception {
             // given
             final Long userId = 1L;
+            final String profileImageUrl = "https://lingring-dev.s3.ap-northeast-2.amazonaws.com/profile-images/1/abc.jpg";
             AuthContext.set(userId);
-            given(userService.getMe(userId)).willReturn(new MeResponse(userId, "링링"));
+            given(userService.getMe(userId)).willReturn(new MeResponse(userId, "링링", profileImageUrl));
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/me")
@@ -85,6 +86,7 @@ class UserControllerTest {
             assertThat(body.get("status").asInt()).isEqualTo(200);
             assertThat(body.get("data").get("id").asLong()).isEqualTo(userId);
             assertThat(body.get("data").get("nickname").asText()).isEqualTo("링링");
+            assertThat(body.get("data").get("profileImage").asText()).isEqualTo(profileImageUrl);
         }
 
         @Test
@@ -121,9 +123,10 @@ class UserControllerTest {
             // given
             final Long callerId = 1L;
             final Long targetId = 7L;
+            final String profileImageUrl = "https://lingring-dev.s3.ap-northeast-2.amazonaws.com/profile-images/7/abc.jpg";
             AuthContext.set(callerId);
             given(userService.getUserProfile(targetId)).willReturn(new UserProfileResponse(
-                    targetId, "Sophie", Level.ADVANCED, new BigDecimal("38.5")
+                    targetId, "Sophie", profileImageUrl, Level.ADVANCED, new BigDecimal("38.5")
             ));
 
             // when
@@ -138,6 +141,7 @@ class UserControllerTest {
             assertThat(body.get("status").asInt()).isEqualTo(200);
             assertThat(body.get("data").get("id").asLong()).isEqualTo(targetId);
             assertThat(body.get("data").get("nickname").asText()).isEqualTo("Sophie");
+            assertThat(body.get("data").get("profileImage").asText()).isEqualTo(profileImageUrl);
             assertThat(body.get("data").get("level").asText()).isEqualTo("ADVANCED");
             assertThat(body.get("data").get("mannerTemperature").decimalValue())
                     .isEqualByComparingTo(new BigDecimal("38.5"));

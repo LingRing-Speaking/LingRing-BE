@@ -20,6 +20,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("""
             SELECT u.id AS id,
                    u.name.value AS nickname,
+                   u.profileImage.value AS profileImage,
                    s.level AS level,
                    s.mannerTemperature AS mannerTemperature
             FROM User u, UserStats s

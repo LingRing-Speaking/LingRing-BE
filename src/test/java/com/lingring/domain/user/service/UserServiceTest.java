@@ -57,11 +57,12 @@ class UserServiceTest extends ServiceIntegrationHelper {
     class GetMe {
 
         @Test
-        @DisplayName("존재하는 사용자 id로 조회하면 id와 nickname을 반환한다")
+        @DisplayName("프로필 이미지가 있는 사용자를 조회하면 id, nickname, profileImage를 반환한다")
         void getMe_whenUserExists_returnsResponse() {
             // given
+            final String profileImageUrl = "https://lingring-dev.s3.ap-northeast-2.amazonaws.com/profile-images/1/abc.jpg";
             final User saved = userRepository.save(
-                    User.createFromOAuth(Provider.KAKAO, "kakao-test-sub-1", new Name("링링"), null)
+                    User.createFromOAuth(Provider.KAKAO, "kakao-test-sub-1", new Name("링링"), profileImageUrl)
             );
 
             // when
@@ -70,6 +71,22 @@ class UserServiceTest extends ServiceIntegrationHelper {
             // then
             assertThat(response.id()).isEqualTo(saved.getId());
             assertThat(response.nickname()).isEqualTo("링링");
+            assertThat(response.profileImage()).isEqualTo(profileImageUrl);
+        }
+
+        @Test
+        @DisplayName("프로필 이미지가 없는 사용자를 조회하면 profileImage가 null로 반환된다")
+        void getMe_whenProfileImageMissing_returnsNullProfileImage() {
+            // given
+            final User saved = userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "kakao-test-sub-no-image", new Name("링링둘"), null)
+            );
+
+            // when
+            final MeResponse response = userService.getMe(saved.getId());
+
+            // then
+            assertThat(response.profileImage()).isNull();
         }
 
         @Test
@@ -91,11 +108,12 @@ class UserServiceTest extends ServiceIntegrationHelper {
     class GetUserProfile {
 
         @Test
-        @DisplayName("user와 stats가 모두 존재하면 id, nickname, level, mannerTemperature를 반환한다")
+        @DisplayName("user와 stats가 모두 존재하면 id, nickname, profileImage, level, mannerTemperature를 반환한다")
         void getUserProfile_whenUserAndStatsExist_returnsResponse() {
             // given
+            final String profileImageUrl = "https://lingring-dev.s3.ap-northeast-2.amazonaws.com/profile-images/1/abc.jpg";
             final User saved = userRepository.save(
-                    User.createFromOAuth(Provider.KAKAO, "kakao-sub-profile", new Name("Sophie"), null)
+                    User.createFromOAuth(Provider.KAKAO, "kakao-sub-profile", new Name("Sophie"), profileImageUrl)
             );
             userStatsRepository.save(UserStats.create(saved.getId()));
 
@@ -105,8 +123,25 @@ class UserServiceTest extends ServiceIntegrationHelper {
             // then
             assertThat(response.id()).isEqualTo(saved.getId());
             assertThat(response.nickname()).isEqualTo("Sophie");
+            assertThat(response.profileImage()).isEqualTo(profileImageUrl);
             assertThat(response.level()).isNotNull();
             assertThat(response.mannerTemperature()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("프로필 이미지가 없는 사용자를 조회하면 profileImage가 null로 반환된다")
+        void getUserProfile_whenProfileImageMissing_returnsNullProfileImage() {
+            // given
+            final User saved = userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "kakao-sub-no-image", new Name("NoImage"), null)
+            );
+            userStatsRepository.save(UserStats.create(saved.getId()));
+
+            // when
+            final UserProfileResponse response = userService.getUserProfile(saved.getId());
+
+            // then
+            assertThat(response.profileImage()).isNull();
         }
 
         @Test
