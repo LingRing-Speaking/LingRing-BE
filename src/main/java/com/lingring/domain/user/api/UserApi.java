@@ -1,7 +1,11 @@
 package com.lingring.domain.user.api;
 
+import com.lingring.domain.user.dto.request.PresignedUrlRequest;
+import com.lingring.domain.user.dto.request.UpdateProfileRequest;
 import com.lingring.domain.user.dto.request.WithdrawRequest;
 import com.lingring.domain.user.dto.response.MeResponse;
+import com.lingring.domain.user.dto.response.PresignedUrlResponse;
+import com.lingring.domain.user.dto.response.UpdateProfileResponse;
 import com.lingring.domain.user.dto.response.UserProfileResponse;
 import com.lingring.global.auth.annotation.AuthUser;
 import com.lingring.global.common.response.ApiResponse;
@@ -12,6 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -96,5 +101,71 @@ public interface UserApi {
     ApiResponse<Void> withdraw(
             @AuthUser final Long userId,
             @Valid @RequestBody final WithdrawRequest request
+    );
+
+    @Operation(
+            summary = "프로필 이미지 업로드용 presigned URL 발급",
+            description = "S3에 직접 PUT 업로드할 수 있는 presigned URL과 객체 키를 발급한다. 키는 서버가 발급하며 본인 user prefix로 고정된다. "
+                    + "발급된 키로 업로드를 마친 뒤 PATCH /me/profile에 profileImageKey로 동봉해 변경을 확정한다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "발급 성공",
+                    useReturnTypeSchema = true
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    ref = "#/components/responses/BadRequest"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    ref = "#/components/responses/Unauthorized"
+            )
+    })
+    @ResponseStatus(HttpStatus.OK)
+    @PostMapping("/me/profile/image/presigned-url")
+    ApiResponse<PresignedUrlResponse> createProfileImageUploadUrl(
+            @AuthUser final Long userId,
+            @Valid @RequestBody final PresignedUrlRequest request
+    );
+
+    @Operation(
+            summary = "프로필 변경",
+            description = "닉네임 또는 프로필 이미지 키(혹은 둘 다)를 받아 변경한다. 둘 중 하나는 반드시 포함되어야 한다. "
+                    + "profileImageKey는 사전에 /me/profile/image/presigned-url로 받은 키를 사용한다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "변경 성공",
+                    useReturnTypeSchema = true
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    ref = "#/components/responses/BadRequest"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    ref = "#/components/responses/Unauthorized"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    ref = "#/components/responses/Forbidden"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    ref = "#/components/responses/NotFound"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "409",
+                    ref = "#/components/responses/Conflict"
+            )
+    })
+    @ResponseStatus(HttpStatus.OK)
+    @PatchMapping("/me/profile")
+    ApiResponse<UpdateProfileResponse> updateProfile(
+            @AuthUser final Long userId,
+            @Valid @RequestBody final UpdateProfileRequest request
     );
 }

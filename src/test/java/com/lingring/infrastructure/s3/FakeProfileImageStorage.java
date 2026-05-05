@@ -1,0 +1,41 @@
+package com.lingring.infrastructure.s3;
+
+import com.lingring.domain.user.service.PresignedUploadUrl;
+import com.lingring.domain.user.service.ProfileImageStorage;
+import java.util.HashSet;
+import java.util.Set;
+
+public class FakeProfileImageStorage implements ProfileImageStorage {
+
+    private static final String FAKE_HOST = "https://fake-s3.local";
+    private static final String FAKE_CDN = "https://fake-cdn.local";
+
+    private final Set<String> uploadedKeys = new HashSet<>();
+
+    @Override
+    public PresignedUploadUrl generateUploadUrl(
+            final String key,
+            final String contentType,
+            final long contentLength
+    ) {
+        return new PresignedUploadUrl(FAKE_HOST + "/" + key, key);
+    }
+
+    @Override
+    public boolean exists(final String key) {
+        return uploadedKeys.contains(key);
+    }
+
+    @Override
+    public String publicUrl(final String key) {
+        return FAKE_CDN + "/" + key;
+    }
+
+    public void simulateUpload(final String key) {
+        uploadedKeys.add(key);
+    }
+
+    public void clear() {
+        uploadedKeys.clear();
+    }
+}
