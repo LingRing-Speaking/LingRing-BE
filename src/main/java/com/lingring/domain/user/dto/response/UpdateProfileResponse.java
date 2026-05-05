@@ -3,14 +3,14 @@ package com.lingring.domain.user.dto.response;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.vo.ProfileImage;
 
-public record MeResponse(
+public record UpdateProfileResponse(
         Long id,
         String nickname,
         String profileImage
 ) {
 
-    public static MeResponse from(final User user) {
-        return new MeResponse(
+    public static UpdateProfileResponse from(final User user) {
+        return new UpdateProfileResponse(
                 user.getId(),
                 user.getName().getValue(),
                 extractUrl(user.getProfileImage())

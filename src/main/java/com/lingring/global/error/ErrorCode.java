@@ -36,6 +36,13 @@ public enum ErrorCode {
     // User Error
     INVALID_USER_NAME(BAD_REQUEST, "유효하지 않은 사용자 이름입니다."),
     USER_NOT_FOUND(NOT_FOUND, "사용자를 찾을 수 없습니다."),
+    EMPTY_UPDATE_PROFILE_REQUEST(BAD_REQUEST, "변경할 항목이 하나 이상 필요합니다."),
+
+    // Profile Image Error
+    INVALID_IMAGE_CONTENT_TYPE(BAD_REQUEST, "이미지 형식만 업로드할 수 있습니다."),
+    IMAGE_TOO_LARGE(BAD_REQUEST, "이미지 크기가 허용 범위를 초과했습니다."),
+    IMAGE_NOT_UPLOADED(BAD_REQUEST, "이미지가 업로드되지 않았습니다."),
+    PROFILE_IMAGE_KEY_FORBIDDEN(FORBIDDEN, "프로필 이미지 키에 접근할 권한이 없습니다."),
 
     // UserStats Error
     USER_STATS_NOT_FOUND(NOT_FOUND, "사용자 통계를 찾을 수 없습니다."),

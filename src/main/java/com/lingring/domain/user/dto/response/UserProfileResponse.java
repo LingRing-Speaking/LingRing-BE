@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 public record UserProfileResponse(
         Long id,
         String nickname,
+        String profileImage,
         Level level,
         BigDecimal mannerTemperature
 ) {
@@ -15,6 +16,7 @@ public record UserProfileResponse(
         return new UserProfileResponse(
                 projection.getId(),
                 projection.getNickname(),
+                projection.getProfileImage(),
                 Level.valueOf(projection.getLevel()),
                 projection.getMannerTemperature()
         );
