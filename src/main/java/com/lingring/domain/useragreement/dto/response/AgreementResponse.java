@@ -1,22 +1,14 @@
-package com.lingring.domain.auth.dto.response;
+package com.lingring.domain.useragreement.dto.response;
 
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.vo.ProfileImage;
 
-public record AuthTokenResponse(
-        String accessToken,
-        String refreshToken,
+public record AgreementResponse(
         UserSummary user
 ) {
 
-    public static AuthTokenResponse of(
-            final String accessToken,
-            final String refreshToken,
-            final User user
-    ) {
-        return new AuthTokenResponse(
-                accessToken,
-                refreshToken,
+    public static AgreementResponse from(final User user) {
+        return new AgreementResponse(
                 new UserSummary(
                         user.getId(),
                         user.getName().getValue(),

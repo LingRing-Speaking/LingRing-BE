@@ -71,6 +71,10 @@ public enum ErrorCode {
     // WithdrawalLog Error
     INVALID_WITHDRAW_DESCRIPTION(BAD_REQUEST, "유효하지 않은 탈퇴 사유 상세 내용입니다."),
 
+    // UserAgreement Error
+    AGREEMENT_ITEMS_INCOMPLETE(BAD_REQUEST, "필수 동의 항목이 누락되었습니다."),
+    INVALID_TERMS_VERSION(BAD_REQUEST, "유효하지 않은 약관 버전입니다."),
+
     // Call Error
     CALL_NOT_FOUND(NOT_FOUND, "통화를 찾을 수 없습니다."),
     CALL_PARTICIPANT_MISMATCH(FORBIDDEN, "해당 통화의 참여자가 아닙니다."),
