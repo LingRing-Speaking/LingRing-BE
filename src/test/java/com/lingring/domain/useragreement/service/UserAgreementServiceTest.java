@@ -123,6 +123,24 @@ class UserAgreementServiceTest extends ServiceIntegrationHelper {
         }
 
         @Test
+        @DisplayName("agreedItems가 camelCase로 들어와도 SNAKE_CASE enum으로 정상 매핑된다")
+        void accept_whenCamelCaseItems_marksAgreed() {
+            // given
+            final User user = seedUser();
+            final AgreementCreateRequest request = new AgreementCreateRequest(
+                    "2026-05-06",
+                    Set.of("over14", "terms", "privacy", "voiceAi")
+            );
+
+            // when
+            userAgreementService.accept(user.getId(), request);
+
+            // then
+            final User reloaded = userRepository.findById(user.getId()).orElseThrow();
+            assertThat(reloaded.requiresOnboarding()).isFalse();
+        }
+
+        @Test
         @DisplayName("지원하지 않는 약관 항목이 포함되면 INVALID_INPUT_VALUE 예외")
         void accept_whenUnknownItem_throwsBadRequest() {
             // given

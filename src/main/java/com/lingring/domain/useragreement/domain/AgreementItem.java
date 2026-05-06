@@ -20,7 +20,9 @@ public enum AgreementItem {
     }
 
     public static AgreementItem fromString(final String value) {
-        final String normalized = value.toUpperCase();
+        final String normalized = value
+                .replaceAll("([a-z])([A-Z])", "$1_$2")
+                .toUpperCase();
         return Arrays.stream(values())
                 .filter(item -> item.name().equals(normalized))
                 .findFirst()
