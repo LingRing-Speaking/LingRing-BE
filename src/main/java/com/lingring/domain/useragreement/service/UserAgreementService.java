@@ -8,8 +8,9 @@ import com.lingring.domain.useragreement.dto.response.AgreementResponse;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
 import com.lingring.global.util.DateTimeProvider;
-import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +24,10 @@ public class UserAgreementService {
 
     @Transactional
     public AgreementResponse accept(final Long userId, final AgreementCreateRequest request) {
-        requireAllRequiredItems(request.agreedItems());
+        final Set<AgreementItem> agreed = request.agreedItems().stream()
+                .map(AgreementItem::fromString)
+                .collect(Collectors.toCollection(() -> EnumSet.noneOf(AgreementItem.class)));
+        requireAllRequiredItems(agreed);
         final User user = userService.getById(userId);
         user.markAgreed(request.termsVersion(), timeProvider.now());
         return AgreementResponse.from(user);

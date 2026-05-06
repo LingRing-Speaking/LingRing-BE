@@ -8,13 +8,12 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
-import com.lingring.domain.useragreement.domain.AgreementItem;
 import com.lingring.domain.useragreement.dto.request.AgreementCreateRequest;
 import com.lingring.domain.useragreement.dto.response.AgreementResponse;
 import com.lingring.domain.useragreement.dto.response.AgreementResponse.UserSummary;
 import com.lingring.domain.useragreement.service.UserAgreementService;
 import com.lingring.global.auth.context.AuthContext;
-import java.util.EnumSet;
+import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -56,7 +55,7 @@ class UserAgreementControllerTest {
             AuthContext.set(userId);
             final AgreementCreateRequest request = new AgreementCreateRequest(
                     "2026-05-06",
-                    EnumSet.allOf(AgreementItem.class)
+                    Set.of("OVER14", "TERMS", "PRIVACY", "VOICE_AI")
             );
             given(userAgreementService.accept(eq(userId), any(AgreementCreateRequest.class)))
                     .willReturn(new AgreementResponse(
@@ -84,7 +83,7 @@ class UserAgreementControllerTest {
             AuthContext.set(42L);
             final AgreementCreateRequest request = new AgreementCreateRequest(
                     "",
-                    EnumSet.allOf(AgreementItem.class)
+                    Set.of("OVER14", "TERMS", "PRIVACY", "VOICE_AI")
             );
 
             // when
@@ -107,7 +106,7 @@ class UserAgreementControllerTest {
             AuthContext.set(42L);
             final AgreementCreateRequest request = new AgreementCreateRequest(
                     "2026-05-06",
-                    EnumSet.noneOf(AgreementItem.class)
+                    Set.of()
             );
 
             // when
@@ -121,6 +120,32 @@ class UserAgreementControllerTest {
             final JsonNode body = objectMapper.readTree(response.getContentAsString());
             assertThat(body.get("status").asInt()).isEqualTo(400);
             then(userAgreementService).should(never()).accept(any(), any());
+        }
+
+        @Test
+        @DisplayName("agreedItems가 소문자로 들어와도 200을 반환한다 (대소문자 무관 매핑)")
+        void accept_whenLowerCaseItems_returns200() throws Exception {
+            // given
+            final Long userId = 42L;
+            AuthContext.set(userId);
+            final AgreementCreateRequest request = new AgreementCreateRequest(
+                    "2026-05-06",
+                    Set.of("over14", "terms", "privacy", "voice_ai")
+            );
+            given(userAgreementService.accept(eq(userId), any(AgreementCreateRequest.class)))
+                    .willReturn(new AgreementResponse(
+                            new UserSummary(userId, "링링이", null, false)
+                    ));
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(post("/api/v1/me/agreements")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            assertThat(response.getStatus()).isEqualTo(200);
         }
     }
 }
