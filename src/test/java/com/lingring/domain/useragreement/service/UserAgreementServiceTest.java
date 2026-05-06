@@ -54,8 +54,9 @@ class UserAgreementServiceTest extends ServiceIntegrationHelper {
             assertThat(response.user().id()).isEqualTo(user.getId());
             assertThat(response.user().requiresOnboarding()).isFalse();
             final User reloaded = userRepository.findById(user.getId()).orElseThrow();
-            assertThat(reloaded.getAgreedAt()).isNotNull();
-            assertThat(reloaded.getAgreedTermsVersion()).isEqualTo("2026-05-06");
+            assertThat(reloaded.getAgreement()).isNotNull();
+            assertThat(reloaded.getAgreement().getAgreedAt()).isNotNull();
+            assertThat(reloaded.getAgreement().getTermsVersion()).isEqualTo("2026-05-06");
             assertThat(reloaded.requiresOnboarding()).isFalse();
         }
 
@@ -86,7 +87,8 @@ class UserAgreementServiceTest extends ServiceIntegrationHelper {
                     EnumSet.allOf(AgreementItem.class)
             );
             userAgreementService.accept(user.getId(), first);
-            final var firstAgreedAt = userRepository.findById(user.getId()).orElseThrow().getAgreedAt();
+            final var firstAgreedAt = userRepository.findById(user.getId()).orElseThrow()
+                    .getAgreement().getAgreedAt();
             Thread.sleep(10);
 
             final AgreementCreateRequest second = new AgreementCreateRequest(
@@ -99,8 +101,8 @@ class UserAgreementServiceTest extends ServiceIntegrationHelper {
 
             // then
             final User reloaded = userRepository.findById(user.getId()).orElseThrow();
-            assertThat(reloaded.getAgreedTermsVersion()).isEqualTo("2026-09-01");
-            assertThat(reloaded.getAgreedAt()).isAfter(firstAgreedAt);
+            assertThat(reloaded.getAgreement().getTermsVersion()).isEqualTo("2026-09-01");
+            assertThat(reloaded.getAgreement().getAgreedAt()).isAfter(firstAgreedAt);
         }
     }
 }

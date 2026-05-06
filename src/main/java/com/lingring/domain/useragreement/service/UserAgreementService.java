@@ -7,6 +7,7 @@ import com.lingring.domain.useragreement.dto.request.AgreementCreateRequest;
 import com.lingring.domain.useragreement.dto.response.AgreementResponse;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
+import com.lingring.global.util.DateTimeProvider;
 import java.time.LocalDateTime;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -18,12 +19,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserAgreementService {
 
     private final UserService userService;
+    private final DateTimeProvider timeProvider;
 
     @Transactional
     public AgreementResponse accept(final Long userId, final AgreementCreateRequest request) {
         requireAllRequiredItems(request.agreedItems());
         final User user = userService.getById(userId);
-        user.markAgreed(request.termsVersion(), LocalDateTime.now());
+        user.markAgreed(request.termsVersion(), timeProvider.now());
         return AgreementResponse.from(user);
     }
 

@@ -3,6 +3,7 @@ package com.lingring.domain.user.domain;
 import static jakarta.persistence.GenerationType.IDENTITY;
 import static lombok.AccessLevel.PROTECTED;
 
+import com.lingring.domain.user.domain.vo.Agreement;
 import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.domain.user.domain.vo.ProfileImage;
 import com.lingring.global.common.entity.BaseTimeEntity;
@@ -56,11 +57,8 @@ public class User extends BaseTimeEntity {
     @Embedded
     private ProfileImage profileImage;
 
-    @Column(name = "agreed_at")
-    private LocalDateTime agreedAt;
-
-    @Column(name = "agreed_terms_version", length = 20)
-    private String agreedTermsVersion;
+    @Embedded
+    private Agreement agreement;
 
     private User(
             @NonNull final Provider provider,
@@ -92,11 +90,10 @@ public class User extends BaseTimeEntity {
     }
 
     public void markAgreed(@NonNull final String termsVersion, @NonNull final LocalDateTime agreedAt) {
-        this.agreedTermsVersion = termsVersion;
-        this.agreedAt = agreedAt;
+        this.agreement = Agreement.of(termsVersion, agreedAt);
     }
 
     public boolean requiresOnboarding() {
-        return this.agreedAt == null;
+        return this.agreement == null;
     }
 }
