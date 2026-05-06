@@ -64,7 +64,7 @@ class AuthControllerTest {
                     new AuthTokenResponse(
                             "access-jwt",
                             "refresh-jwt",
-                            new UserSummary(42L, "링링이", null)
+                            new UserSummary(42L, "링링이", null, false)
                     )
             );
 

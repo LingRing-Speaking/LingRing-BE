@@ -15,6 +15,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -55,6 +56,12 @@ public class User extends BaseTimeEntity {
     @Embedded
     private ProfileImage profileImage;
 
+    @Column(name = "agreed_at")
+    private LocalDateTime agreedAt;
+
+    @Column(name = "agreed_terms_version", length = 20)
+    private String agreedTermsVersion;
+
     private User(
             @NonNull final Provider provider,
             @NonNull final String providerUserId,
@@ -82,5 +89,14 @@ public class User extends BaseTimeEntity {
 
     public void changeProfileImage(@NonNull final ProfileImage newProfileImage) {
         this.profileImage = newProfileImage;
+    }
+
+    public void markAgreed(@NonNull final String termsVersion, @NonNull final LocalDateTime agreedAt) {
+        this.agreedTermsVersion = termsVersion;
+        this.agreedAt = agreedAt;
+    }
+
+    public boolean requiresOnboarding() {
+        return this.agreedAt == null;
     }
 }

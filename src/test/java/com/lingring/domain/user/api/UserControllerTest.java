@@ -72,7 +72,7 @@ class UserControllerTest {
             final Long userId = 1L;
             final String profileImageUrl = "https://lingring-dev.s3.ap-northeast-2.amazonaws.com/profile-images/1/abc.jpg";
             AuthContext.set(userId);
-            given(userService.getMe(userId)).willReturn(new MeResponse(userId, "링링", profileImageUrl));
+            given(userService.getMe(userId)).willReturn(new MeResponse(userId, "링링", profileImageUrl, false));
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/me")
