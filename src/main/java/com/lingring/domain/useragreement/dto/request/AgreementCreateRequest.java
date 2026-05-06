@@ -1,6 +1,5 @@
 package com.lingring.domain.useragreement.dto.request;
 
-import com.lingring.domain.useragreement.domain.AgreementItem;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
@@ -12,6 +11,6 @@ public record AgreementCreateRequest(
         String termsVersion,
 
         @NotEmpty
-        Set<AgreementItem> agreedItems
+        Set<@NotBlank String> agreedItems
 ) {
 }
