@@ -364,15 +364,16 @@ class CallServiceTest extends ServiceIntegrationHelper {
         }
 
         @Test
-        @DisplayName("partner 정보(id, name)를 상대 사용자 기준으로 채운다 — 내가 userA여도, 내가 userB여도 동일")
+        @DisplayName("partner 정보(id, name, profileImage)를 상대 사용자 기준으로 채운다 — 내가 userA여도, 내가 userB여도 동일")
         void getCallsByUserId_fillsPartnerCorrectly() {
             // given: 내 id가 더 작은 케이스(userA)와 더 큰 케이스(userB)를 둘 다 검증하기 위해 두 통화 생성
+            //        partner 한 명은 profileImage가 있고, 다른 한 명은 null인 상태로 둬 nullable 케이스도 검증
             final Long me = saveUser("me").getId();
-            final Long smaller = saveUser("smaller").getId();   // me보다 작아질 수 있음
-            final Long bigger = saveUser("bigger").getId();
+            final Long withImage = saveUser("withImage", "https://cdn.example.com/p/with-image.png").getId();
+            final Long noImage = saveUser("noImage").getId();
             // start()가 자동으로 작은 id를 userA로 정렬하므로, partner는 항상 "다른 쪽"이 채워져야 함
-            saveEndedCall(me, smaller, FIXED_NOW.minusHours(2), FIXED_NOW.minusHours(2).plusMinutes(1));
-            saveEndedCall(me, bigger, FIXED_NOW.minusHours(1), FIXED_NOW.minusHours(1).plusMinutes(1));
+            saveEndedCall(me, withImage, FIXED_NOW.minusHours(2), FIXED_NOW.minusHours(2).plusMinutes(1));
+            saveEndedCall(me, noImage, FIXED_NOW.minusHours(1), FIXED_NOW.minusHours(1).plusMinutes(1));
 
             // when
             final CallsResponse response = callService.getCallsByUserId(me, 0, 20);
@@ -380,9 +381,11 @@ class CallServiceTest extends ServiceIntegrationHelper {
             // then
             assertThat(response.items()).hasSize(2);
             assertThat(response.items()).extracting(item -> item.partner().id())
-                    .containsExactlyInAnyOrder(smaller, bigger);
+                    .containsExactlyInAnyOrder(withImage, noImage);
             assertThat(response.items()).extracting(item -> item.partner().name())
-                    .containsExactlyInAnyOrder("smaller", "bigger");
+                    .containsExactlyInAnyOrder("withImage", "noImage");
+            assertThat(response.items()).extracting(item -> item.partner().profileImage())
+                    .containsExactlyInAnyOrder("https://cdn.example.com/p/with-image.png", null);
         }
 
         @Test
@@ -470,8 +473,12 @@ class CallServiceTest extends ServiceIntegrationHelper {
         }
 
         private User saveUser(final String name) {
+            return saveUser(name, null);
+        }
+
+        private User saveUser(final String name, final String profileImageUrl) {
             return userRepository.save(
-                    User.createFromOAuth(Provider.KAKAO, "sub-" + name + "-" + UUID.randomUUID(), new Name(name), null)
+                    User.createFromOAuth(Provider.KAKAO, "sub-" + name + "-" + UUID.randomUUID(), new Name(name), profileImageUrl)
             );
         }
 

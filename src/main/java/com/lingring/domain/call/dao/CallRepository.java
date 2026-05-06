@@ -19,6 +19,7 @@ public interface CallRepository extends JpaRepository<Call, Long> {
             SELECT c.id AS id,
                    u.id AS partnerId,
                    u.name.value AS partnerName,
+                   u.profileImage.value AS partnerProfileImage,
                    c.startedAt AS startedAt,
                    c.durationSec AS durationSec
             FROM Call c, User u

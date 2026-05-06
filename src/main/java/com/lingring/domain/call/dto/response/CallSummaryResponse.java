@@ -20,7 +20,11 @@ public record CallSummaryResponse(
         final boolean analyzed = false;
         return new CallSummaryResponse(
                 projection.getId(),
-                new PartnerResponse(projection.getPartnerId(), projection.getPartnerName()),
+                new PartnerResponse(
+                        projection.getPartnerId(),
+                        projection.getPartnerName(),
+                        projection.getPartnerProfileImage()
+                ),
                 startedAt,
                 projection.getDurationSec().intValue(),
                 analyzed

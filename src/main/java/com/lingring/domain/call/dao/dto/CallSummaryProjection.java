@@ -10,6 +10,8 @@ public interface CallSummaryProjection {
 
     String getPartnerName();
 
+    String getPartnerProfileImage();
+
     LocalDateTime getStartedAt();
 
     Long getDurationSec();

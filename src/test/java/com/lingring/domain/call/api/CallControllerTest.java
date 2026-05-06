@@ -61,7 +61,7 @@ class CallControllerTest {
                             List.of(
                                     new CallSummaryResponse(
                                             1042L,
-                                            new PartnerResponse(7L, "Sophie"),
+                                            new PartnerResponse(7L, "Sophie", "https://cdn.example.com/p/sophie.png"),
                                             startedAt,
                                             312,
                                             true
@@ -91,6 +91,7 @@ class CallControllerTest {
             assertThat(first.get("id").asLong()).isEqualTo(1042L);
             assertThat(first.get("partner").get("id").asLong()).isEqualTo(7L);
             assertThat(first.get("partner").get("name").asString()).isEqualTo("Sophie");
+            assertThat(first.get("partner").get("profileImage").asString()).isEqualTo("https://cdn.example.com/p/sophie.png");
             assertThat(first.get("startedAt").asString()).isEqualTo("2026-04-29T19:30:00+09:00");
             assertThat(first.get("durationSec").asInt()).isEqualTo(312);
             assertThat(first.get("analyzed").asBoolean()).isTrue();
