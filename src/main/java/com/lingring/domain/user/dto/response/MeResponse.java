@@ -6,14 +6,16 @@ import com.lingring.domain.user.domain.vo.ProfileImage;
 public record MeResponse(
         Long id,
         String nickname,
-        String profileImage
+        String profileImage,
+        boolean requiresOnboarding
 ) {
 
     public static MeResponse from(final User user) {
         return new MeResponse(
                 user.getId(),
                 user.getName().getValue(),
-                extractUrl(user.getProfileImage())
+                extractUrl(user.getProfileImage()),
+                user.requiresOnboarding()
         );
     }
 
