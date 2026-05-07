@@ -6,6 +6,7 @@ public record SocialLoginRequest(
         String provider,
         @NotBlank(message = "idToken이 비어있습니다.") String idToken,
         String accessToken,
-        String nickname
+        String nickname,
+        String authorizationCode
 ) {
 }

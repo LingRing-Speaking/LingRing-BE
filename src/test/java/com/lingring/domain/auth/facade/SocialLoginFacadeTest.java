@@ -12,6 +12,8 @@ import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.domain.user.exception.NicknameConflictException;
+import com.lingring.global.auth.apple.AppleAuthClient;
+import com.lingring.global.auth.apple.FakeAppleAuthClient;
 import com.lingring.global.auth.jwt.IdTokenVerifier;
 import com.lingring.global.auth.jwt.IdTokenVerifiers;
 import com.lingring.global.config.ServiceIntegrationHelper;
@@ -46,6 +48,13 @@ class SocialLoginFacadeTest extends ServiceIntegrationHelper {
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
 
+    @Autowired
+    private AppleAuthClient appleAuthClient;
+
+    private FakeAppleAuthClient fakeAppleAuthClient() {
+        return (FakeAppleAuthClient) appleAuthClient;
+    }
+
     @TestConfiguration
     static class StubIdTokenVerifierConfig {
 
@@ -69,6 +78,12 @@ class SocialLoginFacadeTest extends ServiceIntegrationHelper {
                     Provider.APPLE, apple
             ));
         }
+
+        @Bean
+        @Primary
+        public AppleAuthClient fakeAppleAuthClient() {
+            return new FakeAppleAuthClient();
+        }
     }
 
     @Nested
@@ -80,7 +95,7 @@ class SocialLoginFacadeTest extends ServiceIntegrationHelper {
         void socialLogin_whenNewUserWithNickname_createsUserAndIssuesTokens() {
             // given
             final SocialLoginRequest request = new SocialLoginRequest(
-                    "kakao", VALID_ID_TOKEN, null, "링링이"
+                    "kakao", VALID_ID_TOKEN, null, "링링이", null
             );
 
             // when
@@ -101,7 +116,7 @@ class SocialLoginFacadeTest extends ServiceIntegrationHelper {
         void socialLogin_whenNewUser_alsoCreatesUserStats() {
             // given
             final SocialLoginRequest request = new SocialLoginRequest(
-                    "kakao", VALID_ID_TOKEN, null, "링링이"
+                    "kakao", VALID_ID_TOKEN, null, "링링이", null
             );
 
             // when
@@ -116,7 +131,7 @@ class SocialLoginFacadeTest extends ServiceIntegrationHelper {
         void socialLogin_whenNewUserMissingNickname_throwsNicknameRequired() {
             // given
             final SocialLoginRequest request = new SocialLoginRequest(
-                    "kakao", VALID_ID_TOKEN, null, null
+                    "kakao", VALID_ID_TOKEN, null, null, null
             );
 
             // when & then
@@ -134,7 +149,7 @@ class SocialLoginFacadeTest extends ServiceIntegrationHelper {
                     Provider.KAKAO, "existing-sub", new Name("링링이"), null
             ));
             final SocialLoginRequest request = new SocialLoginRequest(
-                    "kakao", VALID_ID_TOKEN, null, "링링이"
+                    "kakao", VALID_ID_TOKEN, null, "링링이", null
             );
 
             // when & then
@@ -154,12 +169,12 @@ class SocialLoginFacadeTest extends ServiceIntegrationHelper {
         void socialLogin_whenExistingUser_returnsTokensWithoutNickname() {
             // given — 사전 가입
             socialLoginFacade.socialLogin(
-                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이")
+                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이", null)
             );
 
             // when — 같은 idToken으로 다시 로그인 (nickname 없이)
             final AuthTokenResponse response = socialLoginFacade.socialLogin(
-                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, null)
+                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, null, null)
             );
 
             // then
@@ -177,7 +192,7 @@ class SocialLoginFacadeTest extends ServiceIntegrationHelper {
         void socialLogin_whenAppleNewUserWithNickname_createsUserAndIssuesTokens() {
             // given
             final SocialLoginRequest request = new SocialLoginRequest(
-                    "apple", VALID_ID_TOKEN, null, "애플유저"
+                    "apple", VALID_ID_TOKEN, null, "애플유저", null
             );
 
             // when
@@ -197,12 +212,12 @@ class SocialLoginFacadeTest extends ServiceIntegrationHelper {
         void socialLogin_whenAppleExistingUser_returnsTokensWithoutNickname() {
             // given — 사전 가입
             socialLoginFacade.socialLogin(
-                    new SocialLoginRequest("apple", VALID_ID_TOKEN, null, "애플유저")
+                    new SocialLoginRequest("apple", VALID_ID_TOKEN, null, "애플유저", null)
             );
 
             // when
             final AuthTokenResponse response = socialLoginFacade.socialLogin(
-                    new SocialLoginRequest("apple", VALID_ID_TOKEN, null, null)
+                    new SocialLoginRequest("apple", VALID_ID_TOKEN, null, null, null)
             );
 
             // then
@@ -215,7 +230,7 @@ class SocialLoginFacadeTest extends ServiceIntegrationHelper {
         void socialLogin_whenAppleIdTokenInvalid_propagatesUnauthorized() {
             // given
             final SocialLoginRequest request = new SocialLoginRequest(
-                    "apple", INVALID_ID_TOKEN, null, "애플유저"
+                    "apple", INVALID_ID_TOKEN, null, "애플유저", null
             );
 
             // when & then
@@ -230,12 +245,12 @@ class SocialLoginFacadeTest extends ServiceIntegrationHelper {
         void socialLogin_whenSameSubDifferentProvider_createsSeparateUsers() {
             // given — 카카오로 먼저 가입
             final AuthTokenResponse kakaoResponse = socialLoginFacade.socialLogin(
-                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "카카오유저")
+                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "카카오유저", null)
             );
 
             // when — 애플로 가입 (다른 nickname 필요 — name unique 제약)
             final AuthTokenResponse appleResponse = socialLoginFacade.socialLogin(
-                    new SocialLoginRequest("apple", VALID_ID_TOKEN, null, "애플유저")
+                    new SocialLoginRequest("apple", VALID_ID_TOKEN, null, "애플유저", null)
             );
 
             // then
@@ -250,6 +265,80 @@ class SocialLoginFacadeTest extends ServiceIntegrationHelper {
     }
 
     @Nested
+    @DisplayName("socialLogin: Apple authorizationCode → refresh_token 캡처")
+    class AppleCredentialCapture {
+
+        @Test
+        @DisplayName("APPLE + authorizationCode가 있으면 exchange가 호출되고 user에 refresh_token이 저장된다")
+        void socialLogin_whenAppleWithAuthCode_exchangesAndPersistsCredential() {
+            // given
+            fakeAppleAuthClient().reset();
+            fakeAppleAuthClient().setNextRefreshToken("apple-rt-123");
+
+            // when
+            final AuthTokenResponse response = socialLoginFacade.socialLogin(
+                    new SocialLoginRequest("apple", VALID_ID_TOKEN, null, "애플유저", "apple-auth-code")
+            );
+
+            // then
+            assertThat(fakeAppleAuthClient().exchangedCodes()).containsExactly("apple-auth-code");
+            final User saved = userRepository.findById(response.user().id()).orElseThrow();
+            assertThat(saved.getAppleCredential()).isNotNull();
+            assertThat(saved.getAppleCredential().getRefreshToken()).isEqualTo("apple-rt-123");
+        }
+
+        @Test
+        @DisplayName("APPLE + authorizationCode가 없으면 exchange를 호출하지 않고 credential도 저장되지 않는다")
+        void socialLogin_whenAppleWithoutAuthCode_doesNotExchange() {
+            // given
+            fakeAppleAuthClient().reset();
+
+            // when
+            final AuthTokenResponse response = socialLoginFacade.socialLogin(
+                    new SocialLoginRequest("apple", VALID_ID_TOKEN, null, "애플유저", null)
+            );
+
+            // then
+            assertThat(fakeAppleAuthClient().exchangedCodes()).isEmpty();
+            final User saved = userRepository.findById(response.user().id()).orElseThrow();
+            assertThat(saved.getAppleCredential()).isNull();
+        }
+
+        @Test
+        @DisplayName("APPLE exchange가 실패해도 로그인 자체는 성공하고 credential은 저장되지 않는다")
+        void socialLogin_whenExchangeFails_loginStillSucceeds() {
+            // given
+            fakeAppleAuthClient().reset();
+            fakeAppleAuthClient().failNextExchange();
+
+            // when
+            final AuthTokenResponse response = socialLoginFacade.socialLogin(
+                    new SocialLoginRequest("apple", VALID_ID_TOKEN, null, "애플유저", "apple-auth-code")
+            );
+
+            // then
+            assertThat(response.accessToken()).isNotBlank();
+            final User saved = userRepository.findById(response.user().id()).orElseThrow();
+            assertThat(saved.getAppleCredential()).isNull();
+        }
+
+        @Test
+        @DisplayName("KAKAO + authorizationCode를 보내도 Apple exchange는 호출되지 않는다")
+        void socialLogin_whenKakaoWithAuthCode_doesNotInvokeAppleExchange() {
+            // given
+            fakeAppleAuthClient().reset();
+
+            // when
+            socialLoginFacade.socialLogin(
+                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "카카오유저", "should-be-ignored")
+            );
+
+            // then
+            assertThat(fakeAppleAuthClient().exchangedCodes()).isEmpty();
+        }
+    }
+
+    @Nested
     @DisplayName("socialLogin: 입력 검증")
     class Validation {
 
@@ -258,7 +347,7 @@ class SocialLoginFacadeTest extends ServiceIntegrationHelper {
         void socialLogin_whenUnsupportedProvider_throwsNotSupported() {
             // given
             final SocialLoginRequest request = new SocialLoginRequest(
-                    "facebook", VALID_ID_TOKEN, null, "닉네임"
+                    "facebook", VALID_ID_TOKEN, null, "닉네임", null
             );
 
             // when & then
@@ -273,7 +362,7 @@ class SocialLoginFacadeTest extends ServiceIntegrationHelper {
         void socialLogin_whenIdTokenInvalid_propagatesVerifierException() {
             // given
             final SocialLoginRequest request = new SocialLoginRequest(
-                    "kakao", INVALID_ID_TOKEN, null, "닉네임"
+                    "kakao", INVALID_ID_TOKEN, null, "닉네임", null
             );
 
             // when & then
