@@ -6,6 +6,7 @@ import com.lingring.domain.call.service.CallService;
 import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.WithdrawReason;
+import com.lingring.domain.user.domain.vo.AppleOAuthCredential;
 import com.lingring.domain.user.event.UserWithdrawnEvent;
 import com.lingring.domain.user.service.UserService;
 import com.lingring.domain.user.service.UserStatsService;
@@ -13,10 +14,12 @@ import com.lingring.domain.userblock.service.UserBlockService;
 import com.lingring.domain.userexpression.service.UserExpressionService;
 import com.lingring.domain.userreport.service.UserReportService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class UserWithdrawalFacade {
@@ -55,6 +58,11 @@ public class UserWithdrawalFacade {
         if (user.getProvider() != Provider.APPLE) {
             return;
         }
-        appleAuthService.revokeForUser(user);
+        final AppleOAuthCredential credential = user.getAppleCredential();
+        if (credential == null) {
+            log.info("Apple credential 없음, revoke 건너뜀. userId={}", user.getId());
+            return;
+        }
+        appleAuthService.revoke(credential.getRefreshToken());
     }
 }

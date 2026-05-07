@@ -1,9 +1,7 @@
 package com.lingring.domain.auth.service;
 
-import com.lingring.domain.user.domain.User;
-import com.lingring.domain.user.domain.vo.AppleOAuthCredential;
-import com.lingring.domain.user.service.UserService;
 import com.lingring.global.auth.apple.AppleAuthClient;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,27 +12,21 @@ import org.springframework.stereotype.Service;
 public class AppleAuthService {
 
     private final AppleAuthClient appleAuthClient;
-    private final UserService userService;
 
-    public void captureRefreshToken(final Long userId, final String authorizationCode) {
+    public Optional<String> exchangeRefreshToken(final String authorizationCode) {
         try {
-            final String refreshToken = appleAuthClient.exchangeAuthorizationCode(authorizationCode);
-            userService.updateAppleCredential(userId, refreshToken);
+            return Optional.of(appleAuthClient.exchangeAuthorizationCode(authorizationCode));
         } catch (final Exception ex) {
-            log.warn("Apple authorizationCode exchange 실패. userId={}", userId, ex);
+            log.warn("Apple authorizationCode exchange 실패.", ex);
+            return Optional.empty();
         }
     }
 
-    public void revokeForUser(final User user) {
-        final AppleOAuthCredential credential = user.getAppleCredential();
-        if (credential == null) {
-            log.info("Apple credential 없음, revoke 건너뜀. userId={}", user.getId());
-            return;
-        }
+    public void revoke(final String refreshToken) {
         try {
-            appleAuthClient.revoke(credential.getRefreshToken());
+            appleAuthClient.revoke(refreshToken);
         } catch (final Exception ex) {
-            log.warn("Apple revoke 실패, 탈퇴 진행. userId={}", user.getId(), ex);
+            log.warn("Apple revoke 실패, 호출자에서 후속 처리 결정 필요.", ex);
         }
     }
 }

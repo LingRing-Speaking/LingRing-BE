@@ -39,6 +39,7 @@ public class SocialLoginFacade {
         if (provider != Provider.APPLE || authorizationCode == null || authorizationCode.isBlank()) {
             return;
         }
-        appleAuthService.captureRefreshToken(userId, authorizationCode);
+        appleAuthService.exchangeRefreshToken(authorizationCode)
+                .ifPresent(refreshToken -> userService.updateAppleCredential(userId, refreshToken));
     }
 }
