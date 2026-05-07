@@ -4,6 +4,7 @@ import static jakarta.persistence.GenerationType.IDENTITY;
 import static lombok.AccessLevel.PROTECTED;
 
 import com.lingring.domain.user.domain.vo.Agreement;
+import com.lingring.domain.user.domain.vo.AppleOAuthCredential;
 import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.domain.user.domain.vo.ProfileImage;
 import com.lingring.global.common.entity.BaseTimeEntity;
@@ -60,6 +61,9 @@ public class User extends BaseTimeEntity {
     @Embedded
     private Agreement agreement;
 
+    @Embedded
+    private AppleOAuthCredential appleCredential;
+
     private User(
             @NonNull final Provider provider,
             @NonNull final String providerUserId,
@@ -91,6 +95,10 @@ public class User extends BaseTimeEntity {
 
     public void markAgreed(@NonNull final String termsVersion, @NonNull final LocalDateTime agreedAt) {
         this.agreement = Agreement.of(termsVersion, agreedAt);
+    }
+
+    public void updateAppleCredential(@NonNull final String refreshToken) {
+        this.appleCredential = AppleOAuthCredential.of(refreshToken);
     }
 
     public boolean requiresOnboarding() {

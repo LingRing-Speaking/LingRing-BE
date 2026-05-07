@@ -58,7 +58,7 @@ class AuthControllerTest {
         void socialLogin_whenSuccess_returns200WithBody() throws Exception {
             // given
             final SocialLoginRequest request = new SocialLoginRequest(
-                    "kakao", "id-token", null, "링링이"
+                    "kakao", "id-token", null, "링링이", null
             );
             given(socialLoginFacade.socialLogin(any(SocialLoginRequest.class))).willReturn(
                     new AuthTokenResponse(
@@ -89,7 +89,7 @@ class AuthControllerTest {
         void socialLogin_whenIdTokenBlank_rejectedByValidation() throws Exception {
             // given
             final SocialLoginRequest request = new SocialLoginRequest(
-                    "kakao", "", null, "링링이"
+                    "kakao", "", null, "링링이", null
             );
 
             // when
@@ -110,7 +110,7 @@ class AuthControllerTest {
         void socialLogin_whenIdTokenMissing_rejectedByValidation() throws Exception {
             // given — idToken=null
             final SocialLoginRequest request = new SocialLoginRequest(
-                    "kakao", null, null, "링링이"
+                    "kakao", null, null, "링링이", null
             );
 
             // when

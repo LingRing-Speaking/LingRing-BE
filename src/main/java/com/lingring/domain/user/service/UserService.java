@@ -71,6 +71,12 @@ public class UserService {
     }
 
     @Transactional
+    public void updateAppleCredential(final Long userId, final String refreshToken) {
+        final User user = getUser(userId);
+        user.updateAppleCredential(refreshToken);
+    }
+
+    @Transactional
     public User register(
             final Provider provider,
             final String providerUserId,
