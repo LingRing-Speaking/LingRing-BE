@@ -2,24 +2,22 @@ package com.lingring.domain.auth.facade;
 
 import com.lingring.domain.auth.dto.request.SocialLoginRequest;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse;
+import com.lingring.domain.auth.service.AppleAuthService;
 import com.lingring.domain.auth.service.AuthService;
 import com.lingring.domain.auth.service.VerifiedIdToken;
 import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.service.UserService;
-import com.lingring.global.auth.apple.AppleAuthClient;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class SocialLoginFacade {
 
     private final AuthService authService;
     private final UserService userService;
-    private final AppleAuthClient appleAuthClient;
+    private final AppleAuthService appleAuthService;
 
     public AuthTokenResponse socialLogin(final SocialLoginRequest request) {
         final VerifiedIdToken verified = authService.verifyIdToken(
@@ -41,11 +39,6 @@ public class SocialLoginFacade {
         if (provider != Provider.APPLE || authorizationCode == null || authorizationCode.isBlank()) {
             return;
         }
-        try {
-            final String refreshToken = appleAuthClient.exchangeAuthorizationCode(authorizationCode);
-            userService.updateAppleCredential(userId, refreshToken);
-        } catch (final Exception ex) {
-            log.warn("Apple authorizationCode exchange 실패. userId={}", userId, ex);
-        }
+        appleAuthService.captureRefreshToken(userId, authorizationCode);
     }
 }
