@@ -22,6 +22,8 @@ import com.lingring.domain.userexpression.domain.UserExpression;
 import com.lingring.domain.userreport.dao.UserReportRepository;
 import com.lingring.domain.userreport.domain.ReportReason;
 import com.lingring.domain.userreport.domain.UserReport;
+import com.lingring.global.auth.apple.AppleAuthClient;
+import com.lingring.global.auth.apple.FakeAppleAuthClient;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.NotFoundException;
@@ -32,7 +34,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 
+@Import(UserWithdrawalFacadeTest.FakeAppleAuthClientConfig.class)
 class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
 
     @Autowired
@@ -61,6 +68,23 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
 
     @Autowired
     private WithdrawalLogRepository withdrawalLogRepository;
+
+    @Autowired
+    private AppleAuthClient appleAuthClient;
+
+    private FakeAppleAuthClient fakeAppleAuthClient() {
+        return (FakeAppleAuthClient) appleAuthClient;
+    }
+
+    @TestConfiguration
+    static class FakeAppleAuthClientConfig {
+
+        @Bean
+        @Primary
+        public AppleAuthClient fakeAppleAuthClient() {
+            return new FakeAppleAuthClient();
+        }
+    }
 
     @Nested
     @DisplayName("withdraw: 회원탈퇴 시 도메인별 정리 작업")
@@ -302,9 +326,81 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
         }
     }
 
+    @Nested
+    @DisplayName("withdraw: Apple OAuth revoke")
+    class AppleRevoke {
+
+        @Test
+        @DisplayName("Apple 사용자가 refresh_token을 가지고 있으면 Apple revoke가 호출된다")
+        void withdraw_whenAppleUserWithCredential_callsRevoke() {
+            // given
+            fakeAppleAuthClient().reset();
+            final User me = saveAppleUser("애플유저", "apple-me", "apple-rt-stored");
+
+            // when
+            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+
+            // then
+            assertThat(fakeAppleAuthClient().revokedTokens()).containsExactly("apple-rt-stored");
+            assertThat(userRepository.findById(me.getId())).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Apple revoke가 실패해도 회원탈퇴(hard-delete)는 정상적으로 진행된다")
+        void withdraw_whenRevokeFails_stillCompletesWithdrawal() {
+            // given
+            fakeAppleAuthClient().reset();
+            fakeAppleAuthClient().failNextRevoke();
+            final User me = saveAppleUser("애플유저", "apple-me", "apple-rt-stored");
+
+            // when
+            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+
+            // then
+            assertThat(userRepository.findById(me.getId())).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Apple 사용자라도 credential이 없으면 revoke를 호출하지 않는다 (이전 가입자 케이스)")
+        void withdraw_whenAppleUserWithoutCredential_skipsRevoke() {
+            // given
+            fakeAppleAuthClient().reset();
+            final User me = userRepository.save(
+                    User.createFromOAuth(Provider.APPLE, "apple-no-cred", new Name("애플유저"), null)
+            );
+
+            // when
+            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+
+            // then
+            assertThat(fakeAppleAuthClient().revokedTokens()).isEmpty();
+            assertThat(userRepository.findById(me.getId())).isEmpty();
+        }
+
+        @Test
+        @DisplayName("KAKAO 사용자는 revoke 대상이 아니므로 Apple 클라이언트가 호출되지 않는다")
+        void withdraw_whenKakaoUser_doesNotCallAppleRevoke() {
+            // given
+            fakeAppleAuthClient().reset();
+            final User me = saveUser("카카오유저", "kakao-me");
+
+            // when
+            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+
+            // then
+            assertThat(fakeAppleAuthClient().revokedTokens()).isEmpty();
+        }
+    }
+
     private User saveUser(final String nickname, final String providerSub) {
         return userRepository.save(
                 User.createFromOAuth(Provider.KAKAO, providerSub, new Name(nickname), null)
         );
+    }
+
+    private User saveAppleUser(final String nickname, final String providerSub, final String refreshToken) {
+        final User user = User.createFromOAuth(Provider.APPLE, providerSub, new Name(nickname), null);
+        user.updateAppleCredential(refreshToken);
+        return userRepository.save(user);
     }
 }

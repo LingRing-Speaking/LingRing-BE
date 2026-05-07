@@ -131,7 +131,7 @@ class AuthServiceTest extends ServiceIntegrationHelper {
         void refresh_whenValidToken_issuesNewPair() {
             // given
             final AuthTokenResponse first = socialLoginFacade.socialLogin(
-                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이")
+                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이", null)
             );
 
             // when
@@ -148,7 +148,7 @@ class AuthServiceTest extends ServiceIntegrationHelper {
         void refresh_whenUserDeleted_throwsInvalidTokenAndInvalidates() {
             // given
             final AuthTokenResponse first = socialLoginFacade.socialLogin(
-                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이")
+                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이", null)
             );
             userRepository.deleteById(first.user().id());
 
@@ -165,7 +165,7 @@ class AuthServiceTest extends ServiceIntegrationHelper {
         void refresh_whenStaleTokenReused_invalidatesAllAndThrows() {
             // given
             final AuthTokenResponse first = socialLoginFacade.socialLogin(
-                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이")
+                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이", null)
             );
             authService.refresh(first.refreshToken());
 
@@ -182,7 +182,7 @@ class AuthServiceTest extends ServiceIntegrationHelper {
         void refresh_whenNoStoredToken_throws() {
             // given
             final AuthTokenResponse first = socialLoginFacade.socialLogin(
-                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이")
+                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이", null)
             );
             authService.logout(first.user().id());
 
@@ -198,7 +198,7 @@ class AuthServiceTest extends ServiceIntegrationHelper {
         void refresh_whenAccessTokenGiven_throws() {
             // given
             final AuthTokenResponse first = socialLoginFacade.socialLogin(
-                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이")
+                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이", null)
             );
 
             // when & then
@@ -218,7 +218,7 @@ class AuthServiceTest extends ServiceIntegrationHelper {
         void logout_deletesStoredRefreshToken() {
             // given
             final AuthTokenResponse response = socialLoginFacade.socialLogin(
-                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이")
+                    new SocialLoginRequest("kakao", VALID_ID_TOKEN, null, "링링이", null)
             );
             assertThat(refreshTokenRepository.exists(response.user().id())).isTrue();
 
