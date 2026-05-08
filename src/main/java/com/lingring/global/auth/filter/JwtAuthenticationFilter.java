@@ -26,6 +26,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
     private static final List<String> PUBLIC_PATHS = List.of(
             "/api/v1/auth/social",
+            "/api/v1/auth/demo-login",
             "/api/v1/auth/refresh",
             "/ws/**",
             "/actuator/**",
