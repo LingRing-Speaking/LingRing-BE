@@ -8,11 +8,13 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import com.lingring.domain.auth.dto.request.DemoLoginRequest;
 import com.lingring.domain.auth.dto.request.RefreshRequest;
 import com.lingring.domain.auth.dto.request.SocialLoginRequest;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse.UserSummary;
 import com.lingring.domain.auth.dto.response.TokenPairResponse;
+import com.lingring.domain.auth.facade.DemoLoginFacade;
 import com.lingring.domain.auth.facade.SocialLoginFacade;
 import com.lingring.domain.auth.service.AuthService;
 import com.lingring.global.auth.context.AuthContext;
@@ -43,6 +45,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private SocialLoginFacade socialLoginFacade;
+
+    @MockitoBean
+    private DemoLoginFacade demoLoginFacade;
 
     @AfterEach
     void clearAuthContext() {
@@ -170,6 +175,76 @@ class AuthControllerTest {
             final JsonNode body = objectMapper.readTree(response.getContentAsString());
             assertThat(body.get("status").asInt()).isEqualTo(400);
             then(authService).should(never()).refresh(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/v1/auth/demo-login")
+    class DemoLogin {
+
+        @Test
+        @DisplayName("성공 시 200과 accessToken/refreshToken/user를 반환한다")
+        void demoLogin_whenSuccess_returns200WithBody() throws Exception {
+            // given
+            final DemoLoginRequest request = new DemoLoginRequest("review-token-a");
+            given(demoLoginFacade.demoLogin(eq("review-token-a"))).willReturn(
+                    new AuthTokenResponse(
+                            "demo-access",
+                            "demo-refresh",
+                            new UserSummary(7L, "Reviewer A", null, false)
+                    )
+            );
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(post("/api/v1/auth/demo-login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            assertThat(response.getStatus()).isEqualTo(200);
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("data").get("accessToken").asText()).isEqualTo("demo-access");
+            assertThat(body.get("data").get("user").get("nickname").asText()).isEqualTo("Reviewer A");
+        }
+
+        @Test
+        @DisplayName("token이 비어있으면 @Valid가 차단하고 facade를 호출하지 않는다")
+        void demoLogin_whenTokenBlank_rejectedByValidation() throws Exception {
+            // given
+            final DemoLoginRequest request = new DemoLoginRequest("");
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(post("/api/v1/auth/demo-login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("status").asInt()).isEqualTo(400);
+            then(demoLoginFacade).should(never()).demoLogin(any());
+        }
+
+        @Test
+        @DisplayName("token이 누락되면 @Valid가 차단하고 facade를 호출하지 않는다")
+        void demoLogin_whenTokenMissing_rejectedByValidation() throws Exception {
+            // given — token=null
+            final DemoLoginRequest request = new DemoLoginRequest(null);
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(post("/api/v1/auth/demo-login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("status").asInt()).isEqualTo(400);
+            then(demoLoginFacade).should(never()).demoLogin(any());
         }
     }
 

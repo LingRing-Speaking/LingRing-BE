@@ -1,5 +1,6 @@
 package com.lingring.domain.auth.api;
 
+import com.lingring.domain.auth.dto.request.DemoLoginRequest;
 import com.lingring.domain.auth.dto.request.RefreshRequest;
 import com.lingring.domain.auth.dto.request.SocialLoginRequest;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse;
@@ -49,6 +50,39 @@ public interface AuthApi {
     @PostMapping("/auth/social")
     ApiResponse<AuthTokenResponse> socialLogin(
             @Valid @RequestBody final SocialLoginRequest request
+    );
+
+    @Operation(
+            summary = "Apple App Review 리뷰어용 demo 로그인",
+            description = """
+                    SIWA·Kakao 전용 앱이라 진짜 Apple ID/Kakao 계정 발급은 2FA 때문에
+                    비현실적이라 BE Test Account Bypass 패턴을 사용한다.
+                    환경변수에 매핑된 토큰을 받으면 미리 시드된 demo user 의 자체 JWT 를 발급한다.
+                    """
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "demo 로그인 성공",
+                    useReturnTypeSchema = true
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    ref = "#/components/responses/BadRequest"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "유효하지 않은 데모 토큰"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    description = "데모 로그인 비활성화"
+            )
+    })
+    @ResponseStatus(HttpStatus.OK)
+    @PostMapping("/auth/demo-login")
+    ApiResponse<AuthTokenResponse> demoLogin(
+            @Valid @RequestBody final DemoLoginRequest request
     );
 
     @Operation(
