@@ -457,6 +457,26 @@ class CallServiceTest extends ServiceIntegrationHelper {
         }
 
         @Test
+        @DisplayName("상대방이 탈퇴해도 통화 기록은 노출되며 partner는 null로 응답한다")
+        void getCallsByUserId_includesCallsWithWithdrawnPartner() {
+            // given
+            final Long me = saveUser("me").getId();
+            final User partner = saveUser("탈퇴자");
+            final Call ended = saveEndedCall(me, partner.getId(), FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(5));
+
+            // when: UserWithdrawalFacade와 동일한 순서로 상대방 탈퇴 시뮬레이션
+            callService.anonymizeUser(partner.getId());
+            userRepository.deleteById(partner.getId());
+
+            final CallsResponse response = callService.getCallsByUserId(me, 0, 20);
+
+            // then
+            assertThat(response.items()).hasSize(1);
+            assertThat(response.items().get(0).id()).isEqualTo(ended.getId());
+            assertThat(response.items().get(0).partner()).isNull();
+        }
+
+        @Test
         @DisplayName("정확히 1분(60초) 통화는 목록에 포함된다 (>= 60초 경계)")
         void getCallsByUserId_includesCallExactlyOneMinute() {
             // given
