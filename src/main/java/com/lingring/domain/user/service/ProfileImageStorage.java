@@ -7,4 +7,6 @@ public interface ProfileImageStorage {
     boolean exists(String key);
 
     String publicUrl(String key);
+
+    void delete(String key);
 }

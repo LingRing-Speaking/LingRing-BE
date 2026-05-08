@@ -11,6 +11,7 @@ public class FakeProfileImageStorage implements ProfileImageStorage {
     private static final String FAKE_CDN = "https://fake-cdn.local";
 
     private final Set<String> uploadedKeys = new HashSet<>();
+    private final Set<String> deletedKeys = new HashSet<>();
 
     @Override
     public PresignedUploadUrl generateUploadUrl(
@@ -31,11 +32,22 @@ public class FakeProfileImageStorage implements ProfileImageStorage {
         return FAKE_CDN + "/" + key;
     }
 
+    @Override
+    public void delete(final String key) {
+        uploadedKeys.remove(key);
+        deletedKeys.add(key);
+    }
+
     public void simulateUpload(final String key) {
         uploadedKeys.add(key);
     }
 
+    public Set<String> deletedKeys() {
+        return Set.copyOf(deletedKeys);
+    }
+
     public void clear() {
         uploadedKeys.clear();
+        deletedKeys.clear();
     }
 }
