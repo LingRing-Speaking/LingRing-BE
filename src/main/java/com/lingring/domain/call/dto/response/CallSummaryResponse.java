@@ -20,14 +20,21 @@ public record CallSummaryResponse(
         final boolean analyzed = false;
         return new CallSummaryResponse(
                 projection.getId(),
-                new PartnerResponse(
-                        projection.getPartnerId(),
-                        projection.getPartnerName(),
-                        projection.getPartnerProfileImage()
-                ),
+                partnerOf(projection),
                 startedAt,
                 projection.getDurationSec().intValue(),
                 analyzed
+        );
+    }
+
+    private static PartnerResponse partnerOf(final CallSummaryProjection projection) {
+        if (projection.getPartnerId() == null) {
+            return null;
+        }
+        return new PartnerResponse(
+                projection.getPartnerId(),
+                projection.getPartnerName(),
+                projection.getPartnerProfileImage()
         );
     }
 }
