@@ -34,8 +34,9 @@ class AppleClientSecretSignerTest {
         final AppleAuthProperties properties = new AppleAuthProperties(
                 TEAM_ID, KEY_ID, CLIENT_ID, pem, null, null
         );
+        // 충분히 미래로 둬서 JWT exp 가 현재 시점에 만료되지 않도록 한다 (시간 의존성 버그 회피)
         final FixedDateTimeProvider dateTimeProvider = new FixedDateTimeProvider(
-                LocalDateTime.of(2026, 5, 8, 12, 0, 0)
+                LocalDateTime.of(2099, 1, 1, 12, 0, 0)
         );
         signer = new AppleClientSecretSigner(properties, dateTimeProvider);
     }
