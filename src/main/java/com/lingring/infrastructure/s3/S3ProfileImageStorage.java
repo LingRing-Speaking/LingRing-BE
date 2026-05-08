@@ -6,6 +6,7 @@ import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -61,5 +62,13 @@ public class S3ProfileImageStorage implements ProfileImageStorage {
         return "https://%s.s3.%s.amazonaws.com/%s".formatted(
                 properties.bucket(), properties.region(), key
         );
+    }
+
+    @Override
+    public void delete(final String key) {
+        s3Client.deleteObject(DeleteObjectRequest.builder()
+                .bucket(properties.bucket())
+                .key(key)
+                .build());
     }
 }

@@ -13,6 +13,7 @@ import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
 import com.lingring.global.error.exception.ForbiddenException;
+import com.lingring.infrastructure.rekognition.FakeProfileImageModeratorConfig;
 import com.lingring.infrastructure.s3.FakeProfileImageStorage;
 import com.lingring.infrastructure.s3.FakeProfileImageStorageConfig;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 
-@Import(FakeProfileImageStorageConfig.class)
+@Import({FakeProfileImageStorageConfig.class, FakeProfileImageModeratorConfig.class})
 class UserProfileChangerTest extends ServiceIntegrationHelper {
 
     @Autowired

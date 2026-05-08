@@ -43,6 +43,7 @@ public enum ErrorCode {
     IMAGE_TOO_LARGE(BAD_REQUEST, "이미지 크기가 허용 범위를 초과했습니다."),
     IMAGE_NOT_UPLOADED(BAD_REQUEST, "이미지가 업로드되지 않았습니다."),
     PROFILE_IMAGE_KEY_FORBIDDEN(FORBIDDEN, "프로필 이미지 키에 접근할 권한이 없습니다."),
+    INAPPROPRIATE_PROFILE_IMAGE(BAD_REQUEST, "이미지에 부적절한 콘텐츠가 감지되었습니다. 다른 이미지를 선택해주세요."),
 
     // UserStats Error
     USER_STATS_NOT_FOUND(NOT_FOUND, "사용자 통계를 찾을 수 없습니다."),

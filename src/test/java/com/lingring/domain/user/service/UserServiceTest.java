@@ -22,8 +22,11 @@ import com.lingring.global.error.exception.BadRequestException;
 import com.lingring.global.error.exception.ForbiddenException;
 import com.lingring.global.error.exception.NotFoundException;
 import com.lingring.global.error.exception.UnauthorizedException;
+import com.lingring.infrastructure.rekognition.FakeProfileImageModerator;
+import com.lingring.infrastructure.rekognition.FakeProfileImageModeratorConfig;
 import com.lingring.infrastructure.s3.FakeProfileImageStorage;
 import com.lingring.infrastructure.s3.FakeProfileImageStorageConfig;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,7 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 
-@Import(FakeProfileImageStorageConfig.class)
+@Import({FakeProfileImageStorageConfig.class, FakeProfileImageModeratorConfig.class})
 class UserServiceTest extends ServiceIntegrationHelper {
 
     @Autowired
@@ -47,9 +50,13 @@ class UserServiceTest extends ServiceIntegrationHelper {
     @Autowired
     private FakeProfileImageStorage fakeProfileImageStorage;
 
+    @Autowired
+    private FakeProfileImageModerator fakeProfileImageModerator;
+
     @BeforeEach
     void clearFakeStorage() {
         fakeProfileImageStorage.clear();
+        fakeProfileImageModerator.clear();
     }
 
     @Nested
@@ -459,6 +466,63 @@ class UserServiceTest extends ServiceIntegrationHelper {
             )).isInstanceOf(NotFoundException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.USER_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("부적절 이미지가 감지되면 INAPPROPRIATE_PROFILE_IMAGE 예외와 함께 S3 객체를 삭제한다")
+        void updateProfile_whenInappropriateImage_throwsAndDeletesS3Object() {
+            // given
+            final User saved = userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "sub-nsfw", new Name("이전이름"), null)
+            );
+            final String key = "profile-images/" + saved.getId() + "/nsfw";
+            fakeProfileImageStorage.simulateUpload(key);
+            fakeProfileImageModerator.markInappropriate(key, List.of("Explicit Nudity"));
+
+            // when & then
+            assertThatThrownBy(() -> userService.updateProfile(
+                    saved.getId(), new UpdateProfileRequest(null, key)
+            )).isInstanceOf(BadRequestException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.INAPPROPRIATE_PROFILE_IMAGE);
+            assertThat(fakeProfileImageStorage.deletedKeys()).contains(key);
+        }
+
+        @Test
+        @DisplayName("깨끗한 이미지면 user가 갱신되고 S3 객체를 삭제하지 않는다")
+        void updateProfile_whenAcceptableImage_doesNotDeleteS3Object() {
+            // given
+            final User saved = userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "sub-clean", new Name("이전이름"), null)
+            );
+            final String key = "profile-images/" + saved.getId() + "/clean";
+            fakeProfileImageStorage.simulateUpload(key);
+
+            // when
+            final UpdateProfileResponse response = userService.updateProfile(
+                    saved.getId(), new UpdateProfileRequest(null, key)
+            );
+
+            // then
+            assertThat(response.profileImage()).isEqualTo(fakeProfileImageStorage.publicUrl(key));
+            assertThat(fakeProfileImageStorage.deletedKeys()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("nickname만 변경되면 모더레이션을 호출하지 않는다")
+        void updateProfile_whenNicknameOnly_doesNotInvokeModerator() {
+            // given
+            final User saved = userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "sub-no-mod", new Name("이전이름"), null)
+            );
+
+            // when
+            userService.updateProfile(
+                    saved.getId(), new UpdateProfileRequest("새이름", null)
+            );
+
+            // then
+            assertThat(fakeProfileImageModerator.invocationCount()).isZero();
         }
     }
 }
