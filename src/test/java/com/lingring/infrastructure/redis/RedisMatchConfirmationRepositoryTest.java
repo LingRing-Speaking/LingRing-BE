@@ -8,6 +8,7 @@ import com.lingring.domain.matching.dao.MatchConfirmationRepository.AcceptResult
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.domain.MatchConfirmation;
 import com.lingring.domain.matching.domain.MatchingResult;
+import com.lingring.domain.matching.scheduler.MatchConfirmationExpiryWorker;
 import com.lingring.domain.matching.scheduler.MatchingWorker;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.time.LocalDateTime;
@@ -36,6 +37,10 @@ class RedisMatchConfirmationRepositoryTest extends ServiceIntegrationHelper {
     @MockitoBean
     @SuppressWarnings("unused")
     private MatchingWorker matchingWorker;
+
+    @MockitoBean
+    @SuppressWarnings("unused")
+    private MatchConfirmationExpiryWorker matchConfirmationExpiryWorker;
 
     @Nested
     @DisplayName("commit: 큐 → confirm 전이")

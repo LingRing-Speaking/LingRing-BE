@@ -3,6 +3,7 @@ package com.lingring.infrastructure.redis;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.lingring.domain.matching.dao.PairCooldownRepository;
+import com.lingring.domain.matching.scheduler.MatchConfirmationExpiryWorker;
 import com.lingring.domain.matching.scheduler.MatchingWorker;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.time.Duration;
@@ -19,6 +20,10 @@ class RedisPairCooldownRepositoryTest extends ServiceIntegrationHelper {
     @MockitoBean
     @SuppressWarnings("unused")
     private MatchingWorker matchingWorker;
+
+    @MockitoBean
+    @SuppressWarnings("unused")
+    private MatchConfirmationExpiryWorker matchConfirmationExpiryWorker;
 
     @Test
     @DisplayName("put 후 contains는 true, 다른 페어는 false")

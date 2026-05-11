@@ -11,6 +11,7 @@ import com.lingring.domain.matching.domain.MatchConfirmation;
 import com.lingring.domain.matching.domain.MatchingPollStatus;
 import com.lingring.domain.matching.dto.response.MatchingStatusResponse;
 import com.lingring.domain.matching.exception.MatchConfirmationNotFoundException;
+import com.lingring.domain.matching.scheduler.MatchConfirmationExpiryWorker;
 import com.lingring.domain.matching.scheduler.MatchingWorker;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.util.FixedDateTimeProvider;
@@ -50,6 +51,10 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
     @MockitoBean
     @SuppressWarnings("unused")
     private MatchingWorker matchingWorker;
+
+    @MockitoBean
+    @SuppressWarnings("unused")
+    private MatchConfirmationExpiryWorker matchConfirmationExpiryWorker;
 
     @BeforeEach
     void stubDefaultTime() {

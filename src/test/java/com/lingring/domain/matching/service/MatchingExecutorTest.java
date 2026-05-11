@@ -6,6 +6,7 @@ import com.lingring.domain.call.dao.CallRepository;
 import com.lingring.domain.matching.dao.MatchConfirmationRepository;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.domain.MatchConfirmation;
+import com.lingring.domain.matching.scheduler.MatchConfirmationExpiryWorker;
 import com.lingring.domain.matching.scheduler.MatchingWorker;
 import com.lingring.domain.userblock.dao.UserBlockRepository;
 import com.lingring.domain.userblock.domain.UserBlock;
@@ -40,6 +41,10 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
     @MockitoBean
     @SuppressWarnings("unused")
     private MatchingWorker matchingWorker;
+
+    @MockitoBean
+    @SuppressWarnings("unused")
+    private MatchConfirmationExpiryWorker matchConfirmationExpiryWorker;
 
     @Nested
     @DisplayName("executeRound: 한 라운드 페어링")
