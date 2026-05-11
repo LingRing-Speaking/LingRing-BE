@@ -37,7 +37,7 @@ public class MatchingService {
         matchingQueueRepository.enqueue(userId, dateTimeProvider.now());
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public MatchingStatusResponse getStatus(final Long userId) {
         final Optional<MatchingResult> result = matchingQueueRepository.findResult(userId);
         if (result.isPresent()) {

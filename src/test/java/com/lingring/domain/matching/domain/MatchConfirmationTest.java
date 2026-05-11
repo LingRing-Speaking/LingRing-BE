@@ -138,42 +138,6 @@ class MatchConfirmationTest {
         }
     }
 
-    @Nested
-    @DisplayName("isAcceptedBy: 사용자의 수락 상태 조회")
-    class IsAcceptedBy {
-
-        @Test
-        @DisplayName("userA가 accept했으면 userAId 호출 시 true")
-        void isAcceptedBy_userAAccepted_true() {
-            // given
-            final MatchConfirmation c = newConfirmation(7L, 42L, 1, 0, DEADLINE);
-
-            // when & then
-            assertThat(c.isAcceptedBy(7L)).isTrue();
-        }
-
-        @Test
-        @DisplayName("userB가 아직 accept 안 했으면 userBId 호출 시 false")
-        void isAcceptedBy_userBNotAccepted_false() {
-            // given
-            final MatchConfirmation c = newConfirmation(7L, 42L, 1, 0, DEADLINE);
-
-            // when & then
-            assertThat(c.isAcceptedBy(42L)).isFalse();
-        }
-
-        @Test
-        @DisplayName("페어에 속하지 않은 userId면 MatchConfirmationNotFoundException")
-        void isAcceptedBy_whenUnknownUser_throws() {
-            // given
-            final MatchConfirmation c = newConfirmation(7L, 42L, 0, 0, DEADLINE);
-
-            // when & then
-            assertThatThrownBy(() -> c.isAcceptedBy(99L))
-                    .isInstanceOf(com.lingring.domain.matching.exception.MatchConfirmationNotFoundException.class);
-        }
-    }
-
     private MatchConfirmation newConfirmation(
             final Long userA, final Long userB,
             final int userAAccepted, final int userBAccepted,

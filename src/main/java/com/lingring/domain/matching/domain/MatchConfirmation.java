@@ -32,16 +32,6 @@ public record MatchConfirmation(
         return userAAccepted && userBAccepted;
     }
 
-    public boolean isAcceptedBy(final Long userId) {
-        if (userAId.equals(userId)) {
-            return userAAccepted;
-        }
-        if (userBId.equals(userId)) {
-            return userBAccepted;
-        }
-        throw new MatchConfirmationNotFoundException(userId);
-    }
-
     public Long partnerOf(final Long userId) {
         if (userAId.equals(userId)) {
             return userBId;

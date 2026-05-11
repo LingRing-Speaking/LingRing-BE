@@ -85,7 +85,6 @@ public enum ErrorCode {
 
     // Matching Error
     MATCH_CONFIRMATION_NOT_FOUND(NOT_FOUND, "수락/거절할 매칭이 없습니다. 다시 매칭을 시작해주세요."),
-    MATCH_ALREADY_RESPONDED(CONFLICT, "이미 응답한 매칭입니다."),
 
     // Signaling Error
     SIGNALING_INVALID_USER(BAD_REQUEST, "시그널링 연결에 유효하지 않은 사용자입니다."),
