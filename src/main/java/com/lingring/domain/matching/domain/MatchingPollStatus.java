@@ -1,7 +1,8 @@
 package com.lingring.domain.matching.domain;
 
 public enum MatchingPollStatus {
+    NONE,
     WAITING,
-    MATCHED,
-    NONE
+    AWAITING_CONFIRM,
+    MATCHED
 }
