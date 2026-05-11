@@ -3,9 +3,9 @@ package com.lingring.domain.matching.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.lingring.domain.call.dao.CallRepository;
-import com.lingring.domain.call.domain.Call;
+import com.lingring.domain.matching.dao.MatchConfirmationRepository;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
-import com.lingring.domain.matching.domain.MatchingResult;
+import com.lingring.domain.matching.domain.MatchConfirmation;
 import com.lingring.domain.matching.scheduler.MatchingWorker;
 import com.lingring.domain.userblock.dao.UserBlockRepository;
 import com.lingring.domain.userblock.domain.UserBlock;
@@ -27,6 +27,9 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
 
     @Autowired
     private MatchingQueueRepository matchingQueueRepository;
+
+    @Autowired
+    private MatchConfirmationRepository matchConfirmationRepository;
 
     @Autowired
     private CallRepository callRepository;
@@ -63,11 +66,11 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
 
             // then
             assertThat(matchingQueueRepository.contains(1L)).isTrue();
-            assertThat(matchingQueueRepository.findResult(1L)).isEmpty();
+            assertThat(matchConfirmationRepository.findByUser(1L)).isEmpty();
         }
 
         @Test
-        @DisplayName("두 사용자가 큐에 있으면 입장 시각 순으로 페어링하고 양쪽 결과를 동일한 roomId로 저장한다")
+        @DisplayName("두 사용자가 큐에 있으면 입장 시각 순으로 confirm record를 생성하고 양쪽 user index를 등록한다")
         void executeRound_pairsTwoUsersByEnqueuedAtOrder() {
             // given
             matchingQueueRepository.enqueue(1L, BASE);
@@ -79,18 +82,17 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
             // then
             assertThat(matchingQueueRepository.contains(1L)).isFalse();
             assertThat(matchingQueueRepository.contains(2L)).isFalse();
-            final Optional<MatchingResult> result1 = matchingQueueRepository.findResult(1L);
-            final Optional<MatchingResult> result2 = matchingQueueRepository.findResult(2L);
-            assertThat(result1).isPresent();
-            assertThat(result1.get().partnerId()).isEqualTo(2L);
-            assertThat(result2).isPresent();
-            assertThat(result2.get().partnerId()).isEqualTo(1L);
-            assertThat(result1.get().roomId()).isEqualTo(result2.get().roomId());
+            final Optional<MatchConfirmation> c1 = matchConfirmationRepository.findByUser(1L);
+            final Optional<MatchConfirmation> c2 = matchConfirmationRepository.findByUser(2L);
+            assertThat(c1).isPresent();
+            assertThat(c2).isPresent();
+            assertThat(c1.get().pairKey()).isEqualTo("1:2");
+            assertThat(c1.get().roomId()).isEqualTo(c2.get().roomId());
         }
 
         @Test
-        @DisplayName("페어링 성사 시 Call 엔티티가 isActive=true 상태로 영속화된다")
-        void executeRound_persistsCallEntity() {
+        @DisplayName("페어링 성사 시점에는 아직 Call 엔티티가 저장되지 않는다 (accept 완료 시점에 저장)")
+        void executeRound_doesNotPersistCallYet() {
             // given
             matchingQueueRepository.enqueue(1L, BASE);
             matchingQueueRepository.enqueue(2L, BASE.plusSeconds(1));
@@ -99,14 +101,8 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
             matchingExecutor.executeRound();
 
             // then
-            final Optional<MatchingResult> result = matchingQueueRepository.findResult(1L);
-            assertThat(result).isPresent();
-            final Optional<Call> call = callRepository.findByRoomId(result.get().roomId());
-            assertThat(call).isPresent();
-            assertThat(call.get().isActive()).isTrue();
-            assertThat(call.get().getUserAId()).isEqualTo(1L);
-            assertThat(call.get().getUserBId()).isEqualTo(2L);
-            assertThat(call.get().getEndedAt()).isNull();
+            assertThat(callRepository.count()).isZero();
+            assertThat(matchConfirmationRepository.findByUser(1L)).isPresent();
         }
 
         @Test
@@ -125,13 +121,13 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
             assertThat(matchingQueueRepository.contains(3L)).isFalse();
             assertThat(matchingQueueRepository.contains(2L)).isFalse();
             assertThat(matchingQueueRepository.contains(1L)).isTrue();
-            assertThat(matchingQueueRepository.findResult(3L))
-                    .map(MatchingResult::partnerId)
+            assertThat(matchConfirmationRepository.findByUser(3L))
+                    .map(c -> c.partnerOf(3L))
                     .contains(2L);
-            assertThat(matchingQueueRepository.findResult(2L))
-                    .map(MatchingResult::partnerId)
+            assertThat(matchConfirmationRepository.findByUser(2L))
+                    .map(c -> c.partnerOf(2L))
                     .contains(3L);
-            assertThat(matchingQueueRepository.findResult(1L)).isEmpty();
+            assertThat(matchConfirmationRepository.findByUser(1L)).isEmpty();
         }
 
         @Test
@@ -148,17 +144,17 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
 
             // then: 1-2, 3-4 두 쌍이 매칭되어 큐가 비어야 함
             assertThat(matchingQueueRepository.findAllOrderByEnqueuedAt()).isEmpty();
-            assertThat(matchingQueueRepository.findResult(1L))
-                    .map(MatchingResult::partnerId)
+            assertThat(matchConfirmationRepository.findByUser(1L))
+                    .map(c -> c.partnerOf(1L))
                     .contains(2L);
-            assertThat(matchingQueueRepository.findResult(2L))
-                    .map(MatchingResult::partnerId)
+            assertThat(matchConfirmationRepository.findByUser(2L))
+                    .map(c -> c.partnerOf(2L))
                     .contains(1L);
-            assertThat(matchingQueueRepository.findResult(3L))
-                    .map(MatchingResult::partnerId)
+            assertThat(matchConfirmationRepository.findByUser(3L))
+                    .map(c -> c.partnerOf(3L))
                     .contains(4L);
-            assertThat(matchingQueueRepository.findResult(4L))
-                    .map(MatchingResult::partnerId)
+            assertThat(matchConfirmationRepository.findByUser(4L))
+                    .map(c -> c.partnerOf(4L))
                     .contains(3L);
         }
 
@@ -177,10 +173,10 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
             assertThat(matchingQueueRepository.contains(1L)).isFalse();
             assertThat(matchingQueueRepository.contains(2L)).isFalse();
             assertThat(matchingQueueRepository.contains(3L)).isTrue();
-            assertThat(matchingQueueRepository.findResult(1L))
-                    .map(MatchingResult::partnerId)
+            assertThat(matchConfirmationRepository.findByUser(1L))
+                    .map(c -> c.partnerOf(1L))
                     .contains(2L);
-            assertThat(matchingQueueRepository.findResult(3L)).isEmpty();
+            assertThat(matchConfirmationRepository.findByUser(3L)).isEmpty();
         }
 
         @Test
@@ -197,8 +193,8 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
             // then
             assertThat(matchingQueueRepository.contains(1L)).isTrue();
             assertThat(matchingQueueRepository.contains(2L)).isTrue();
-            assertThat(matchingQueueRepository.findResult(1L)).isEmpty();
-            assertThat(matchingQueueRepository.findResult(2L)).isEmpty();
+            assertThat(matchConfirmationRepository.findByUser(1L)).isEmpty();
+            assertThat(matchConfirmationRepository.findByUser(2L)).isEmpty();
         }
     }
 }
