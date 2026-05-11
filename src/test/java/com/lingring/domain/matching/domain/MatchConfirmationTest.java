@@ -1,6 +1,7 @@
 package com.lingring.domain.matching.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -53,6 +54,16 @@ class MatchConfirmationTest {
             // when & then
             assertThat(c.isExpired(DEADLINE.plusSeconds(1))).isTrue();
         }
+
+        @Test
+        @DisplayName("deadline과 정확히 같은 시각이면 만료다 (boundary inclusive)")
+        void isExpired_atDeadline_true() {
+            // given
+            final MatchConfirmation c = newConfirmation(1L, 2L, 0, 0, DEADLINE);
+
+            // when & then
+            assertThat(c.isExpired(DEADLINE)).isTrue();
+        }
     }
 
     @Nested
@@ -60,12 +71,43 @@ class MatchConfirmationTest {
     class BothAccepted {
 
         @Test
-        @DisplayName("두 플래그가 모두 1일 때만 true")
-        void bothAccepted_returnsExpected() {
-            assertThat(newConfirmation(1L, 2L, 1, 1, DEADLINE).bothAccepted()).isTrue();
-            assertThat(newConfirmation(1L, 2L, 1, 0, DEADLINE).bothAccepted()).isFalse();
-            assertThat(newConfirmation(1L, 2L, 0, 1, DEADLINE).bothAccepted()).isFalse();
-            assertThat(newConfirmation(1L, 2L, 0, 0, DEADLINE).bothAccepted()).isFalse();
+        @DisplayName("양쪽 모두 1이면 true")
+        void bothAccepted_whenBothTrue_returnsTrue() {
+            // given
+            final MatchConfirmation c = newConfirmation(1L, 2L, 1, 1, DEADLINE);
+
+            // when & then
+            assertThat(c.bothAccepted()).isTrue();
+        }
+
+        @Test
+        @DisplayName("userA만 1이면 false")
+        void bothAccepted_whenOnlyUserATrue_returnsFalse() {
+            // given
+            final MatchConfirmation c = newConfirmation(1L, 2L, 1, 0, DEADLINE);
+
+            // when & then
+            assertThat(c.bothAccepted()).isFalse();
+        }
+
+        @Test
+        @DisplayName("userB만 1이면 false")
+        void bothAccepted_whenOnlyUserBTrue_returnsFalse() {
+            // given
+            final MatchConfirmation c = newConfirmation(1L, 2L, 0, 1, DEADLINE);
+
+            // when & then
+            assertThat(c.bothAccepted()).isFalse();
+        }
+
+        @Test
+        @DisplayName("양쪽 모두 0이면 false")
+        void bothAccepted_whenBothFalse_returnsFalse() {
+            // given
+            final MatchConfirmation c = newConfirmation(1L, 2L, 0, 0, DEADLINE);
+
+            // when & then
+            assertThat(c.bothAccepted()).isFalse();
         }
     }
 
@@ -82,6 +124,53 @@ class MatchConfirmationTest {
             // when & then
             assertThat(c.partnerOf(7L)).isEqualTo(42L);
             assertThat(c.partnerOf(42L)).isEqualTo(7L);
+        }
+
+        @Test
+        @DisplayName("페어에 속하지 않은 userId면 MatchConfirmationNotFoundException")
+        void partnerOf_whenUnknownUser_throws() {
+            // given
+            final MatchConfirmation c = newConfirmation(7L, 42L, 0, 0, DEADLINE);
+
+            // when & then
+            assertThatThrownBy(() -> c.partnerOf(99L))
+                    .isInstanceOf(com.lingring.domain.matching.exception.MatchConfirmationNotFoundException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("isAcceptedBy: 사용자의 수락 상태 조회")
+    class IsAcceptedBy {
+
+        @Test
+        @DisplayName("userA가 accept했으면 userAId 호출 시 true")
+        void isAcceptedBy_userAAccepted_true() {
+            // given
+            final MatchConfirmation c = newConfirmation(7L, 42L, 1, 0, DEADLINE);
+
+            // when & then
+            assertThat(c.isAcceptedBy(7L)).isTrue();
+        }
+
+        @Test
+        @DisplayName("userB가 아직 accept 안 했으면 userBId 호출 시 false")
+        void isAcceptedBy_userBNotAccepted_false() {
+            // given
+            final MatchConfirmation c = newConfirmation(7L, 42L, 1, 0, DEADLINE);
+
+            // when & then
+            assertThat(c.isAcceptedBy(42L)).isFalse();
+        }
+
+        @Test
+        @DisplayName("페어에 속하지 않은 userId면 MatchConfirmationNotFoundException")
+        void isAcceptedBy_whenUnknownUser_throws() {
+            // given
+            final MatchConfirmation c = newConfirmation(7L, 42L, 0, 0, DEADLINE);
+
+            // when & then
+            assertThatThrownBy(() -> c.isAcceptedBy(99L))
+                    .isInstanceOf(com.lingring.domain.matching.exception.MatchConfirmationNotFoundException.class);
         }
     }
 
