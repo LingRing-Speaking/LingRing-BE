@@ -2,7 +2,6 @@ package com.lingring.domain.matching.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.BDDMockito.given;
 
 import com.lingring.domain.call.dao.CallRepository;
 import com.lingring.domain.matching.dao.MatchConfirmationRepository;
@@ -14,7 +13,7 @@ import com.lingring.domain.matching.dto.response.MatchingStatusResponse;
 import com.lingring.domain.matching.exception.MatchConfirmationNotFoundException;
 import com.lingring.domain.matching.scheduler.MatchingWorker;
 import com.lingring.global.config.ServiceIntegrationHelper;
-import com.lingring.global.util.DateTimeProvider;
+import com.lingring.global.util.FixedDateTimeProvider;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,14 +21,16 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+@Import(MatchingServiceTestConfig.class)
 class MatchingServiceTest extends ServiceIntegrationHelper {
 
     private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 5, 12, 12, 0, 0);
 
-    @MockitoBean
-    private DateTimeProvider dateTimeProvider;
+    @Autowired
+    private FixedDateTimeProvider dateTimeProvider;
 
     @Autowired
     private MatchingService matchingService;
@@ -52,7 +53,7 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
 
     @BeforeEach
     void stubDefaultTime() {
-        given(dateTimeProvider.now()).willReturn(FIXED_NOW);
+        dateTimeProvider.setFixedTime(FIXED_NOW);
     }
 
     private UUID seedConfirmation(final Long userA, final Long userB, final LocalDateTime deadline) {

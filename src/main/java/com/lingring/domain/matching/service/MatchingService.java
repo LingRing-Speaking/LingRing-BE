@@ -37,6 +37,7 @@ public class MatchingService {
         matchingQueueRepository.enqueue(userId, dateTimeProvider.now());
     }
 
+    @Transactional
     public MatchingStatusResponse getStatus(final Long userId) {
         final Optional<MatchingResult> result = matchingQueueRepository.findResult(userId);
         if (result.isPresent()) {
@@ -48,11 +49,8 @@ public class MatchingService {
             final MatchConfirmation c = confirmation.get();
             final LocalDateTime now = dateTimeProvider.now();
             if (c.isExpired(now)) {
-                expireConfirmation(c);
-                if (matchingQueueRepository.contains(userId)) {
-                    return MatchingStatusResponse.waiting();
-                }
-                return MatchingStatusResponse.none();
+                expireConfirmation(c, now);
+                return MatchingStatusResponse.waiting();
             }
             return MatchingStatusResponse.awaitingConfirm(c.partnerOf(userId), c.deadline());
         }
@@ -74,7 +72,7 @@ public class MatchingService {
             throw new MatchConfirmationNotFoundException(userId);
         }
         if (before.get().isExpired(now)) {
-            expireConfirmation(before.get());
+            expireConfirmation(before.get(), now);
             return;
         }
         final AcceptResult result = matchConfirmationRepository.accept(userId, now);
@@ -84,7 +82,7 @@ public class MatchingService {
         }
         if (outcome == AcceptOutcome.EXPIRED) {
             final Optional<MatchConfirmation> stale = matchConfirmationRepository.findByUser(userId);
-            stale.ifPresent(this::expireConfirmation);
+            stale.ifPresent(c -> expireConfirmation(c, now));
             return;
         }
         if (outcome == AcceptOutcome.ACCEPTED_WAITING) {
@@ -96,9 +94,10 @@ public class MatchingService {
 
     @Transactional
     public void declineMatch(final Long userId) {
+        final LocalDateTime now = dateTimeProvider.now();
         final MatchConfirmation confirmation = matchConfirmationRepository.findByUser(userId)
                 .orElseThrow(() -> new MatchConfirmationNotFoundException(userId));
-        expireConfirmation(confirmation);
+        expireConfirmation(confirmation, now);
     }
 
     @Transactional
@@ -106,7 +105,7 @@ public class MatchingService {
         final LocalDateTime now = dateTimeProvider.now();
         final List<MatchConfirmation> expired = matchConfirmationRepository.findAllExpired(now);
         for (final MatchConfirmation c : expired) {
-            expireConfirmation(c);
+            expireConfirmation(c, now);
         }
     }
 
@@ -117,11 +116,10 @@ public class MatchingService {
         callRepository.save(Call.start(userId, promoted.partnerId(), promoted.roomId(), now));
     }
 
-    private void expireConfirmation(final MatchConfirmation confirmation) {
+    private void expireConfirmation(final MatchConfirmation confirmation, final LocalDateTime now) {
         pairCooldownRepository.put(confirmation.pairKey(),
                 Duration.ofMinutes(matchingProperties.cooldownMinutes()));
         matchConfirmationRepository.delete(confirmation.pairKey());
-        final LocalDateTime now = dateTimeProvider.now();
         matchingQueueRepository.enqueue(confirmation.userAId(), now);
         matchingQueueRepository.enqueue(confirmation.userBId(), now);
     }
