@@ -22,6 +22,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 class RedisMatchConfirmationRepositoryTest extends ServiceIntegrationHelper {
 
+    private static final LocalDateTime ENQUEUED_AT = LocalDateTime.of(2026, 5, 12, 12, 0, 0);
     private static final LocalDateTime DEADLINE = LocalDateTime.of(2026, 5, 12, 12, 0, 15);
     private static final LocalDateTime BEFORE_DEADLINE = DEADLINE.minusSeconds(5);
     private static final LocalDateTime AFTER_DEADLINE = DEADLINE.plusSeconds(1);
@@ -44,8 +45,8 @@ class RedisMatchConfirmationRepositoryTest extends ServiceIntegrationHelper {
         @DisplayName("양쪽 user가 큐에 있을 때 ZREM + confirm Hash 생성 + index 생성")
         void commit_success() {
             // given
-            queueRepository.enqueue(1L, LocalDateTime.now());
-            queueRepository.enqueue(2L, LocalDateTime.now());
+            queueRepository.enqueue(1L, ENQUEUED_AT);
+            queueRepository.enqueue(2L, ENQUEUED_AT);
             final UUID roomId = UUID.randomUUID();
 
             // when
@@ -66,7 +67,7 @@ class RedisMatchConfirmationRepositoryTest extends ServiceIntegrationHelper {
         @DisplayName("한쪽이 큐에 없으면 커밋 실패하고 confirm은 만들어지지 않는다")
         void commit_whenOneSideNotInQueue_fails() {
             // given
-            queueRepository.enqueue(1L, LocalDateTime.now());
+            queueRepository.enqueue(1L, ENQUEUED_AT);
 
             // when
             final boolean committed = repository.commit(1L, 2L, UUID.randomUUID(), DEADLINE);
@@ -183,8 +184,8 @@ class RedisMatchConfirmationRepositoryTest extends ServiceIntegrationHelper {
     }
 
     private UUID seedCommittedConfirmation(final Long userA, final Long userB, final LocalDateTime deadline) {
-        queueRepository.enqueue(userA, LocalDateTime.now());
-        queueRepository.enqueue(userB, LocalDateTime.now());
+        queueRepository.enqueue(userA, ENQUEUED_AT);
+        queueRepository.enqueue(userB, ENQUEUED_AT);
         final UUID roomId = UUID.randomUUID();
         repository.commit(userA, userB, roomId, deadline);
         return roomId;
