@@ -142,4 +142,52 @@ class MatchingControllerTest {
             then(matchingService).should().leaveQueue(userId);
         }
     }
+
+    @Nested
+    @DisplayName("POST /api/v1/me/matching/accept")
+    class AcceptMatch {
+
+        @Test
+        @DisplayName("수락 성공 시 204를 반환한다")
+        void acceptMatch_returns204() throws Exception {
+            // given
+            final Long userId = 1L;
+            AuthContext.set(userId);
+            willDoNothing().given(matchingService).acceptMatch(userId);
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(
+                            post("/api/v1/me/matching/accept"))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            assertThat(response.getStatus()).isEqualTo(204);
+            then(matchingService).should().acceptMatch(userId);
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/v1/me/matching/decline")
+    class DeclineMatch {
+
+        @Test
+        @DisplayName("거절 성공 시 204를 반환한다")
+        void declineMatch_returns204() throws Exception {
+            // given
+            final Long userId = 1L;
+            AuthContext.set(userId);
+            willDoNothing().given(matchingService).declineMatch(userId);
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(
+                            post("/api/v1/me/matching/decline"))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            assertThat(response.getStatus()).isEqualTo(204);
+            then(matchingService).should().declineMatch(userId);
+        }
+    }
 }

@@ -1,7 +1,7 @@
 package com.lingring.domain.matching.service;
 
-import com.lingring.domain.call.dao.CallRepository;
-import com.lingring.domain.call.domain.Call;
+import com.lingring.domain.matching.MatchingProperties;
+import com.lingring.domain.matching.dao.MatchConfirmationRepository;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.domain.MatchingCandidate;
 import com.lingring.domain.matching.domain.MatchingQueue;
@@ -23,10 +23,11 @@ public class MatchingExecutor {
     private static final int MATCHING_SIZE = 2;
 
     private final MatchingQueueRepository matchingQueueRepository;
-    private final CallRepository callRepository;
+    private final MatchConfirmationRepository matchConfirmationRepository;
     private final MatchingPolicies matchingPolicies;
     private final RoomIdGenerator roomIdGenerator;
     private final DateTimeProvider dateTimeProvider;
+    private final MatchingProperties matchingProperties;
 
     public void executeRound() {
         final List<MatchingCandidate> candidates = matchingQueueRepository.findAllOrderByEnqueuedAt();
@@ -51,12 +52,12 @@ public class MatchingExecutor {
         }
         final Long partnerId = partner.get().userId();
         final UUID roomId = roomIdGenerator.generate();
-        final boolean committed = matchingQueueRepository.commitMatch(self.userId(), partnerId, roomId);
+        final LocalDateTime now = dateTimeProvider.now();
+        final LocalDateTime deadline = now.plusSeconds(matchingProperties.confirmDeadlineSeconds());
+        final boolean committed = matchConfirmationRepository.commit(self.userId(), partnerId, roomId, deadline);
         if (!committed) {
             return;
         }
-        final LocalDateTime now = dateTimeProvider.now();
-        callRepository.save(Call.start(self.userId(), partnerId, roomId, now));
         consumed.add(self.userId());
         consumed.add(partnerId);
     }

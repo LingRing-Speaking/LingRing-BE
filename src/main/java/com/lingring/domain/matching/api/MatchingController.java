@@ -29,4 +29,16 @@ public class MatchingController implements MatchingApi {
         matchingService.leaveQueue(userId);
         return ApiResponse.success(HttpStatus.NO_CONTENT);
     }
+
+    @Override
+    public ApiResponse<Void> acceptMatch(final Long userId) {
+        matchingService.acceptMatch(userId);
+        return ApiResponse.success(HttpStatus.NO_CONTENT);
+    }
+
+    @Override
+    public ApiResponse<Void> declineMatch(final Long userId) {
+        matchingService.declineMatch(userId);
+        return ApiResponse.success(HttpStatus.NO_CONTENT);
+    }
 }
