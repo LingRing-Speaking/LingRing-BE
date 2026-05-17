@@ -16,7 +16,7 @@ public class MatchConfirmationExpiryWorker {
     @SchedulerLock(
             name = "match-confirmation-expiry-worker",
             lockAtMostFor = "PT5S",
-            lockAtLeastFor = "PT500MS"
+            lockAtLeastFor = "PT0.5S"
     )
     public void runOnce() {
         matchingService.expireOverdueConfirmations();
