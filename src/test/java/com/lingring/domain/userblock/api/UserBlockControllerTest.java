@@ -13,8 +13,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import com.lingring.domain.userblock.dto.request.UserBlockCreateRequest;
-import com.lingring.domain.userblock.dto.response.UserBlockListResponse;
+import com.lingring.domain.userblock.dto.response.UserBlockItemResponse;
 import com.lingring.domain.userblock.dto.response.UserBlockResponse;
+import com.lingring.domain.userblock.dto.response.UserBlocksResponse;
 import com.lingring.domain.userblock.service.UserBlockService;
 import com.lingring.global.auth.context.AuthContext;
 import com.lingring.global.error.ErrorCode;
@@ -190,10 +191,12 @@ class UserBlockControllerTest {
             final Long userId = 1L;
             AuthContext.set(userId);
             given(userBlockService.getAllByUserId(userId, 0, 2)).willReturn(
-                    new UserBlockListResponse(
+                    new UserBlocksResponse(
                             List.of(
-                                    new UserBlockResponse(2L, userId, 11L, LocalDateTime.now()),
-                                    new UserBlockResponse(1L, userId, 10L, LocalDateTime.now())
+                                    new UserBlockItemResponse(
+                                            2L, 11L, "둘째", "https://cdn.example.com/p2.png", LocalDateTime.now()),
+                                    new UserBlockItemResponse(
+                                            1L, 10L, "첫째", null, LocalDateTime.now())
                             ),
                             true
                     )
@@ -214,6 +217,13 @@ class UserBlockControllerTest {
             final JsonNode data = body.get("data");
             assertThat(data.get("items").size()).isEqualTo(2);
             assertThat(data.get("hasNext").asBoolean()).isTrue();
+            final JsonNode firstItem = data.get("items").get(0);
+            assertThat(firstItem.get("blockedUserId").asLong()).isEqualTo(11L);
+            assertThat(firstItem.get("nickname").asText()).isEqualTo("둘째");
+            assertThat(firstItem.get("profileImage").asText()).isEqualTo("https://cdn.example.com/p2.png");
+            final JsonNode secondItem = data.get("items").get(1);
+            assertThat(secondItem.get("nickname").asText()).isEqualTo("첫째");
+            assertThat(secondItem.get("profileImage").isNull()).isTrue();
         }
 
         @Test
@@ -223,7 +233,7 @@ class UserBlockControllerTest {
             final Long userId = 1L;
             AuthContext.set(userId);
             given(userBlockService.getAllByUserId(userId, 0, 20))
-                    .willReturn(new UserBlockListResponse(List.of(), false));
+                    .willReturn(new UserBlocksResponse(List.of(), false));
 
             // when
             mockMvc.perform(get("/api/v1/blocks")

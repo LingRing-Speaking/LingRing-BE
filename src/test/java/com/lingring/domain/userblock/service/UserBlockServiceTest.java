@@ -3,14 +3,20 @@ package com.lingring.domain.userblock.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.lingring.domain.user.dao.UserRepository;
+import com.lingring.domain.user.domain.Provider;
+import com.lingring.domain.user.domain.User;
+import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.domain.userblock.dao.UserBlockRepository;
 import com.lingring.domain.userblock.domain.UserBlock;
 import com.lingring.domain.userblock.dto.request.UserBlockCreateRequest;
-import com.lingring.domain.userblock.dto.response.UserBlockListResponse;
+import com.lingring.domain.userblock.dto.response.UserBlockItemResponse;
 import com.lingring.domain.userblock.dto.response.UserBlockResponse;
+import com.lingring.domain.userblock.dto.response.UserBlocksResponse;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -23,6 +29,9 @@ class UserBlockServiceTest extends ServiceIntegrationHelper {
 
     @Autowired
     private UserBlockRepository userBlockRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Nested
     @DisplayName("block: 사용자 차단")
@@ -107,6 +116,47 @@ class UserBlockServiceTest extends ServiceIntegrationHelper {
     class GetAllByUserId {
 
         @Test
+        @DisplayName("응답 item에 차단된 사용자의 nickname/profileImage가 채워진다")
+        void getAllByUserId_includesBlockedUserProfile() {
+            // given
+            final Long me = 1L;
+            final User blocked = saveUser("타깃", "https://cdn.example.com/p.png");
+            userBlockRepository.save(UserBlock.create(me, blocked.getId()));
+
+            // when
+            final UserBlocksResponse response = userBlockService.getAllByUserId(me, 0, 20);
+
+            // then
+            assertThat(response.items()).hasSize(1);
+            final UserBlockItemResponse item = response.items().get(0);
+            assertThat(item.blockedUserId()).isEqualTo(blocked.getId());
+            assertThat(item.nickname()).isEqualTo("타깃");
+            assertThat(item.profileImage()).isEqualTo("https://cdn.example.com/p.png");
+            assertThat(response.hasNext()).isFalse();
+        }
+
+        @Test
+        @DisplayName("차단된 사용자가 탈퇴(삭제)되었어도 차단 항목은 반환되며 nickname/profileImage는 null")
+        void getAllByUserId_returnsItemWithNullProfileWhenBlockedUserMissing() {
+            // given
+            final Long me = 1L;
+            final User withdrawn = saveUser("탈퇴자", "https://cdn.example.com/gone.png");
+            final Long blockedUserId = withdrawn.getId();
+            userBlockRepository.save(UserBlock.create(me, blockedUserId));
+            userRepository.deleteById(blockedUserId);
+
+            // when
+            final UserBlocksResponse response = userBlockService.getAllByUserId(me, 0, 20);
+
+            // then
+            assertThat(response.items()).hasSize(1);
+            final UserBlockItemResponse item = response.items().get(0);
+            assertThat(item.blockedUserId()).isEqualTo(blockedUserId);
+            assertThat(item.nickname()).isNull();
+            assertThat(item.profileImage()).isNull();
+        }
+
+        @Test
         @DisplayName("page=0, size=2로 3건 중 2건을 반환하고 hasNext=true")
         void getAllByUserId_returnsFirstPageWithHasNextTrue() {
             // given
@@ -116,12 +166,12 @@ class UserBlockServiceTest extends ServiceIntegrationHelper {
             userBlockRepository.save(UserBlock.create(userId, 12L));
 
             // when
-            final UserBlockListResponse response =
+            final UserBlocksResponse response =
                     userBlockService.getAllByUserId(userId, 0, 2);
 
             // then
             assertThat(response.items()).hasSize(2);
-            assertThat(response.items()).allMatch(item -> item.userId().equals(userId));
+            assertThat(response.items()).allMatch(item -> item.blockedUserId() != null);
             assertThat(response.hasNext()).isTrue();
         }
 
@@ -129,7 +179,7 @@ class UserBlockServiceTest extends ServiceIntegrationHelper {
         @DisplayName("해당 userId의 항목이 없으면 빈 items + hasNext=false")
         void getAllByUserId_whenNone_returnsEmptyWithHasNextFalse() {
             // when
-            final UserBlockListResponse response =
+            final UserBlocksResponse response =
                     userBlockService.getAllByUserId(9_999_999L, 0, 20);
 
             // then
@@ -147,7 +197,7 @@ class UserBlockServiceTest extends ServiceIntegrationHelper {
             }
 
             // when
-            final UserBlockListResponse response =
+            final UserBlocksResponse response =
                     userBlockService.getAllByUserId(userId, 0, 999);
 
             // then
@@ -164,12 +214,23 @@ class UserBlockServiceTest extends ServiceIntegrationHelper {
             userBlockRepository.save(UserBlock.create(userId, 11L));
 
             // when
-            final UserBlockListResponse response =
+            final UserBlocksResponse response =
                     userBlockService.getAllByUserId(userId, 0, 0);
 
             // then
             assertThat(response.items()).hasSize(1);
             assertThat(response.hasNext()).isTrue();
         }
+    }
+
+    private User saveUser(final String name, final String profileImageUrl) {
+        return userRepository.save(
+                User.createFromOAuth(
+                        Provider.KAKAO,
+                        "sub-" + name + "-" + UUID.randomUUID(),
+                        new Name(name),
+                        profileImageUrl
+                )
+        );
     }
 }
