@@ -1,5 +1,6 @@
 package com.lingring.domain.userblock.dao;
 
+import com.lingring.domain.userblock.dao.dto.UserBlockItemProjection;
 import com.lingring.domain.userblock.domain.UserBlock;
 import java.util.List;
 import java.util.Optional;
@@ -18,7 +19,21 @@ public interface UserBlockRepository extends JpaRepository<UserBlock, Long> {
 
     Optional<UserBlock> findByUserIdAndBlockedUserId(Long userId, Long blockedUserId);
 
-    Slice<UserBlock> findAllByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+    @Query("""
+            SELECT b.id AS id,
+                   b.blockedUserId AS blockedUserId,
+                   u.name.value AS nickname,
+                   u.profileImage.value AS profileImage,
+                   b.createdAt AS createdAt
+            FROM UserBlock b
+            LEFT JOIN User u ON u.id = b.blockedUserId
+            WHERE b.userId = :userId
+            ORDER BY b.createdAt DESC
+            """)
+    Slice<UserBlockItemProjection> findItemsByUserId(
+            @Param("userId") Long userId,
+            Pageable pageable
+    );
 
     @Query("SELECT ub.blockedUserId FROM UserBlock ub WHERE ub.userId = :userId")
     List<Long> findBlockedUserIdsByUserId(@Param("userId") Long userId);
