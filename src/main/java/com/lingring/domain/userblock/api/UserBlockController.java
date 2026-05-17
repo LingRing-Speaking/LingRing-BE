@@ -1,7 +1,7 @@
 package com.lingring.domain.userblock.api;
 
 import com.lingring.domain.userblock.dto.request.UserBlockCreateRequest;
-import com.lingring.domain.userblock.dto.response.UserBlockListResponse;
+import com.lingring.domain.userblock.dto.response.UserBlocksResponse;
 import com.lingring.domain.userblock.dto.response.UserBlockResponse;
 import com.lingring.domain.userblock.service.UserBlockService;
 import com.lingring.global.common.response.ApiResponse;
@@ -30,7 +30,7 @@ public class UserBlockController implements UserBlockApi {
     }
 
     @Override
-    public ApiResponse<UserBlockListResponse> getAll(
+    public ApiResponse<UserBlocksResponse> getAll(
             final Long userId,
             final int page,
             final int size

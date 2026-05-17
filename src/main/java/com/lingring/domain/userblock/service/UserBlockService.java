@@ -1,10 +1,11 @@
 package com.lingring.domain.userblock.service;
 
 import com.lingring.domain.userblock.dao.UserBlockRepository;
+import com.lingring.domain.userblock.dao.dto.UserBlockItemProjection;
 import com.lingring.domain.userblock.domain.UserBlock;
 import com.lingring.domain.userblock.dto.request.UserBlockCreateRequest;
-import com.lingring.domain.userblock.dto.response.UserBlockListResponse;
 import com.lingring.domain.userblock.dto.response.UserBlockResponse;
+import com.lingring.domain.userblock.dto.response.UserBlocksResponse;
 import com.lingring.global.common.pagination.PageSize;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
@@ -43,11 +44,11 @@ public class UserBlockService {
     }
 
     @Transactional(readOnly = true)
-    public UserBlockListResponse getAllByUserId(final Long userId, final int page, final int size) {
+    public UserBlocksResponse getAllByUserId(final Long userId, final int page, final int size) {
         final PageSize pageSize = PageSize.clamp(size);
-        final Slice<UserBlock> slice = userBlockRepository
-                .findAllByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(page, pageSize.value()));
-        return UserBlockListResponse.from(slice);
+        final Slice<UserBlockItemProjection> slice = userBlockRepository
+                .findItemsByUserId(userId, PageRequest.of(page, pageSize.value()));
+        return UserBlocksResponse.from(slice);
     }
 
     private void validateNotSelfBlock(final Long userId, final Long blockedUserId) {

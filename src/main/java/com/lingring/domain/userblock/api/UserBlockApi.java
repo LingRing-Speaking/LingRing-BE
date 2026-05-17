@@ -1,7 +1,7 @@
 package com.lingring.domain.userblock.api;
 
 import com.lingring.domain.userblock.dto.request.UserBlockCreateRequest;
-import com.lingring.domain.userblock.dto.response.UserBlockListResponse;
+import com.lingring.domain.userblock.dto.response.UserBlocksResponse;
 import com.lingring.domain.userblock.dto.response.UserBlockResponse;
 import com.lingring.global.auth.annotation.AuthUser;
 import com.lingring.global.common.response.ApiResponse;
@@ -75,7 +75,7 @@ public interface UserBlockApi {
     })
     @ResponseStatus(HttpStatus.OK)
     @GetMapping("/blocks")
-    ApiResponse<UserBlockListResponse> getAll(
+    ApiResponse<UserBlocksResponse> getAll(
             @AuthUser final Long userId,
             @Parameter(description = "0-based 페이지 번호", example = "0")
             @RequestParam(defaultValue = "0") final int page,
