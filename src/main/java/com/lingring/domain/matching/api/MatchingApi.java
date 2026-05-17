@@ -64,4 +64,45 @@ public interface MatchingApi {
     ApiResponse<Void> leaveQueue(
             @AuthUser final Long userId
     );
+
+    @Operation(
+            summary = "매칭 수락",
+            description = "AWAITING_CONFIRM 상태의 매칭을 수락한다. 양쪽 모두 수락하면 MATCHED로 전이되어 roomId가 발급되며 통화 기록이 생성된다. "
+                    + "수락 후에는 GET /api/v1/me/matching 폴링으로 결과를 확인한다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "204",
+                    description = "수락 처리됨 (양쪽 수락 완료 여부와 무관하게 204)"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "수락할 매칭 컨펌 레코드가 없습니다 (이미 만료/decline 처리된 경우)"
+            )
+    })
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PostMapping("/me/matching/accept")
+    ApiResponse<Void> acceptMatch(
+            @AuthUser final Long userId
+    );
+
+    @Operation(
+            summary = "매칭 거절",
+            description = "AWAITING_CONFIRM 상태의 매칭을 거절한다. 양쪽 모두 WAITING으로 복귀하며 페어 cooldown(10분)이 적용된다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "204",
+                    description = "거절 처리됨"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "거절할 매칭 컨펌 레코드가 없습니다"
+            )
+    })
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PostMapping("/me/matching/decline")
+    ApiResponse<Void> declineMatch(
+            @AuthUser final Long userId
+    );
 }

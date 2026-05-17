@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.domain.MatchingCandidate;
 import com.lingring.domain.matching.domain.MatchingResult;
+import com.lingring.domain.matching.scheduler.MatchConfirmationExpiryWorker;
 import com.lingring.domain.matching.scheduler.MatchingWorker;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.time.LocalDateTime;
@@ -28,6 +29,10 @@ class RedisMatchingQueueRepositoryTest extends ServiceIntegrationHelper {
     @MockitoBean
     @SuppressWarnings("unused")
     private MatchingWorker matchingWorker;
+
+    @MockitoBean
+    @SuppressWarnings("unused")
+    private MatchConfirmationExpiryWorker matchConfirmationExpiryWorker;
 
     @Nested
     @DisplayName("enqueue / contains / remove")
