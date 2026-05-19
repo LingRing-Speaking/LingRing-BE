@@ -19,9 +19,10 @@ public interface UserAgreementApi {
     @Operation(
             summary = "약관 동의 처리",
             description = """
-                    가입 직후 약관 동의 화면에서 사용자가 필수 4개 항목(OVER14, TERMS, PRIVACY, VOICE_AI)에
+                    가입 직후 약관 동의 화면에서 사용자가 필수 3개 항목(OVER14, TERMS, PRIVACY)에
                     동의했음을 기록한다. 동의 시점·약관 버전이 User에 저장되며, 이후 응답의
                     requiresOnboarding이 false로 전환된다.
+                    (VOICE_AI는 enum에는 남아 있지만 현재 필수 항목에서 임시 제외됨)
                     """
     )
     @ApiResponses({

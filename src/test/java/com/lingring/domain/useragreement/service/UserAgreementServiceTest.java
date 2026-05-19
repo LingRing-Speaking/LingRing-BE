@@ -66,7 +66,7 @@ class UserAgreementServiceTest extends ServiceIntegrationHelper {
             final User user = seedUser();
             final AgreementCreateRequest request = new AgreementCreateRequest(
                     "2026-05-06",
-                    Set.of("OVER14", "TERMS", "PRIVACY")
+                    Set.of("OVER14", "TERMS")
             );
 
             // when & then
@@ -74,6 +74,24 @@ class UserAgreementServiceTest extends ServiceIntegrationHelper {
                     .isInstanceOf(BadRequestException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.AGREEMENT_ITEMS_INCOMPLETE);
+        }
+
+        @Test
+        @DisplayName("VOICE_AI는 임시 비활성화 상태라 생략해도 정상 처리된다")
+        void accept_whenVoiceAiOmitted_marksAgreed() {
+            // given
+            final User user = seedUser();
+            final AgreementCreateRequest request = new AgreementCreateRequest(
+                    "2026-05-06",
+                    Set.of("OVER14", "TERMS", "PRIVACY")
+            );
+
+            // when
+            userAgreementService.accept(user.getId(), request);
+
+            // then
+            final User reloaded = userRepository.findById(user.getId()).orElseThrow();
+            assertThat(reloaded.requiresOnboarding()).isFalse();
         }
 
         @Test
