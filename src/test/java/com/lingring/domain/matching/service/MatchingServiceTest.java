@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.lingring.domain.call.dao.CallRepository;
+import com.lingring.domain.call.domain.Call;
 import com.lingring.domain.matching.dao.MatchConfirmationRepository;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.dao.PairCooldownRepository;
@@ -133,9 +134,28 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
     class GetStatus {
 
         @Test
-        @DisplayName("매칭 결과가 있으면 MATCHED와 partnerId, roomId를 반환한다")
-        void getStatus_whenMatched_returnsMatched() {
-            // given: 워커가 페어링한 상태를 직접 시드
+        @DisplayName("매칭 결과 + 같은 roomId의 Call이 있으면 MATCHED와 callId까지 반환한다")
+        void getStatus_whenMatched_returnsMatchedWithCallId() {
+            // given: 워커가 페어링하고 Call까지 저장한 상태를 직접 시드
+            final UUID roomId = UUID.randomUUID();
+            matchingQueueRepository.saveResult(1L, 2L, roomId);
+            matchingQueueRepository.saveResult(2L, 1L, roomId);
+            final Call savedCall = callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW));
+
+            // when
+            final MatchingStatusResponse response = matchingService.getStatus(1L);
+
+            // then
+            assertThat(response.status()).isEqualTo(MatchingPollStatus.MATCHED);
+            assertThat(response.partnerId()).isEqualTo(2L);
+            assertThat(response.roomId()).isEqualTo(roomId);
+            assertThat(response.callId()).isEqualTo(savedCall.getId());
+        }
+
+        @Test
+        @DisplayName("매칭 결과는 있지만 Call이 아직 저장되지 않은 경우 callId는 null이다")
+        void getStatus_whenMatchedButCallMissing_returnsNullCallId() {
+            // given: result key는 있지만 Call이 없는 비정상 상태
             final UUID roomId = UUID.randomUUID();
             matchingQueueRepository.saveResult(1L, 2L, roomId);
             matchingQueueRepository.saveResult(2L, 1L, roomId);
@@ -145,12 +165,12 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
 
             // then
             assertThat(response.status()).isEqualTo(MatchingPollStatus.MATCHED);
-            assertThat(response.partnerId()).isEqualTo(2L);
             assertThat(response.roomId()).isEqualTo(roomId);
+            assertThat(response.callId()).isNull();
         }
 
         @Test
-        @DisplayName("큐에만 있으면 WAITING을 반환한다")
+        @DisplayName("큐에만 있으면 WAITING이고 callId는 null이다")
         void getStatus_whenInQueue_returnsWaiting() {
             // given
             matchingService.enterQueue(1L);
@@ -162,10 +182,11 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
             assertThat(response.status()).isEqualTo(MatchingPollStatus.WAITING);
             assertThat(response.partnerId()).isNull();
             assertThat(response.roomId()).isNull();
+            assertThat(response.callId()).isNull();
         }
 
         @Test
-        @DisplayName("큐에도 없고 매칭 결과도 없으면 NONE을 반환한다")
+        @DisplayName("큐에도 없고 매칭 결과도 없으면 NONE이고 callId는 null이다")
         void getStatus_whenNone_returnsNone() {
             // when
             final MatchingStatusResponse response = matchingService.getStatus(1L);
@@ -174,6 +195,7 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
             assertThat(response.status()).isEqualTo(MatchingPollStatus.NONE);
             assertThat(response.partnerId()).isNull();
             assertThat(response.roomId()).isNull();
+            assertThat(response.callId()).isNull();
         }
     }
 
@@ -207,7 +229,7 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
     class GetStatusAwaitingConfirm {
 
         @Test
-        @DisplayName("confirm 레코드가 있고 만료 전이면 AWAITING_CONFIRM과 partnerId·deadline을 반환한다")
+        @DisplayName("confirm 레코드가 있고 만료 전이면 AWAITING_CONFIRM과 partnerId·deadline을 반환하고 callId는 null이다")
         void getStatus_whenAwaitingConfirm_returnsAwaiting() {
             // given
             final LocalDateTime future = FIXED_NOW.plusSeconds(10);
@@ -221,6 +243,7 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
             assertThat(response.partnerId()).isEqualTo(2L);
             assertThat(response.confirmDeadline()).isEqualTo(future);
             assertThat(response.roomId()).isNull();
+            assertThat(response.callId()).isNull();
         }
 
         @Test
