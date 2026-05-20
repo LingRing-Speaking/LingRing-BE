@@ -82,6 +82,11 @@ public enum ErrorCode {
     // Call Error
     CALL_NOT_FOUND(NOT_FOUND, "통화를 찾을 수 없습니다."),
     CALL_PARTICIPANT_MISMATCH(FORBIDDEN, "해당 통화의 참여자가 아닙니다."),
+    CALL_ACTIVE(BAD_REQUEST, "진행 중인 통화는 녹음 업로드를 시작할 수 없습니다."),
+    INVALID_CALL_RECORDING_CONTENT_TYPE(BAD_REQUEST, "허용되지 않은 오디오 형식입니다."),
+    CALL_RECORDING_TOO_LARGE(BAD_REQUEST, "녹음 파일 크기가 허용 범위를 초과했습니다."),
+    CALL_RECORDING_KEY_FORBIDDEN(FORBIDDEN, "본인의 녹음 키만 사용할 수 있습니다."),
+    CALL_RECORDING_S3_MISSING(BAD_REQUEST, "업로드된 녹음 파일을 찾을 수 없습니다."),
 
     // Matching Error
     MATCH_CONFIRMATION_NOT_FOUND(NOT_FOUND, "수락/거절할 매칭이 없습니다. 다시 매칭을 시작해주세요."),

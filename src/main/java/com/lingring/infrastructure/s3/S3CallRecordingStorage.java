@@ -1,13 +1,12 @@
 package com.lingring.infrastructure.s3;
 
-import com.lingring.domain.user.domain.PresignedUploadUrl;
-import com.lingring.domain.user.domain.ProfileImageStorage;
-import java.time.Duration;
+import com.lingring.domain.call.domain.CallRecordingStorage;
+import com.lingring.domain.call.domain.PresignedUpload;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -16,39 +15,40 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 
 @Component
 @RequiredArgsConstructor
-public class S3ProfileImageStorage implements ProfileImageStorage {
+public class S3CallRecordingStorage implements CallRecordingStorage {
 
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
-    private final S3Properties properties;
+    private final S3Properties s3Properties;
+    private final CallRecordingS3Properties callRecordingProperties;
 
     @Override
-    public PresignedUploadUrl generateUploadUrl(
+    public PresignedUpload generateUploadUrl(
             final String key,
             final String contentType,
             final long contentLength
     ) {
         final PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                .bucket(properties.bucket())
+                .bucket(s3Properties.bucket())
                 .key(key)
                 .contentType(contentType)
                 .contentLength(contentLength)
                 .build();
 
         final PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
-                .signatureDuration(Duration.ofSeconds(properties.presignedUrlExpirationSeconds()))
+                .signatureDuration(callRecordingProperties.uploadTtl())
                 .putObjectRequest(putObjectRequest)
                 .build();
 
         final PresignedPutObjectRequest presigned = s3Presigner.presignPutObject(presignRequest);
-        return new PresignedUploadUrl(presigned.url().toString(), key);
+        return new PresignedUpload(presigned.url().toString(), key);
     }
 
     @Override
     public boolean exists(final String key) {
         try {
             s3Client.headObject(HeadObjectRequest.builder()
-                    .bucket(properties.bucket())
+                    .bucket(s3Properties.bucket())
                     .key(key)
                     .build());
             return true;
@@ -58,17 +58,11 @@ public class S3ProfileImageStorage implements ProfileImageStorage {
     }
 
     @Override
-    public String publicUrl(final String key) {
-        return "https://%s.s3.%s.amazonaws.com/%s".formatted(
-                properties.bucket(), properties.region(), key
-        );
-    }
-
-    @Override
-    public void delete(final String key) {
-        s3Client.deleteObject(DeleteObjectRequest.builder()
-                .bucket(properties.bucket())
+    public String contentTypeOf(final String key) {
+        final HeadObjectResponse response = s3Client.headObject(HeadObjectRequest.builder()
+                .bucket(s3Properties.bucket())
                 .key(key)
                 .build());
+        return response.contentType();
     }
 }

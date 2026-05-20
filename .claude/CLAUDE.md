@@ -27,5 +27,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - 루트 패키지: `com.lingring` (메인 클래스 `LingRingApplication`). 상세 패키지 레이아웃(도메인별 구조 포함)은 `.claude/rules/package-structure.md`를 따른다.
 - `settings.gradle`의 루트 프로젝트 이름은 `backend`로 저장소명 `LingRing-BE`와 다르다. Gradle 프로젝트명은 `backend`이며 jar 산출물 이름, IDE 프로젝트 표시명에 영향을 준다.
-- `.gitignore`가 `src/main/resources/` 및 `src/test/resources/` 아래의 **모든 `*.yml`을 제외**한다. 이미 추적 중인 파일만 예외이므로, 프로파일별 설정(`application-dev.yml` 등)을 추가해도 git이 조용히 무시한다. 의도적으로 커밋하려면 `git add -f`를 쓰거나 무시되지 않는 경로로 옮길 것.
 - `HELP.md`도 gitignore 대상(Spring Initializr 기본 산출물).
+
+## yml 파일 정책 (절대 commit 금지)
+
+- `src/main/resources/**/*.yml`, `src/test/resources/**/*.yml` 은 **절대 git에 commit하지 않는다**. `.gitignore` 가 이 경로의 모든 `*.yml` 을 ignore하며, 과거에 잘못 추적되던 `application.yml` (main/test 양쪽) 도 본 정책 적용 시점에 추적 해제되었다.
+- `git add -f` 로 강제 추가하지 말 것. `--no-verify` 와 마찬가지로 안전 장치를 우회하는 행위.
+- 새 `@ConfigurationProperties` 를 도입할 때 yml 변경분을 같은 PR/커밋에 동봉하지 않는다. 도메인 정책·인프라 설정 변경 사항은 PR 본문에 텍스트로 적어 운영자/팀원에게 전달하고, 실제 yml 갱신은 각자 로컬·secret manager·배포 파이프라인 쪽에서 별도 처리한다.
+- 새 yml이 필요하면 `application.yml` 외 경로(ignore되지 않는 위치)에 예시 파일을 두든지 README에 설명을 추가하는 식으로 우회. 추적되는 yml 자체를 새로 만들지 않는다.

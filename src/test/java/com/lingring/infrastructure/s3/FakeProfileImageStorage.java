@@ -1,7 +1,7 @@
 package com.lingring.infrastructure.s3;
 
-import com.lingring.domain.user.service.PresignedUploadUrl;
-import com.lingring.domain.user.service.ProfileImageStorage;
+import com.lingring.domain.user.domain.PresignedUploadUrl;
+import com.lingring.domain.user.domain.ProfileImageStorage;
 import java.util.HashSet;
 import java.util.Set;
 
