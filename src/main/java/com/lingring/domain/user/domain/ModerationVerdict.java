@@ -1,4 +1,4 @@
-package com.lingring.domain.user.service;
+package com.lingring.domain.user.domain;
 
 import java.util.List;
 

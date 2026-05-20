@@ -1,4 +1,4 @@
-package com.lingring.domain.user.service;
+package com.lingring.domain.user.domain;
 
 public interface ProfileImageModerator {
 
