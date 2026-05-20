@@ -4,6 +4,8 @@ import com.lingring.domain.call.dao.CallRecordingRepository;
 import com.lingring.domain.call.dao.CallRepository;
 import com.lingring.domain.call.domain.Call;
 import com.lingring.domain.call.domain.CallRecording;
+import com.lingring.domain.call.domain.CallRecordingStorage;
+import com.lingring.domain.call.domain.PresignedUpload;
 import com.lingring.domain.call.domain.vo.CallRecordingKey;
 import com.lingring.domain.call.dto.request.CallRecordingCreateRequest;
 import com.lingring.domain.call.dto.request.CallRecordingPresignedUrlRequest;
@@ -43,8 +45,7 @@ public class CallRecordingService {
         requireWithinSizeLimit(request.contentLength());
 
         final CallRecordingKey key = CallRecordingKey.generateFor(callId, userId);
-        final PresignedUpload presigned = storage.generateUploadUrl(
-                key.getValue(), request.contentType(), request.contentLength());
+        final PresignedUpload presigned = storage.generateUploadUrl(key.getValue(), request.contentType(), request.contentLength());
         return CallRecordingPresignedUrlResponse.from(presigned);
     }
 

@@ -1,7 +1,7 @@
 package com.lingring.infrastructure.rekognition;
 
-import com.lingring.domain.user.service.ModerationVerdict;
-import com.lingring.domain.user.service.ProfileImageModerator;
+import com.lingring.domain.user.domain.ModerationVerdict;
+import com.lingring.domain.user.domain.ProfileImageModerator;
 import com.lingring.infrastructure.s3.S3Properties;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

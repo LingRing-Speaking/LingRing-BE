@@ -1,4 +1,4 @@
-package com.lingring.domain.call.service;
+package com.lingring.domain.call.domain;
 
 public record PresignedUpload(
         String url,

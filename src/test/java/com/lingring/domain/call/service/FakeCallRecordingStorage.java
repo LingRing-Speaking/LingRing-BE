@@ -1,5 +1,7 @@
 package com.lingring.domain.call.service;
 
+import com.lingring.domain.call.domain.CallRecordingStorage;
+import com.lingring.domain.call.domain.PresignedUpload;
 import java.util.HashMap;
 import java.util.Map;
 
