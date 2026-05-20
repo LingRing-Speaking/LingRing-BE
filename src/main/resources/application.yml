@@ -75,6 +75,16 @@ profile-image:
   allowed-content-type-prefix: image/
   max-content-length-bytes: 31457280
 
+s3:
+  call-recording:
+    prefix: call-recordings/
+    upload-ttl: PT10M
+    max-content-length: 52428800
+    allowed-content-types:
+      - audio/m4a
+      - audio/mp4
+      - audio/webm
+
 apple:
   token-encrypt-password: dltjddn423!
   token-encrypt-salt: d3e7642a0750fe97
