@@ -63,11 +63,15 @@ class MatchingFlowIntegrationTest extends ServiceIntegrationHelper {
         matchingService.acceptMatch(1L);
         matchingService.acceptMatch(2L);
 
-        // then: MATCHED
+        // then: MATCHED + callId가 persist된 Call.id와 일치
         final MatchingStatusResponse after = matchingService.getStatus(1L);
         assertThat(after.status()).isEqualTo(MatchingPollStatus.MATCHED);
         assertThat(after.roomId()).isNotNull();
         assertThat(callRepository.count()).isEqualTo(1L);
+        final Long persistedCallId = callRepository.findByRoomId(after.roomId())
+                .orElseThrow()
+                .getId();
+        assertThat(after.callId()).isEqualTo(persistedCallId);
     }
 
     @Test

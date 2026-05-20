@@ -42,7 +42,10 @@ public class MatchingService {
         final Optional<MatchingResult> result = matchingQueueRepository.findResult(userId);
         if (result.isPresent()) {
             final MatchingResult matched = result.get();
-            return MatchingStatusResponse.matched(matched.partnerId(), matched.roomId());
+            final Long callId = callRepository.findByRoomId(matched.roomId())
+                    .map(Call::getId)
+                    .orElse(null);
+            return MatchingStatusResponse.matched(matched.partnerId(), matched.roomId(), callId);
         }
         final Optional<MatchConfirmation> confirmation = matchConfirmationRepository.findByUser(userId);
         if (confirmation.isPresent()) {
