@@ -12,7 +12,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -46,21 +45,18 @@ public interface CallRecordingApi {
     @Operation(
             summary = "녹음 업로드 완료 알림",
             description = "S3 업로드 완료 후 호출. CallRecording 메타데이터를 영속화한다."
-                    + " (callId, userId)당 한 row만 유지되며, 재요청 시 기존 row를 그대로 반환한다 (200)."
-                    + " 신규 생성 시 201과 Location 헤더를 반환한다."
+                    + " (callId, userId)당 한 row만 유지되며, 재요청은 기존 row를 그대로 반환해 멱등하게 동작한다."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "201",
-                    description = "신규 생성"
-            ),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "200",
-                    description = "이미 등록되어 있어 기존 row를 반환 (멱등 재요청)"
+                    description = "등록 성공",
+                    useReturnTypeSchema = true
             )
     })
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/calls/{callId}/recordings")
-    ResponseEntity<ApiResponse<CallRecordingCreateResponse>> create(
+    ApiResponse<CallRecordingCreateResponse> create(
             @AuthUser final Long userId,
             @Parameter(description = "통화 ID", example = "42")
             @PathVariable final Long callId,

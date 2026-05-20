@@ -7,6 +7,7 @@ import com.lingring.domain.call.domain.CallRecording;
 import com.lingring.domain.call.domain.vo.CallRecordingKey;
 import com.lingring.domain.call.dto.request.CallRecordingCreateRequest;
 import com.lingring.domain.call.dto.request.CallRecordingPresignedUrlRequest;
+import com.lingring.domain.call.dto.response.CallRecordingCreateResponse;
 import com.lingring.domain.call.dto.response.CallRecordingPresignedUrlResponse;
 import com.lingring.domain.call.exception.CallActiveException;
 import com.lingring.domain.call.exception.CallNotFoundException;
@@ -15,7 +16,6 @@ import com.lingring.domain.call.exception.CallRecordingS3MissingException;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
 import com.lingring.infrastructure.s3.CallRecordingS3Properties;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,7 +49,7 @@ public class CallRecordingService {
     }
 
     @Transactional
-    public CallRecordingCreateResult create(
+    public CallRecordingCreateResponse create(
             final Long callId,
             final Long userId,
             final CallRecordingCreateRequest request
@@ -60,15 +60,12 @@ public class CallRecordingService {
             throw new CallRecordingS3MissingException(request.recordingKey());
         }
 
-        final Optional<CallRecording> existing = callRecordingRepository.findByCallIdAndUserId(callId, userId);
-        if (existing.isPresent()) {
-            return CallRecordingCreateResult.existing(existing.get());
-        }
-
-        final String contentType = storage.contentTypeOf(request.recordingKey());
-        final CallRecording saved = callRecordingRepository.save(
-                CallRecording.upload(callId, userId, request.recordingKey(), contentType));
-        return CallRecordingCreateResult.created(saved);
+        final CallRecording recording = callRecordingRepository
+                .findByCallIdAndUserId(callId, userId)
+                .orElseGet(() -> callRecordingRepository.save(
+                        CallRecording.upload(callId, userId, request.recordingKey(),
+                                storage.contentTypeOf(request.recordingKey()))));
+        return CallRecordingCreateResponse.from(recording);
     }
 
     private Call requireParticipantCall(final Long callId, final Long userId) {

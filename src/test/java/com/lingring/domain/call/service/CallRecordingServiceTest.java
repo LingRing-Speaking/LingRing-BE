@@ -10,6 +10,7 @@ import com.lingring.domain.call.domain.CallRecording;
 import com.lingring.domain.call.domain.CallRecordingStatus;
 import com.lingring.domain.call.dto.request.CallRecordingCreateRequest;
 import com.lingring.domain.call.dto.request.CallRecordingPresignedUrlRequest;
+import com.lingring.domain.call.dto.response.CallRecordingCreateResponse;
 import com.lingring.domain.call.dto.response.CallRecordingPresignedUrlResponse;
 import com.lingring.domain.call.exception.CallActiveException;
 import com.lingring.domain.call.exception.CallNotFoundException;
@@ -160,7 +161,7 @@ class CallRecordingServiceTest extends ServiceIntegrationHelper {
     class Create {
 
         @Test
-        @DisplayName("정상 요청 시 CREATED 결과를 반환하고 DB에 row를 저장한다")
+        @DisplayName("정상 요청 시 응답을 반환하고 DB에 row를 저장한다")
         void create_whenValid_createsRecording() {
             // given
             final Call call = saveEndedCall(1L, 2L);
@@ -168,12 +169,11 @@ class CallRecordingServiceTest extends ServiceIntegrationHelper {
             storage.put(key, "audio/m4a");
 
             // when
-            final CallRecordingCreateResult result = callRecordingService.create(
+            final CallRecordingCreateResponse response = callRecordingService.create(
                     call.getId(), 1L, new CallRecordingCreateRequest(key));
 
             // then
-            assertThat(result.created()).isTrue();
-            assertThat(result.response().status()).isEqualTo(CallRecordingStatus.UPLOADED);
+            assertThat(response.status()).isEqualTo(CallRecordingStatus.UPLOADED);
             final CallRecording saved = callRecordingRepository.findByCallIdAndUserId(call.getId(), 1L).orElseThrow();
             assertThat(saved.getRecordingKey()).isEqualTo(key);
             assertThat(saved.getContentType()).isEqualTo("audio/m4a");
@@ -181,22 +181,21 @@ class CallRecordingServiceTest extends ServiceIntegrationHelper {
         }
 
         @Test
-        @DisplayName("동일 (callId, userId) 재요청이면 created=false 와 기존 row를 반환한다 (멱등)")
+        @DisplayName("동일 (callId, userId) 재요청은 기존 row를 그대로 반환하고 새 row를 만들지 않는다 (멱등)")
         void create_whenAlreadyExists_returnsExisting() {
             // given
             final Call call = saveEndedCall(1L, 2L);
             final String key = "call-recordings/%d/1/first-upload".formatted(call.getId());
             storage.put(key, "audio/m4a");
-            final CallRecordingCreateResult first = callRecordingService.create(
+            final CallRecordingCreateResponse first = callRecordingService.create(
                     call.getId(), 1L, new CallRecordingCreateRequest(key));
 
             // when
-            final CallRecordingCreateResult second = callRecordingService.create(
+            final CallRecordingCreateResponse second = callRecordingService.create(
                     call.getId(), 1L, new CallRecordingCreateRequest(key));
 
             // then
-            assertThat(second.created()).isFalse();
-            assertThat(second.response().recordingId()).isEqualTo(first.response().recordingId());
+            assertThat(second.recordingId()).isEqualTo(first.recordingId());
             assertThat(callRecordingRepository.findAll()).hasSize(1);
         }
 

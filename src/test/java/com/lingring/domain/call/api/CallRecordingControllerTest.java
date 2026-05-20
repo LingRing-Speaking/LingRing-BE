@@ -6,11 +6,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
-import com.lingring.domain.call.domain.CallRecording;
 import com.lingring.domain.call.dto.request.CallRecordingCreateRequest;
 import com.lingring.domain.call.dto.request.CallRecordingPresignedUrlRequest;
+import com.lingring.domain.call.dto.response.CallRecordingCreateResponse;
 import com.lingring.domain.call.dto.response.CallRecordingPresignedUrlResponse;
-import com.lingring.domain.call.service.CallRecordingCreateResult;
+import com.lingring.domain.call.domain.CallRecordingStatus;
 import com.lingring.domain.call.service.CallRecordingService;
 import com.lingring.global.auth.context.AuthContext;
 import org.junit.jupiter.api.AfterEach;
@@ -128,15 +128,12 @@ class CallRecordingControllerTest {
     class Create {
 
         @Test
-        @DisplayName("신규 생성이면 201과 Location 헤더를 반환한다")
-        void create_whenNew_returns201WithLocation() throws Exception {
+        @DisplayName("등록 성공 시 201과 recordingId/status를 반환한다")
+        void create_whenSuccess_returns201() throws Exception {
             // given
             AuthContext.set(USER_ID);
-            final CallRecording recording = CallRecording.upload(CALL_ID, USER_ID,
-                    "call-recordings/42/1/abc", "audio/m4a");
-            setId(recording, 7L);
             given(callRecordingService.create(eq(CALL_ID), eq(USER_ID), any()))
-                    .willReturn(CallRecordingCreateResult.created(recording));
+                    .willReturn(new CallRecordingCreateResponse(7L, CallRecordingStatus.UPLOADED));
             final String body = objectMapper.writeValueAsString(
                     new CallRecordingCreateRequest("call-recordings/42/1/abc"));
 
@@ -150,38 +147,9 @@ class CallRecordingControllerTest {
 
             // then
             assertThat(response.getStatus()).isEqualTo(201);
-            assertThat(response.getHeader("Location")).isEqualTo("/calls/42/recordings/7");
             final JsonNode data = objectMapper.readTree(response.getContentAsString()).get("data");
             assertThat(data.get("recordingId").asLong()).isEqualTo(7L);
             assertThat(data.get("status").asText()).isEqualTo("UPLOADED");
-        }
-
-        @Test
-        @DisplayName("멱등 재요청이면 200을 반환하고 Location 헤더가 없다")
-        void create_whenIdempotent_returns200WithoutLocation() throws Exception {
-            // given
-            AuthContext.set(USER_ID);
-            final CallRecording recording = CallRecording.upload(CALL_ID, USER_ID,
-                    "call-recordings/42/1/abc", "audio/m4a");
-            setId(recording, 7L);
-            given(callRecordingService.create(eq(CALL_ID), eq(USER_ID), any()))
-                    .willReturn(CallRecordingCreateResult.existing(recording));
-            final String body = objectMapper.writeValueAsString(
-                    new CallRecordingCreateRequest("call-recordings/42/1/abc"));
-
-            // when
-            final MockHttpServletResponse response = mockMvc.perform(
-                            post("/api/v1/calls/{callId}/recordings", CALL_ID)
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content(body))
-                    .andReturn()
-                    .getResponse();
-
-            // then
-            assertThat(response.getStatus()).isEqualTo(200);
-            assertThat(response.getHeader("Location")).isNull();
-            final JsonNode data = objectMapper.readTree(response.getContentAsString()).get("data");
-            assertThat(data.get("recordingId").asLong()).isEqualTo(7L);
         }
 
         @Test
@@ -204,16 +172,6 @@ class CallRecordingControllerTest {
             // then
             final JsonNode responseBody = objectMapper.readTree(response.getContentAsString());
             assertThat(responseBody.get("status").asInt()).isEqualTo(400);
-        }
-    }
-
-    private static void setId(final CallRecording recording, final Long id) {
-        try {
-            final var field = CallRecording.class.getDeclaredField("id");
-            field.setAccessible(true);
-            field.set(recording, id);
-        } catch (final ReflectiveOperationException e) {
-            throw new RuntimeException(e);
         }
     }
 }
