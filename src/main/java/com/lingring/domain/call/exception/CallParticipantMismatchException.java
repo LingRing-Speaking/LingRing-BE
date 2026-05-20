@@ -12,4 +12,11 @@ public class CallParticipantMismatchException extends DomainException {
                 "userId %d는 roomId %s 통화의 참여자가 아닙니다.".formatted(userId, roomId)
         );
     }
+
+    public CallParticipantMismatchException(final Long callId, final Long userId) {
+        super(
+                ErrorCode.CALL_PARTICIPANT_MISMATCH,
+                "userId %d는 callId %d 통화의 참여자가 아닙니다.".formatted(userId, callId)
+        );
+    }
 }

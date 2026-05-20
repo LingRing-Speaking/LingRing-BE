@@ -58,6 +58,16 @@ profile-image:
   allowed-content-type-prefix: image/
   max-content-length-bytes: 5242880
 
+s3:
+  call-recording:
+    prefix: call-recordings/
+    upload-ttl: PT10M
+    max-content-length: 52428800
+    allowed-content-types:
+      - audio/m4a
+      - audio/mp4
+      - audio/webm
+
 apple:
   token-encrypt-password: test-encrypt-password
   token-encrypt-salt: deadbeefcafebabe
