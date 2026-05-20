@@ -73,13 +73,14 @@ class MatchingControllerTest {
     class GetStatus {
 
         @Test
-        @DisplayName("매칭 결과가 있으면 MATCHED + partnerId + roomId를 반환한다")
+        @DisplayName("매칭 결과가 있으면 MATCHED + partnerId + roomId + callId를 반환한다")
         void getStatus_whenMatched_returnsMatched() throws Exception {
             // given
             final Long userId = 1L;
+            final Long callId = 42L;
             AuthContext.set(userId);
             given(matchingService.getStatus(userId))
-                    .willReturn(MatchingStatusResponse.matched(2L, ROOM_ID));
+                    .willReturn(MatchingStatusResponse.matched(2L, ROOM_ID, callId));
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
@@ -94,6 +95,7 @@ class MatchingControllerTest {
             assertThat(body.get("data").get("status").asText()).isEqualTo("MATCHED");
             assertThat(body.get("data").get("partnerId").asLong()).isEqualTo(2L);
             assertThat(body.get("data").get("roomId").asText()).isEqualTo(ROOM_ID.toString());
+            assertThat(body.get("data").get("callId").asLong()).isEqualTo(callId);
         }
 
         @Test
