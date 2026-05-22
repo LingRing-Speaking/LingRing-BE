@@ -87,6 +87,9 @@ public enum ErrorCode {
     CALL_RECORDING_TOO_LARGE(BAD_REQUEST, "녹음 파일 크기가 허용 범위를 초과했습니다."),
     CALL_RECORDING_KEY_FORBIDDEN(FORBIDDEN, "본인의 녹음 키만 사용할 수 있습니다."),
     CALL_RECORDING_S3_MISSING(BAD_REQUEST, "업로드된 녹음 파일을 찾을 수 없습니다."),
+    CALL_TRANSCRIPT_NOT_FOUND(NOT_FOUND, "통화 transcript를 찾을 수 없습니다."),
+    CALL_TRANSCRIPT_ALREADY_IN_PROGRESS(CONFLICT, "이미 분석이 진행 중입니다."),
+    CALL_RECORDINGS_NOT_READY(BAD_REQUEST, "분석을 시작하려면 두 화자의 녹음이 모두 업로드되어야 합니다."),
 
     // Matching Error
     MATCH_CONFIRMATION_NOT_FOUND(NOT_FOUND, "수락/거절할 매칭이 없습니다. 다시 매칭을 시작해주세요."),
