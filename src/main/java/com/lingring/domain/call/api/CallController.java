@@ -1,7 +1,7 @@
 package com.lingring.domain.call.api;
 
 import com.lingring.domain.call.dto.response.CallsResponse;
-import com.lingring.domain.call.service.CallService;
+import com.lingring.domain.call.facade.CallHistoryFacade;
 import com.lingring.global.common.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class CallController implements CallApi {
 
-    private final CallService callService;
+    private final CallHistoryFacade callHistoryFacade;
 
     @Override
     public ApiResponse<CallsResponse> getAll(
@@ -19,6 +19,6 @@ public class CallController implements CallApi {
             final int page,
             final int size
     ) {
-        return ApiResponse.success(HttpStatus.OK, callService.getCallsByUserId(userId, page, size));
+        return ApiResponse.success(HttpStatus.OK, callHistoryFacade.getCallsByUserId(userId, page, size));
     }
 }

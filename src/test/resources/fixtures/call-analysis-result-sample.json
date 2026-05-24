@@ -1,0 +1,64 @@
+{
+  "callId": 138,
+  "modelIdentifier": "gemini-2.5-flash",
+  "transcript": {
+    "segments": [
+      {"userId": 14, "startSec": 1.931, "endSec": 2.201, "text": "Hi."},
+      {"userId": 1, "startSec": 2.186, "endSec": 2.446, "text": "Hi."},
+      {"userId": 1, "startSec": 2.936, "endSec": 3.626, "text": "What's your name?"},
+      {"userId": 14, "startSec": 3.0, "endSec": 3.7, "text": "What's your name?"},
+      {"userId": 14, "startSec": 6.26, "endSec": 7.79, "text": "Oh, hi, my name is Lee."},
+      {"userId": 1, "startSec": 6.584, "endSec": 8.084, "text": "Oh, hi, my name is Lee."},
+      {"userId": 14, "startSec": 9.63, "endSec": 10.4, "text": "Oh, Lee. Hi."},
+      {"userId": 1, "startSec": 9.684, "endSec": 10.484, "text": "Oh, Lee. Hi."},
+      {"userId": 1, "startSec": 10.974, "endSec": 16.474, "text": "Um what what did you do in this weekend?"},
+      {"userId": 14, "startSec": 11.15, "endSec": 16.46, "text": "Um what what did you do in this weekend?"},
+      {"userId": 14, "startSec": 18.78, "endSec": 27.32, "text": "Uh in this weekend, um maybe I I will meet my girlfriend, make girlfriend, maybe."},
+      {"userId": 1, "startSec": 19.163, "endSec": 27.723, "text": "Uh in this weekend, um maybe I I will make my girlfriend, make for friend, maybe."},
+      {"userId": 1, "startSec": 29.431, "endSec": 31.391, "text": "Oh, meet your girlfriend."},
+      {"userId": 14, "startSec": 29.439, "endSec": 31.169, "text": "Oh, meet your girlfriend."},
+      {"userId": 14, "startSec": 31.859, "endSec": 32.419, "text": "How long?"},
+      {"userId": 1, "startSec": 32.151, "endSec": 32.631, "text": "How long?"},
+      {"userId": 14, "startSec": 34.259, "endSec": 38.819, "text": "How long time you met your girlfriend?"},
+      {"userId": 1, "startSec": 34.441, "endSec": 39.131, "text": "How long time you meet your girlfriend?"},
+      {"userId": 14, "startSec": 42.125, "endSec": 48.655, "text": "Um, maybe I, um, I don't know exactly, but"},
+      {"userId": 1, "startSec": 42.259, "endSec": 48.889, "text": "Um, maybe I, um, I don't know exactly, but"},
+      {"userId": 1, "startSec": 50.039, "endSec": 56.569, "text": "I think we met maybe three years ago."},
+      {"userId": 14, "startSec": 50.045, "endSec": 55.955, "text": "I think we met maybe three years ago."},
+      {"userId": 14, "startSec": 56.155, "endSec": 104.595, "text": "We met at 24 year, of 24 years old."},
+      {"userId": 1, "startSec": 56.569, "endSec": 104.819, "text": "We met at 24 year of 24 years old."}
+    ]
+  },
+  "analyses": [
+    {
+      "userId": 1,
+      "mistakes": [
+        {"tag": "COLLOCATION", "wrong": "in this weekend", "improved": "this weekend", "reason": "특정 기간을 나타낼 때 'this'와 같은 지시형용사와 함께 쓸 때는 전치사 없이 사용하는 것이 더 자연스럽습니다. 'on the weekend'도 가능합니다.", "koMeaning": "이번 주말에"},
+        {"tag": "VOCABULARY", "wrong": "make my girlfriend, make for friend", "improved": "meet my girlfriend", "reason": "'만나다'라는 의미로 사람을 만나는 경우 'make' 대신 'meet'을 사용해야 합니다. 'make'는 '만들다'라는 의미입니다.", "koMeaning": "여자친구를 만날 것이다"},
+        {"tag": "GRAMMAR", "wrong": "How long time", "improved": "How long", "reason": "'얼마나 오래'를 물을 때 'How long'만으로 충분하며 'time'은 중복되어 어색합니다.", "koMeaning": "얼마나 오랫동안"},
+        {"tag": "GRAMMAR", "wrong": "How long time you meet your girlfriend?", "improved": "How long have you been together?", "reason": "관계의 지속 기간을 물을 때는 현재완료 시제를 사용하거나 만난 시점을 물을 때는 'How long ago did you meet...?'로 표현하는 것이 자연스럽습니다. 현재 시제는 일반적으로 사용하지 않습니다.", "koMeaning": "여자친구를 만난 지 얼마나 됐어요?"},
+        {"tag": "GRAMMAR", "wrong": "24 year of 24 years old", "improved": "four years ago", "reason": "만난 시점을 표현할 때는 'four years ago'와 같이 기간을 명확히 말하거나, 나이를 언급하려면 'when we were 24 years old'와 같이 구체적으로 표현해야 합니다. 현재 표현은 중복되고 어색합니다.", "koMeaning": "4년 전에 만났습니다"}
+      ],
+      "positives": [
+        {"sentence": "Oh, hi, my name is Lee.", "goodPart": "my name is Lee", "koMeaning": "자연스러운 자기소개입니다."},
+        {"sentence": "Um, maybe I, um, I don't know exactly, but", "goodPart": "I don't know exactly, but", "koMeaning": "불확실성을 표현할 때 사용하는 아주 좋은 문구입니다."},
+        {"sentence": "I think we met maybe three years ago.", "goodPart": "I think we met maybe three years ago.", "koMeaning": "자신의 생각을 표현하는 'I think'와 추측을 나타내는 'maybe'를 적절히 사용했으며, 'met'의 과거형 사용도 정확합니다."}
+      ]
+    },
+    {
+      "userId": 14,
+      "mistakes": [
+        {"tag": "COLLOCATION", "wrong": "in this weekend", "improved": "this weekend", "reason": "특정 기간을 나타낼 때 'this'와 같은 지시형용사와 함께 쓸 때는 전치사 없이 사용하는 것이 더 자연스럽습니다. 'on the weekend'도 가능합니다.", "koMeaning": "이번 주말에"},
+        {"tag": "VOCABULARY", "wrong": "make girlfriend", "improved": "meet my girlfriend", "reason": "'만나다'라는 의미로 사람을 만나는 경우 'make' 대신 'meet'을 사용해야 합니다. 'make'는 '만들다'라는 의미입니다. (앞부분의 'meet my girlfriend'는 맞지만, 동일 문장 내 오류가 있어 긍정 피드백에 포함하지 않습니다.)", "koMeaning": "여자친구를 만나다"},
+        {"tag": "GRAMMAR", "wrong": "How long time", "improved": "How long", "reason": "'얼마나 오래'를 물을 때 'How long'만으로 충분하며 'time'은 중복되어 어색합니다.", "koMeaning": "얼마나 오랫동안"},
+        {"tag": "GRAMMAR", "wrong": "How long time you met your girlfriend?", "improved": "How long have you been together?", "reason": "관계의 지속 기간을 물을 때는 현재완료 시제를 사용하거나 만난 시점을 물을 때는 'How long ago did you meet...?'로 표현하는 것이 자연스럽습니다. 과거 시제만으로는 지속적인 기간을 묻기 어렵습니다.", "koMeaning": "여자친구를 만난 지 얼마나 됐어요?"},
+        {"tag": "GRAMMAR", "wrong": "24 year, of 24 years old", "improved": "four years ago", "reason": "만난 시점을 표현할 때는 'four years ago'와 같이 기간을 명확히 말하거나, 나이를 언급하려면 'when we were 24 years old'와 같이 구체적으로 표현해야 합니다. 현재 표현은 중복되고 어색합니다.", "koMeaning": "4년 전에 만났습니다"}
+      ],
+      "positives": [
+        {"sentence": "Oh, hi, my name is Lee.", "goodPart": "my name is Lee", "koMeaning": "자연스러운 자기소개입니다."},
+        {"sentence": "Um, maybe I, um, I don't know exactly, but", "goodPart": "I don't know exactly, but", "koMeaning": "불확실성을 표현할 때 사용하는 아주 좋은 문구입니다."},
+        {"sentence": "I think we met maybe three years ago.", "goodPart": "I think we met maybe three years ago.", "koMeaning": "자신의 생각을 표현하는 'I think'와 추측을 나타내는 'maybe'를 적절히 사용했으며, 'met'의 과거형 사용도 정확합니다."}
+      ]
+    }
+  ]
+}

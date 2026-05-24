@@ -13,56 +13,52 @@ import org.junit.jupiter.api.Test;
 class CallTranscriptTest {
 
     @Nested
-    @DisplayName("startProcessing: 신규 transcript 생성 팩토리")
-    class StartProcessing {
+    @DisplayName("create: 신규 transcript 생성 팩토리")
+    class Create {
 
         @Test
-        @DisplayName("callId를 보관하고 status=PROCESSING으로 시작한다")
-        void startProcessing_whenValid_createsProcessingTranscript() {
+        @DisplayName("callId를 보관하고 content는 null로 시작한다")
+        void create_whenValid_createsEmptyTranscript() {
             // when
-            final CallTranscript transcript = CallTranscript.startProcessing(1L);
+            final CallTranscript transcript = CallTranscript.create(1L);
 
             // then
             assertThat(transcript.getCallId()).isEqualTo(1L);
-            assertThat(transcript.getStatus()).isEqualTo(CallTranscriptStatus.PROCESSING);
             assertThat(transcript.getContent()).isNull();
-            assertThat(transcript.isProcessing()).isTrue();
-            assertThat(transcript.isCompleted()).isFalse();
         }
 
         @Test
         @DisplayName("callId가 null이면 NullPointerException이 발생한다")
-        void startProcessing_whenCallIdNull_throws() {
+        void create_whenCallIdNull_throws() {
             // when & then
-            assertThatThrownBy(() -> CallTranscript.startProcessing(null))
+            assertThatThrownBy(() -> CallTranscript.create(null))
                     .isInstanceOf(NullPointerException.class);
         }
     }
 
     @Nested
-    @DisplayName("complete: STT 결과 수신 후 완료 처리")
+    @DisplayName("complete: SQS 결과 수신 후 segments 저장")
     class Complete {
 
         @Test
-        @DisplayName("PROCESSING에서 COMPLETED로 전이되고 content가 채워진다")
-        void complete_whenProcessing_transitionsToCompleted() {
+        @DisplayName("content가 null이면 새 content로 채운다")
+        void complete_whenContentEmpty_fillsContent() {
             // given
-            final CallTranscript transcript = CallTranscript.startProcessing(1L);
+            final CallTranscript transcript = CallTranscript.create(1L);
             final TranscriptContent content = sampleContent();
 
             // when
             transcript.complete(content);
 
             // then
-            assertThat(transcript.isCompleted()).isTrue();
             assertThat(transcript.getContent()).isEqualTo(content);
         }
 
         @Test
-        @DisplayName("이미 COMPLETED 상태에서 다시 호출하면 무시된다 (멱등)")
+        @DisplayName("이미 content가 채워져 있으면 다시 호출해도 무시된다 (멱등)")
         void complete_whenAlreadyCompleted_isIdempotent() {
             // given
-            final CallTranscript transcript = CallTranscript.startProcessing(1L);
+            final CallTranscript transcript = CallTranscript.create(1L);
             final TranscriptContent first = sampleContent();
             transcript.complete(first);
             final TranscriptContent second = new TranscriptContent(List.of());
@@ -78,45 +74,11 @@ class CallTranscriptTest {
         @DisplayName("content가 null이면 NullPointerException이 발생한다")
         void complete_whenContentNull_throws() {
             // given
-            final CallTranscript transcript = CallTranscript.startProcessing(1L);
+            final CallTranscript transcript = CallTranscript.create(1L);
 
             // when & then
             assertThatThrownBy(() -> transcript.complete(null))
                     .isInstanceOf(NullPointerException.class);
-        }
-    }
-
-    @Nested
-    @DisplayName("fail: 실패 상태 전이")
-    class Fail {
-
-        @Test
-        @DisplayName("PROCESSING에서 FAILED로 전이된다")
-        void fail_whenProcessing_transitionsToFailed() {
-            // given
-            final CallTranscript transcript = CallTranscript.startProcessing(1L);
-
-            // when
-            transcript.fail();
-
-            // then
-            assertThat(transcript.getStatus()).isEqualTo(CallTranscriptStatus.FAILED);
-            assertThat(transcript.isProcessing()).isFalse();
-            assertThat(transcript.isCompleted()).isFalse();
-        }
-
-        @Test
-        @DisplayName("이미 COMPLETED 상태에서는 fail이 무시된다")
-        void fail_whenAlreadyCompleted_isIgnored() {
-            // given
-            final CallTranscript transcript = CallTranscript.startProcessing(1L);
-            transcript.complete(sampleContent());
-
-            // when
-            transcript.fail();
-
-            // then
-            assertThat(transcript.isCompleted()).isTrue();
         }
     }
 

@@ -1,6 +1,6 @@
-package com.lingring.domain.call.event;
+package com.lingring.domain.callanalysis.event;
 
-import com.lingring.domain.call.domain.TranscriptionStarter;
+import com.lingring.domain.callanalysis.domain.CallAnalysisStarter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -10,16 +10,16 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class CallTranscriptRequestedListener {
+public class CallAnalysisRequestedListener {
 
-    private final TranscriptionStarter transcriptionStarter;
+    private final CallAnalysisStarter callAnalysisStarter;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void on(final CallTranscriptRequestedEvent event) {
+    public void on(final CallAnalysisRequestedEvent event) {
         try {
-            transcriptionStarter.requestTranscript(event.callId(), event.recordings());
+            callAnalysisStarter.requestAnalysis(event.callId(), event.recordings());
         } catch (final RuntimeException e) {
-            log.error("transcript 변환 요청 실패: callId={}", event.callId(), e);
+            log.error("call analysis 요청 실패: callId={}", event.callId(), e);
         }
     }
 }
