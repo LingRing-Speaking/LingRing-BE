@@ -14,6 +14,7 @@ import com.lingring.domain.callanalysis.domain.vo.PositiveItem;
 import com.lingring.domain.callanalysis.domain.vo.Positives;
 import com.lingring.domain.callanalysis.dto.response.CallAnalysisResponse;
 import com.lingring.domain.callanalysis.dto.response.CallAnalysisStatusResponse;
+import com.lingring.domain.callanalysis.exception.CallAnalysisAccessForbiddenException;
 import com.lingring.domain.callanalysis.exception.CallAnalysisNotFoundException;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.util.List;
@@ -26,6 +27,7 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
 
     private static final Long CALL_ID = 100L;
     private static final Long USER_ID = 1L;
+    private static final Long OTHER_USER_ID = 2L;
     private static final String MODEL = "gemini-2.5-flash";
 
     @Autowired
@@ -35,34 +37,32 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
     private CallAnalysisRepository callAnalysisRepository;
 
     @Nested
-    @DisplayName("startProcessing: PROCESSING 행 생성")
+    @DisplayName("startProcessing: PROCESSING 행 생성 (find-or-save 멱등)")
     class StartProcessing {
 
         @Test
-        @DisplayName("기존 행이 없으면 PROCESSING 상태로 새 행을 저장한다")
-        void startProcessing_whenNotExists_createsRow() {
+        @DisplayName("기존 행이 없으면 PROCESSING 상태로 새 행을 저장하고 반환한다")
+        void startProcessing_whenNotExists_createsAndReturns() {
             // when
-            callAnalysisService.startProcessing(CALL_ID, USER_ID);
+            final CallAnalysis saved = callAnalysisService.startProcessing(CALL_ID, USER_ID);
 
             // then
-            final CallAnalysis saved = callAnalysisRepository.findByCallIdAndUserId(CALL_ID, USER_ID).orElseThrow();
+            assertThat(saved.getId()).isNotNull();
             assertThat(saved.getStatus()).isEqualTo(CallAnalysisStatus.PROCESSING);
             assertThat(saved.getResult()).isNull();
         }
 
         @Test
-        @DisplayName("이미 행이 존재하면 멱등하게 중복 저장하지 않는다")
-        void startProcessing_whenAlreadyExists_isIdempotent() {
+        @DisplayName("이미 행이 존재하면 동일한 id를 반환한다 (멱등)")
+        void startProcessing_whenAlreadyExists_returnsExisting() {
             // given
-            callAnalysisService.startProcessing(CALL_ID, USER_ID);
-            final Long initialId = callAnalysisRepository.findByCallIdAndUserId(CALL_ID, USER_ID).orElseThrow().getId();
+            final CallAnalysis first = callAnalysisService.startProcessing(CALL_ID, USER_ID);
 
             // when
-            callAnalysisService.startProcessing(CALL_ID, USER_ID);
+            final CallAnalysis second = callAnalysisService.startProcessing(CALL_ID, USER_ID);
 
             // then
-            assertThat(callAnalysisRepository.findByCallIdAndUserId(CALL_ID, USER_ID).orElseThrow().getId())
-                    .isEqualTo(initialId);
+            assertThat(second.getId()).isEqualTo(first.getId());
         }
     }
 
@@ -75,10 +75,9 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
         void complete_whenProcessing_transitions() {
             // given
             callAnalysisService.startProcessing(CALL_ID, USER_ID);
-            final AnalysisResult result = sampleResult();
 
             // when
-            callAnalysisService.complete(CALL_ID, USER_ID, result, MODEL);
+            callAnalysisService.complete(CALL_ID, USER_ID, sampleResult(), MODEL);
 
             // then
             final CallAnalysis saved = callAnalysisRepository.findByCallIdAndUserId(CALL_ID, USER_ID).orElseThrow();
@@ -141,58 +140,69 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
     }
 
     @Nested
-    @DisplayName("getStatus: 본인 분석 상태만 조회")
+    @DisplayName("getStatus: 본인 분석 상태만 조회 (analysisId 기준)")
     class GetStatus {
 
         @Test
-        @DisplayName("PROCESSING 상태이면 PROCESSING을 담은 응답을 반환한다")
-        void getStatus_whenProcessing_returnsStatus() {
+        @DisplayName("본인 소유의 PROCESSING analysisId면 PROCESSING을 반환한다")
+        void getStatus_whenOwnedAndProcessing_returnsStatus() {
             // given
-            callAnalysisService.startProcessing(CALL_ID, USER_ID);
+            final CallAnalysis saved = callAnalysisService.startProcessing(CALL_ID, USER_ID);
 
             // when
-            final CallAnalysisStatusResponse response = callAnalysisService.getStatus(CALL_ID, USER_ID);
+            final CallAnalysisStatusResponse response = callAnalysisService.getStatus(saved.getId(), USER_ID);
 
             // then
             assertThat(response.status()).isEqualTo(CallAnalysisStatus.PROCESSING);
         }
 
         @Test
-        @DisplayName("COMPLETED 상태이면 COMPLETED를 담은 응답을 반환한다")
-        void getStatus_whenCompleted_returnsStatus() {
+        @DisplayName("본인 소유의 COMPLETED analysisId면 COMPLETED를 반환한다")
+        void getStatus_whenOwnedAndCompleted_returnsStatus() {
             // given
-            callAnalysisService.startProcessing(CALL_ID, USER_ID);
+            final CallAnalysis saved = callAnalysisService.startProcessing(CALL_ID, USER_ID);
             callAnalysisService.complete(CALL_ID, USER_ID, sampleResult(), MODEL);
 
             // when
-            final CallAnalysisStatusResponse response = callAnalysisService.getStatus(CALL_ID, USER_ID);
+            final CallAnalysisStatusResponse response = callAnalysisService.getStatus(saved.getId(), USER_ID);
 
             // then
             assertThat(response.status()).isEqualTo(CallAnalysisStatus.COMPLETED);
         }
 
         @Test
-        @DisplayName("행이 없으면 CallAnalysisNotFoundException")
+        @DisplayName("존재하지 않는 analysisId면 CallAnalysisNotFoundException")
         void getStatus_whenMissing_throws() {
             // when & then
-            assertThatThrownBy(() -> callAnalysisService.getStatus(CALL_ID, USER_ID))
+            assertThatThrownBy(() -> callAnalysisService.getStatus(9999L, USER_ID))
                     .isInstanceOf(CallAnalysisNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("타인 소유의 analysisId 조회 시 CallAnalysisAccessForbiddenException")
+        void getStatus_whenNotOwned_throws() {
+            // given
+            final CallAnalysis other = callAnalysisService.startProcessing(CALL_ID, OTHER_USER_ID);
+
+            // when & then
+            assertThatThrownBy(() -> callAnalysisService.getStatus(other.getId(), USER_ID))
+                    .isInstanceOf(CallAnalysisAccessForbiddenException.class);
         }
     }
 
     @Nested
-    @DisplayName("get: 분석 결과 조회")
+    @DisplayName("get: 분석 결과 조회 (analysisId 기준)")
     class Get {
 
         @Test
-        @DisplayName("존재하면 응답 DTO로 변환해 반환한다")
-        void get_whenExists_returnsResponse() {
+        @DisplayName("본인 소유면 응답 DTO로 변환해 반환한다")
+        void get_whenOwned_returnsResponse() {
             // given
-            callAnalysisService.startProcessing(CALL_ID, USER_ID);
+            final CallAnalysis saved = callAnalysisService.startProcessing(CALL_ID, USER_ID);
             callAnalysisService.complete(CALL_ID, USER_ID, sampleResult(), MODEL);
 
             // when
-            final CallAnalysisResponse response = callAnalysisService.get(CALL_ID, USER_ID);
+            final CallAnalysisResponse response = callAnalysisService.get(saved.getId(), USER_ID);
 
             // then
             assertThat(response.callId()).isEqualTo(CALL_ID);
@@ -203,11 +213,22 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
         }
 
         @Test
-        @DisplayName("존재하지 않으면 CallAnalysisNotFoundException")
+        @DisplayName("존재하지 않는 analysisId면 CallAnalysisNotFoundException")
         void get_whenMissing_throws() {
             // when & then
-            assertThatThrownBy(() -> callAnalysisService.get(CALL_ID, USER_ID))
+            assertThatThrownBy(() -> callAnalysisService.get(9999L, USER_ID))
                     .isInstanceOf(CallAnalysisNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("타인 소유의 analysisId 조회 시 CallAnalysisAccessForbiddenException")
+        void get_whenNotOwned_throws() {
+            // given
+            final CallAnalysis other = callAnalysisService.startProcessing(CALL_ID, OTHER_USER_ID);
+
+            // when & then
+            assertThatThrownBy(() -> callAnalysisService.get(other.getId(), USER_ID))
+                    .isInstanceOf(CallAnalysisAccessForbiddenException.class);
         }
     }
 

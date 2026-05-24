@@ -8,12 +8,12 @@ import com.lingring.domain.call.dao.CallRepository;
 import com.lingring.domain.call.dao.CallTranscriptRepository;
 import com.lingring.domain.call.domain.Call;
 import com.lingring.domain.call.domain.CallRecording;
-import com.lingring.domain.call.dto.response.CallTranscriptStartResponse;
 import com.lingring.domain.call.exception.CallParticipantMismatchException;
 import com.lingring.domain.call.exception.CallRecordingsNotReadyException;
 import com.lingring.domain.callanalysis.dao.CallAnalysisRepository;
 import com.lingring.domain.callanalysis.domain.CallAnalysisStarter;
 import com.lingring.domain.callanalysis.domain.CallAnalysisStatus;
+import com.lingring.domain.callanalysis.dto.response.CallAnalysisStartResponse;
 import com.lingring.domain.callanalysis.support.FakeCallAnalysisStarter;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.time.LocalDateTime;
@@ -70,18 +70,20 @@ class CallAnalysisRequestFacadeTest extends ServiceIntegrationHelper {
     }
 
     @Test
-    @DisplayName("두 녹음이 준비되어 있으면 transcript와 분석 행 2개(PROCESSING)를 생성하고 starter를 1회 호출한다")
-    void request_whenReady_createsTranscriptAndAnalysesAndInvokesStarter() {
+    @DisplayName("두 녹음이 준비되어 있으면 transcript와 분석 행 2개(PROCESSING)를 생성하고 본인 analysisId를 반환한다")
+    void request_whenReady_createsTranscriptAndAnalysesAndReturnsSelfAnalysisId() {
         // given
         final Call call = saveEndedCall(1L, 2L);
         saveRecording(call.getId(), 1L, "call-recordings/%d/1/abc".formatted(call.getId()));
         saveRecording(call.getId(), 2L, "call-recordings/%d/2/def".formatted(call.getId()));
 
         // when
-        final CallTranscriptStartResponse response = callAnalysisRequestFacade.request(call.getId(), 1L);
+        final CallAnalysisStartResponse response = callAnalysisRequestFacade.request(call.getId(), 1L);
 
         // then
-        assertThat(response.transcriptId()).isNotNull();
+        final Long selfAnalysisId = callAnalysisRepository.findByCallIdAndUserId(call.getId(), 1L)
+                .orElseThrow().getId();
+        assertThat(response.analysisId()).isEqualTo(selfAnalysisId);
         assertThat(callTranscriptRepository.findByCallId(call.getId())).isPresent();
         assertThat(callAnalysisRepository.findByCallIdAndUserId(call.getId(), 1L))
                 .hasValueSatisfying(a -> assertThat(a.getStatus()).isEqualTo(CallAnalysisStatus.PROCESSING));
@@ -94,20 +96,22 @@ class CallAnalysisRequestFacadeTest extends ServiceIntegrationHelper {
     }
 
     @Test
-    @DisplayName("이미 transcript가 존재하면 starter를 재호출하지 않고 기존 응답을 반환한다 (멱등)")
-    void request_whenTranscriptExists_isIdempotent() {
-        // given
+    @DisplayName("이미 transcript가 존재하면 starter를 재호출하지 않고 호출자 본인 analysisId를 반환한다 (멱등)")
+    void request_whenTranscriptExists_returnsCallersAnalysisIdAndDoesNotReinvoke() {
+        // given: userA가 먼저 트리거
         final Call call = saveEndedCall(1L, 2L);
         saveRecording(call.getId(), 1L, "call-recordings/%d/1/abc".formatted(call.getId()));
         saveRecording(call.getId(), 2L, "call-recordings/%d/2/def".formatted(call.getId()));
-        final CallTranscriptStartResponse first = callAnalysisRequestFacade.request(call.getId(), 1L);
+        callAnalysisRequestFacade.request(call.getId(), 1L);
         fakeCallAnalysisStarter.reset();
 
-        // when
-        final CallTranscriptStartResponse second = callAnalysisRequestFacade.request(call.getId(), 2L);
+        // when: userB가 동일 통화에 대해 다시 요청
+        final CallAnalysisStartResponse second = callAnalysisRequestFacade.request(call.getId(), 2L);
 
-        // then
-        assertThat(second.transcriptId()).isEqualTo(first.transcriptId());
+        // then: userB 본인의 analysisId가 반환되고 starter는 재호출되지 않는다
+        final Long userBAnalysisId = callAnalysisRepository.findByCallIdAndUserId(call.getId(), 2L)
+                .orElseThrow().getId();
+        assertThat(second.analysisId()).isEqualTo(userBAnalysisId);
         assertThat(fakeCallAnalysisStarter.invocations()).isEmpty();
     }
 

@@ -1,7 +1,7 @@
 package com.lingring.domain.callanalysis.api;
 
-import com.lingring.domain.call.dto.response.CallTranscriptStartResponse;
 import com.lingring.domain.callanalysis.dto.response.CallAnalysisResponse;
+import com.lingring.domain.callanalysis.dto.response.CallAnalysisStartResponse;
 import com.lingring.global.auth.annotation.AuthUser;
 import com.lingring.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,8 +20,8 @@ public interface CallAnalysisApi {
     @Operation(
             summary = "분석 트리거",
             description = "두 화자의 녹음이 모두 업로드된 통화에 대해 STT + LLM 분석 파이프라인을 비동기로 시작한다."
-                    + " 이미 처리 중이거나 완료된 경우 기존 정보를 그대로 반환한다 (멱등)."
-                    + " 응답 body의 status 필드로 PROCESSING/COMPLETED 여부를 확인할 수 있다."
+                    + " 이미 처리 중이거나 완료된 경우 기존 분석을 그대로 반환한다 (멱등)."
+                    + " 응답의 analysisId 로 /analyses/{id}/status 폴링 및 /analyses/{id} 결과 조회를 수행한다."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -32,7 +32,7 @@ public interface CallAnalysisApi {
     })
     @ResponseStatus(HttpStatus.ACCEPTED)
     @PostMapping("/calls/{callId}/analysis")
-    ApiResponse<CallTranscriptStartResponse> requestAnalysis(
+    ApiResponse<CallAnalysisStartResponse> requestAnalysis(
             @AuthUser final Long userId,
             @Parameter(description = "통화 ID", example = "42")
             @PathVariable final Long callId
@@ -40,8 +40,8 @@ public interface CallAnalysisApi {
 
     @Operation(
             summary = "통화 분석 결과 조회",
-            description = "비동기로 생성된 LLM 분석 결과를 본인 화자 기준으로 조회한다."
-                    + " status에 따라 PROCESSING(아직 생성 중) / COMPLETED(mistakes/positives 포함) / FAILED 응답이 반환된다."
+            description = "본인 소유 분석의 mistakes/positives 를 포함한 전체 결과를 조회한다."
+                    + " 본인 소유가 아닌 analysisId 요청은 403."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -51,10 +51,10 @@ public interface CallAnalysisApi {
             )
     })
     @ResponseStatus(HttpStatus.OK)
-    @GetMapping("/calls/{callId}/analysis")
+    @GetMapping("/analyses/{analysisId}")
     ApiResponse<CallAnalysisResponse> getAnalysis(
             @AuthUser final Long userId,
-            @Parameter(description = "통화 ID", example = "42")
-            @PathVariable final Long callId
+            @Parameter(description = "분석 ID", example = "100")
+            @PathVariable final Long analysisId
     );
 }

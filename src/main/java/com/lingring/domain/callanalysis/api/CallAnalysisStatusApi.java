@@ -16,9 +16,9 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 public interface CallAnalysisStatusApi {
 
     @Operation(
-            summary = "통화 분석 상태 조회",
-            description = "본인 화자 기준의 분석 진행 상태(PROCESSING/COMPLETED/FAILED)만 가볍게 조회한다."
-                    + " 폴링용으로 사용한다."
+            summary = "분석 상태 조회",
+            description = "본인 소유 분석의 진행 상태(PROCESSING/COMPLETED/FAILED)만 가볍게 조회한다."
+                    + " 폴링용. 본인 소유가 아닌 analysisId 요청은 403."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -28,10 +28,10 @@ public interface CallAnalysisStatusApi {
             )
     })
     @ResponseStatus(HttpStatus.OK)
-    @GetMapping("/calls/{callId}/analysis/status")
+    @GetMapping("/analyses/{analysisId}/status")
     ApiResponse<CallAnalysisStatusResponse> getStatus(
             @AuthUser final Long userId,
-            @Parameter(description = "통화 ID", example = "42")
-            @PathVariable final Long callId
+            @Parameter(description = "분석 ID", example = "100")
+            @PathVariable final Long analysisId
     );
 }

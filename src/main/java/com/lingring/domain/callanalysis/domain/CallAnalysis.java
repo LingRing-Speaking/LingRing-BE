@@ -86,4 +86,8 @@ public class CallAnalysis extends BaseTimeEntity {
     public boolean isCompleted() {
         return status == CallAnalysisStatus.COMPLETED;
     }
+
+    public boolean isOwnedBy(@NonNull final Long requesterId) {
+        return this.userId.equals(requesterId);
+    }
 }

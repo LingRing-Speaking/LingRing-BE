@@ -24,7 +24,7 @@ import tools.jackson.databind.ObjectMapper;
 class CallAnalysisStatusControllerTest {
 
     private static final Long USER_ID = 1L;
-    private static final Long CALL_ID = 42L;
+    private static final Long ANALYSIS_ID = 100L;
 
     @Autowired
     private MockMvc mockMvc;
@@ -45,12 +45,12 @@ class CallAnalysisStatusControllerTest {
     void getStatus_returnsStatusOnly() throws Exception {
         // given
         AuthContext.set(USER_ID);
-        given(callAnalysisService.getStatus(eq(CALL_ID), eq(USER_ID)))
+        given(callAnalysisService.getStatus(eq(ANALYSIS_ID), eq(USER_ID)))
                 .willReturn(new CallAnalysisStatusResponse(CallAnalysisStatus.PROCESSING));
 
         // when
         final MockHttpServletResponse response = mockMvc.perform(
-                        get("/api/v1/calls/{callId}/analysis/status", CALL_ID))
+                        get("/api/v1/analyses/{analysisId}/status", ANALYSIS_ID))
                 .andReturn()
                 .getResponse();
 

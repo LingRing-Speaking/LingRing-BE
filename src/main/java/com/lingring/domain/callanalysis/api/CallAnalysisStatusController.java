@@ -14,10 +14,10 @@ public class CallAnalysisStatusController implements CallAnalysisStatusApi {
     private final CallAnalysisService callAnalysisService;
 
     @Override
-    public ApiResponse<CallAnalysisStatusResponse> getStatus(final Long userId, final Long callId) {
+    public ApiResponse<CallAnalysisStatusResponse> getStatus(final Long userId, final Long analysisId) {
         return ApiResponse.success(
                 HttpStatus.OK,
-                callAnalysisService.getStatus(callId, userId)
+                callAnalysisService.getStatus(analysisId, userId)
         );
     }
 }

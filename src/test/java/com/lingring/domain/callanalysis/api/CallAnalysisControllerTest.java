@@ -6,9 +6,9 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
-import com.lingring.domain.call.dto.response.CallTranscriptStartResponse;
 import com.lingring.domain.callanalysis.domain.CallAnalysisStatus;
 import com.lingring.domain.callanalysis.dto.response.CallAnalysisResponse;
+import com.lingring.domain.callanalysis.dto.response.CallAnalysisStartResponse;
 import com.lingring.domain.callanalysis.dto.response.MistakeItemResponse;
 import com.lingring.domain.callanalysis.dto.response.PositiveItemResponse;
 import com.lingring.domain.callanalysis.facade.CallAnalysisRequestFacade;
@@ -32,6 +32,7 @@ class CallAnalysisControllerTest {
 
     private static final Long USER_ID = 1L;
     private static final Long CALL_ID = 42L;
+    private static final Long ANALYSIS_ID = 100L;
 
     @Autowired
     private MockMvc mockMvc;
@@ -55,12 +56,12 @@ class CallAnalysisControllerTest {
     class RequestAnalysis {
 
         @Test
-        @DisplayName("분석 트리거 성공 시 202와 transcriptId를 반환한다")
-        void requestAnalysis_returns202() throws Exception {
+        @DisplayName("분석 트리거 성공 시 202와 본인 analysisId를 반환한다")
+        void requestAnalysis_returns202WithAnalysisId() throws Exception {
             // given
             AuthContext.set(USER_ID);
             given(callAnalysisRequestFacade.request(eq(CALL_ID), eq(USER_ID)))
-                    .willReturn(new CallTranscriptStartResponse(7L));
+                    .willReturn(new CallAnalysisStartResponse(ANALYSIS_ID));
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
@@ -71,12 +72,12 @@ class CallAnalysisControllerTest {
             // then
             assertThat(response.getStatus()).isEqualTo(202);
             final JsonNode data = objectMapper.readTree(response.getContentAsString()).get("data");
-            assertThat(data.get("transcriptId").asLong()).isEqualTo(7L);
+            assertThat(data.get("analysisId").asLong()).isEqualTo(ANALYSIS_ID);
         }
     }
 
     @Nested
-    @DisplayName("GET /api/v1/calls/{callId}/analysis")
+    @DisplayName("GET /api/v1/analyses/{analysisId}")
     class GetAnalysis {
 
         @Test
@@ -84,7 +85,7 @@ class CallAnalysisControllerTest {
         void getAnalysis_whenCompleted_returnsItems() throws Exception {
             // given
             AuthContext.set(USER_ID);
-            given(callAnalysisService.get(eq(CALL_ID), eq(USER_ID)))
+            given(callAnalysisService.get(eq(ANALYSIS_ID), eq(USER_ID)))
                     .willReturn(new CallAnalysisResponse(
                             CALL_ID,
                             USER_ID,
@@ -106,7 +107,7 @@ class CallAnalysisControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            get("/api/v1/calls/{callId}/analysis", CALL_ID))
+                            get("/api/v1/analyses/{analysisId}", ANALYSIS_ID))
                     .andReturn()
                     .getResponse();
 
@@ -126,7 +127,7 @@ class CallAnalysisControllerTest {
         void getAnalysis_whenProcessing_returnsEmptyArrays() throws Exception {
             // given
             AuthContext.set(USER_ID);
-            given(callAnalysisService.get(eq(CALL_ID), eq(USER_ID)))
+            given(callAnalysisService.get(eq(ANALYSIS_ID), eq(USER_ID)))
                     .willReturn(new CallAnalysisResponse(
                             CALL_ID,
                             USER_ID,
@@ -138,7 +139,7 @@ class CallAnalysisControllerTest {
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
-                            get("/api/v1/calls/{callId}/analysis", CALL_ID))
+                            get("/api/v1/analyses/{analysisId}", ANALYSIS_ID))
                     .andReturn()
                     .getResponse();
 
