@@ -11,6 +11,7 @@ import com.lingring.domain.call.domain.vo.TranscriptSegment;
 import com.lingring.domain.call.dto.response.CallTranscriptResponse;
 import com.lingring.domain.call.dto.response.CallTranscriptStartResponse;
 import com.lingring.domain.call.service.CallTranscriptService;
+import com.lingring.domain.callanalysis.facade.CallAnalysisRequestFacade;
 import com.lingring.global.auth.context.AuthContext;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
@@ -38,6 +39,9 @@ class CallTranscriptControllerTest {
     private ObjectMapper objectMapper;
 
     @MockitoBean
+    private CallAnalysisRequestFacade callAnalysisRequestFacade;
+
+    @MockitoBean
     private CallTranscriptService callTranscriptService;
 
     @AfterEach
@@ -54,7 +58,7 @@ class CallTranscriptControllerTest {
         void requestAnalysis_returns202() throws Exception {
             // given
             AuthContext.set(USER_ID);
-            given(callTranscriptService.requestAnalysis(eq(CALL_ID), eq(USER_ID)))
+            given(callAnalysisRequestFacade.request(eq(CALL_ID), eq(USER_ID)))
                     .willReturn(new CallTranscriptStartResponse(7L, CallTranscriptStatus.PROCESSING));
 
             // when
@@ -75,7 +79,7 @@ class CallTranscriptControllerTest {
         void requestAnalysis_whenAlreadyCompleted_returnsExisting() throws Exception {
             // given
             AuthContext.set(USER_ID);
-            given(callTranscriptService.requestAnalysis(eq(CALL_ID), eq(USER_ID)))
+            given(callAnalysisRequestFacade.request(eq(CALL_ID), eq(USER_ID)))
                     .willReturn(new CallTranscriptStartResponse(7L, CallTranscriptStatus.COMPLETED));
 
             // when

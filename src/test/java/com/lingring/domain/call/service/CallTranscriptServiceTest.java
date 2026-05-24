@@ -10,30 +10,24 @@ import com.lingring.domain.call.domain.Call;
 import com.lingring.domain.call.domain.CallRecording;
 import com.lingring.domain.call.domain.CallTranscript;
 import com.lingring.domain.call.domain.CallTranscriptStatus;
-import com.lingring.domain.call.domain.TranscriptionStarter;
 import com.lingring.domain.call.domain.vo.TranscriptContent;
 import com.lingring.domain.call.domain.vo.TranscriptSegment;
 import com.lingring.domain.call.dto.response.CallTranscriptResponse;
-import com.lingring.domain.call.dto.response.CallTranscriptStartResponse;
 import com.lingring.domain.call.exception.CallActiveException;
 import com.lingring.domain.call.exception.CallNotFoundException;
 import com.lingring.domain.call.exception.CallParticipantMismatchException;
 import com.lingring.domain.call.exception.CallRecordingsNotReadyException;
 import com.lingring.domain.call.exception.CallTranscriptNotFoundException;
+import com.lingring.domain.call.service.CallTranscriptService.StartTranscriptResult;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 
-@Import(CallTranscriptServiceTest.FakeTranscriptionStarterConfig.class)
 class CallTranscriptServiceTest extends ServiceIntegrationHelper {
 
     private static final LocalDateTime ENDED_AT = LocalDateTime.of(2026, 5, 20, 10, 0);
@@ -51,143 +45,98 @@ class CallTranscriptServiceTest extends ServiceIntegrationHelper {
     @Autowired
     private CallTranscriptRepository callTranscriptRepository;
 
-    @Autowired
-    private FakeTranscriptionStarter fakeTranscriptionStarter;
-
-    @BeforeEach
-    void clear() {
-        fakeTranscriptionStarter.reset();
-    }
-
-    @TestConfiguration
-    static class FakeTranscriptionStarterConfig {
-
-        @Bean
-        FakeTranscriptionStarter fakeTranscriptionStarter() {
-            return new FakeTranscriptionStarter();
-        }
-
-        @Bean
-        TranscriptionStarter transcriptionStarter(final FakeTranscriptionStarter fake) {
-            return fake;
-        }
-    }
-
     @Nested
-    @DisplayName("requestAnalysis: 분석 트리거")
-    class RequestAnalysis {
+    @DisplayName("startTranscript: transcript 생성 및 정보 반환")
+    class StartTranscript {
 
         @Test
-        @DisplayName("두 녹음이 모두 있으면 PROCESSING transcript를 생성하고 Lambda를 호출한다")
-        void requestAnalysis_whenBothRecordingsReady_createsProcessingAndInvokes() {
+        @DisplayName("두 녹음이 모두 있으면 freshlyCreated=true와 PROCESSING transcript를 반환한다")
+        void startTranscript_whenBothRecordingsReady_returnsFreshlyCreated() {
             // given
             final Call call = saveEndedCall(1L, 2L);
             saveRecording(call.getId(), 1L, "call-recordings/%d/1/abc".formatted(call.getId()));
             saveRecording(call.getId(), 2L, "call-recordings/%d/2/def".formatted(call.getId()));
 
             // when
-            final CallTranscriptStartResponse response =
-                    callTranscriptService.requestAnalysis(call.getId(), 1L);
+            final StartTranscriptResult result = callTranscriptService.startTranscript(call.getId(), 1L);
 
             // then
-            assertThat(response.status()).isEqualTo(CallTranscriptStatus.PROCESSING);
+            assertThat(result.freshlyCreated()).isTrue();
+            assertThat(result.transcript().getStatus()).isEqualTo(CallTranscriptStatus.PROCESSING);
+            assertThat(result.userAId()).isEqualTo(1L);
+            assertThat(result.userBId()).isEqualTo(2L);
+            assertThat(result.recordings()).extracting("userId").containsExactlyInAnyOrder(1L, 2L);
             assertThat(callTranscriptRepository.findByCallId(call.getId())).isPresent();
-            assertThat(fakeTranscriptionStarter.invocations()).hasSize(1);
-            assertThat(fakeTranscriptionStarter.invocations().get(0).callId()).isEqualTo(call.getId());
-            assertThat(fakeTranscriptionStarter.invocations().get(0).recordings())
-                    .extracting("userId")
-                    .containsExactlyInAnyOrder(1L, 2L);
         }
 
         @Test
-        @DisplayName("이미 PROCESSING 상태이면 기존 transcript 응답을 반환하고 Lambda는 재호출하지 않는다 (멱등)")
-        void requestAnalysis_whenAlreadyProcessing_returnsExistingAndDoesNotReinvoke() {
+        @DisplayName("이미 transcript가 존재하면 freshlyCreated=false와 기존 transcript를 반환한다 (멱등)")
+        void startTranscript_whenAlreadyExists_returnsExisting() {
             // given
             final Call call = saveEndedCall(1L, 2L);
             saveRecording(call.getId(), 1L, "call-recordings/%d/1/abc".formatted(call.getId()));
             saveRecording(call.getId(), 2L, "call-recordings/%d/2/def".formatted(call.getId()));
-            final CallTranscriptStartResponse first = callTranscriptService.requestAnalysis(call.getId(), 1L);
+            final StartTranscriptResult first = callTranscriptService.startTranscript(call.getId(), 1L);
 
             // when
-            final CallTranscriptStartResponse second = callTranscriptService.requestAnalysis(call.getId(), 2L);
+            final StartTranscriptResult second = callTranscriptService.startTranscript(call.getId(), 2L);
 
             // then
-            assertThat(second.transcriptId()).isEqualTo(first.transcriptId());
-            assertThat(second.status()).isEqualTo(CallTranscriptStatus.PROCESSING);
-            assertThat(fakeTranscriptionStarter.invocations()).hasSize(1);
-        }
-
-        @Test
-        @DisplayName("이미 COMPLETED 상태이면 기존 transcript 응답을 반환하고 Lambda는 호출하지 않는다")
-        void requestAnalysis_whenAlreadyCompleted_returnsExisting() {
-            // given
-            final Call call = saveEndedCall(1L, 2L);
-            saveRecording(call.getId(), 1L, "call-recordings/%d/1/abc".formatted(call.getId()));
-            saveRecording(call.getId(), 2L, "call-recordings/%d/2/def".formatted(call.getId()));
-            final CallTranscript completed = CallTranscript.startProcessing(call.getId());
-            completed.complete(new TranscriptContent(List.of(
-                    new TranscriptSegment(1L, 0.0, 1.0, "hello")
-            )));
-            callTranscriptRepository.save(completed);
-
-            // when
-            final CallTranscriptStartResponse response = callTranscriptService.requestAnalysis(call.getId(), 1L);
-
-            // then
-            assertThat(response.status()).isEqualTo(CallTranscriptStatus.COMPLETED);
-            assertThat(fakeTranscriptionStarter.invocations()).isEmpty();
+            assertThat(second.freshlyCreated()).isFalse();
+            assertThat(second.transcript().getId()).isEqualTo(first.transcript().getId());
+            assertThat(second.recordings()).isEmpty();
         }
 
         @Test
         @DisplayName("존재하지 않는 callId면 CallNotFoundException")
-        void requestAnalysis_whenCallMissing_throws() {
+        void startTranscript_whenCallMissing_throws() {
             // when & then
-            assertThatThrownBy(() -> callTranscriptService.requestAnalysis(9999L, 1L))
+            assertThatThrownBy(() -> callTranscriptService.startTranscript(9999L, 1L))
                     .isInstanceOf(CallNotFoundException.class);
         }
 
         @Test
         @DisplayName("통화 참여자가 아니면 CallParticipantMismatchException")
-        void requestAnalysis_whenNotParticipant_throws() {
+        void startTranscript_whenNotParticipant_throws() {
             // given
             final Call call = saveEndedCall(1L, 2L);
 
             // when & then
-            assertThatThrownBy(() -> callTranscriptService.requestAnalysis(call.getId(), 99L))
+            assertThatThrownBy(() -> callTranscriptService.startTranscript(call.getId(), 99L))
                     .isInstanceOf(CallParticipantMismatchException.class);
         }
 
         @Test
         @DisplayName("통화가 아직 활성 상태면 CallActiveException")
-        void requestAnalysis_whenCallActive_throws() {
+        void startTranscript_whenCallActive_throws() {
             // given
             final Call active = callRepository.save(Call.start(1L, 2L, UUID.randomUUID(), STARTED_AT));
 
             // when & then
-            assertThatThrownBy(() -> callTranscriptService.requestAnalysis(active.getId(), 1L))
+            assertThatThrownBy(() -> callTranscriptService.startTranscript(active.getId(), 1L))
                     .isInstanceOf(CallActiveException.class);
         }
 
         @Test
         @DisplayName("두 녹음이 모두 없으면 CallRecordingsNotReadyException")
-        void requestAnalysis_whenNoRecordings_throws() {
+        void startTranscript_whenNoRecordings_throws() {
             // given
             final Call call = saveEndedCall(1L, 2L);
 
             // when & then
-            assertThatThrownBy(() -> callTranscriptService.requestAnalysis(call.getId(), 1L))
+            assertThatThrownBy(() -> callTranscriptService.startTranscript(call.getId(), 1L))
                     .isInstanceOf(CallRecordingsNotReadyException.class);
         }
 
         @Test
         @DisplayName("한쪽 녹음만 있으면 CallRecordingsNotReadyException")
-        void requestAnalysis_whenOnlyOneRecording_throws() {
+        void startTranscript_whenOnlyOneRecording_throws() {
             // given
             final Call call = saveEndedCall(1L, 2L);
             saveRecording(call.getId(), 1L, "call-recordings/%d/1/abc".formatted(call.getId()));
 
             // when & then
-            assertThatThrownBy(() -> callTranscriptService.requestAnalysis(call.getId(), 1L))
+            assertThatThrownBy(() -> callTranscriptService.startTranscript(call.getId(), 1L))
                     .isInstanceOf(CallRecordingsNotReadyException.class);
         }
     }
@@ -292,12 +241,12 @@ class CallTranscriptServiceTest extends ServiceIntegrationHelper {
             transcript.complete(new TranscriptContent(initialSegments));
             callTranscriptRepository.save(transcript);
 
-            // when: 다른 segments로 다시 complete 호출
+            // when
             callTranscriptService.complete(call.getId(), List.of(
                     new TranscriptSegment(1L, 0.0, 1.0, "overwritten")
             ));
 
-            // then: 기존 content가 유지된다
+            // then
             final CallTranscript saved = callTranscriptRepository.findByCallId(call.getId()).orElseThrow();
             assertThat(saved.getContent().segments().get(0).text()).isEqualTo("initial");
         }
