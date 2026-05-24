@@ -8,7 +8,6 @@ import com.lingring.domain.call.dao.CallRepository;
 import com.lingring.domain.call.dao.CallTranscriptRepository;
 import com.lingring.domain.call.domain.Call;
 import com.lingring.domain.call.domain.CallRecording;
-import com.lingring.domain.call.domain.CallTranscriptStatus;
 import com.lingring.domain.call.dto.response.CallTranscriptStartResponse;
 import com.lingring.domain.call.exception.CallParticipantMismatchException;
 import com.lingring.domain.call.exception.CallRecordingsNotReadyException;
@@ -82,7 +81,7 @@ class CallAnalysisRequestFacadeTest extends ServiceIntegrationHelper {
         final CallTranscriptStartResponse response = callAnalysisRequestFacade.request(call.getId(), 1L);
 
         // then
-        assertThat(response.status()).isEqualTo(CallTranscriptStatus.PROCESSING);
+        assertThat(response.transcriptId()).isNotNull();
         assertThat(callTranscriptRepository.findByCallId(call.getId())).isPresent();
         assertThat(callAnalysisRepository.findByCallIdAndUserId(call.getId(), 1L))
                 .hasValueSatisfying(a -> assertThat(a.getStatus()).isEqualTo(CallAnalysisStatus.PROCESSING));

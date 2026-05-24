@@ -38,8 +38,14 @@ public class CallAnalysisCompletionFacade {
 
     private AnalysisResult toAnalysisResult(final UserAnalysisPart userAnalysis) {
         return new AnalysisResult(
-                new Mistakes(userAnalysis.mistakes().stream().map(this::toMistakeItem).toList()),
-                new Positives(userAnalysis.positives().stream().map(this::toPositiveItem).toList())
+                new Mistakes(userAnalysis.mistakes().stream()
+                        .map(this::toMistakeItem)
+                        .toList()
+                ),
+                new Positives(userAnalysis.positives().stream()
+                        .map(this::toPositiveItem)
+                        .toList()
+                )
         );
     }
 

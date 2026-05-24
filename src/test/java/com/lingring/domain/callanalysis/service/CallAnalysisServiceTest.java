@@ -13,6 +13,7 @@ import com.lingring.domain.callanalysis.domain.vo.Mistakes;
 import com.lingring.domain.callanalysis.domain.vo.PositiveItem;
 import com.lingring.domain.callanalysis.domain.vo.Positives;
 import com.lingring.domain.callanalysis.dto.response.CallAnalysisResponse;
+import com.lingring.domain.callanalysis.dto.response.CallAnalysisStatusResponse;
 import com.lingring.domain.callanalysis.exception.CallAnalysisNotFoundException;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.util.List;
@@ -136,6 +137,46 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
         void fail_whenMissing_doesNothing() {
             // when & then (no throw)
             callAnalysisService.fail(CALL_ID, USER_ID);
+        }
+    }
+
+    @Nested
+    @DisplayName("getStatus: 본인 분석 상태만 조회")
+    class GetStatus {
+
+        @Test
+        @DisplayName("PROCESSING 상태이면 PROCESSING을 담은 응답을 반환한다")
+        void getStatus_whenProcessing_returnsStatus() {
+            // given
+            callAnalysisService.startProcessing(CALL_ID, USER_ID);
+
+            // when
+            final CallAnalysisStatusResponse response = callAnalysisService.getStatus(CALL_ID, USER_ID);
+
+            // then
+            assertThat(response.status()).isEqualTo(CallAnalysisStatus.PROCESSING);
+        }
+
+        @Test
+        @DisplayName("COMPLETED 상태이면 COMPLETED를 담은 응답을 반환한다")
+        void getStatus_whenCompleted_returnsStatus() {
+            // given
+            callAnalysisService.startProcessing(CALL_ID, USER_ID);
+            callAnalysisService.complete(CALL_ID, USER_ID, sampleResult(), MODEL);
+
+            // when
+            final CallAnalysisStatusResponse response = callAnalysisService.getStatus(CALL_ID, USER_ID);
+
+            // then
+            assertThat(response.status()).isEqualTo(CallAnalysisStatus.COMPLETED);
+        }
+
+        @Test
+        @DisplayName("행이 없으면 CallAnalysisNotFoundException")
+        void getStatus_whenMissing_throws() {
+            // when & then
+            assertThatThrownBy(() -> callAnalysisService.getStatus(CALL_ID, USER_ID))
+                    .isInstanceOf(CallAnalysisNotFoundException.class);
         }
     }
 

@@ -9,7 +9,6 @@ import com.lingring.domain.call.domain.CallTranscript;
 import com.lingring.domain.call.domain.vo.RecordingReference;
 import com.lingring.domain.call.domain.vo.TranscriptContent;
 import com.lingring.domain.call.domain.vo.TranscriptSegment;
-import com.lingring.domain.call.dto.response.CallTranscriptResponse;
 import com.lingring.domain.call.exception.CallActiveException;
 import com.lingring.domain.call.exception.CallNotFoundException;
 import com.lingring.domain.call.exception.CallParticipantMismatchException;
@@ -42,16 +41,8 @@ public class CallTranscriptService {
         }
 
         final List<RecordingReference> references = collectRecordings(call);
-        final CallTranscript transcript = callTranscriptRepository.save(CallTranscript.startProcessing(callId));
+        final CallTranscript transcript = callTranscriptRepository.save(CallTranscript.create(callId));
         return StartTranscriptResult.created(transcript, call.getUserAId(), call.getUserBId(), references);
-    }
-
-    @Transactional(readOnly = true)
-    public CallTranscriptResponse getTranscript(final Long callId, final Long userId) {
-        requireParticipantCall(callId, userId);
-        final CallTranscript transcript = callTranscriptRepository.findByCallId(callId)
-                .orElseThrow(() -> new CallTranscriptNotFoundException(callId));
-        return CallTranscriptResponse.from(transcript);
     }
 
     @Transactional

@@ -9,10 +9,8 @@ import com.lingring.domain.call.dao.CallTranscriptRepository;
 import com.lingring.domain.call.domain.Call;
 import com.lingring.domain.call.domain.CallRecording;
 import com.lingring.domain.call.domain.CallTranscript;
-import com.lingring.domain.call.domain.CallTranscriptStatus;
 import com.lingring.domain.call.domain.vo.TranscriptContent;
 import com.lingring.domain.call.domain.vo.TranscriptSegment;
-import com.lingring.domain.call.dto.response.CallTranscriptResponse;
 import com.lingring.domain.call.exception.CallActiveException;
 import com.lingring.domain.call.exception.CallNotFoundException;
 import com.lingring.domain.call.exception.CallParticipantMismatchException;
@@ -50,7 +48,7 @@ class CallTranscriptServiceTest extends ServiceIntegrationHelper {
     class StartTranscript {
 
         @Test
-        @DisplayName("두 녹음이 모두 있으면 freshlyCreated=true와 PROCESSING transcript를 반환한다")
+        @DisplayName("두 녹음이 모두 있으면 freshlyCreated=true와 신규 transcript를 반환한다")
         void startTranscript_whenBothRecordingsReady_returnsFreshlyCreated() {
             // given
             final Call call = saveEndedCall(1L, 2L);
@@ -62,7 +60,7 @@ class CallTranscriptServiceTest extends ServiceIntegrationHelper {
 
             // then
             assertThat(result.freshlyCreated()).isTrue();
-            assertThat(result.transcript().getStatus()).isEqualTo(CallTranscriptStatus.PROCESSING);
+            assertThat(result.transcript().getContent()).isNull();
             assertThat(result.userAId()).isEqualTo(1L);
             assertThat(result.userBId()).isEqualTo(2L);
             assertThat(result.recordings()).extracting("userId").containsExactlyInAnyOrder(1L, 2L);
@@ -142,79 +140,15 @@ class CallTranscriptServiceTest extends ServiceIntegrationHelper {
     }
 
     @Nested
-    @DisplayName("getTranscript: 조회")
-    class GetTranscript {
-
-        @Test
-        @DisplayName("PROCESSING 상태에서는 status만 반환하고 segments는 null이다")
-        void getTranscript_whenProcessing_returnsStatusOnly() {
-            // given
-            final Call call = saveEndedCall(1L, 2L);
-            callTranscriptRepository.save(CallTranscript.startProcessing(call.getId()));
-
-            // when
-            final CallTranscriptResponse response = callTranscriptService.getTranscript(call.getId(), 1L);
-
-            // then
-            assertThat(response.status()).isEqualTo(CallTranscriptStatus.PROCESSING);
-            assertThat(response.segments()).isNull();
-        }
-
-        @Test
-        @DisplayName("COMPLETED 상태에서는 segments를 포함하여 반환한다")
-        void getTranscript_whenCompleted_returnsSegments() {
-            // given
-            final Call call = saveEndedCall(1L, 2L);
-            final CallTranscript transcript = CallTranscript.startProcessing(call.getId());
-            transcript.complete(new TranscriptContent(List.of(
-                    new TranscriptSegment(1L, 0.0, 2.1, "안녕"),
-                    new TranscriptSegment(2L, 2.5, 4.8, "오 안녕")
-            )));
-            callTranscriptRepository.save(transcript);
-
-            // when
-            final CallTranscriptResponse response = callTranscriptService.getTranscript(call.getId(), 1L);
-
-            // then
-            assertThat(response.status()).isEqualTo(CallTranscriptStatus.COMPLETED);
-            assertThat(response.segments()).hasSize(2);
-            assertThat(response.segments().get(0).text()).isEqualTo("안녕");
-        }
-
-        @Test
-        @DisplayName("transcript가 없으면 CallTranscriptNotFoundException")
-        void getTranscript_whenMissing_throws() {
-            // given
-            final Call call = saveEndedCall(1L, 2L);
-
-            // when & then
-            assertThatThrownBy(() -> callTranscriptService.getTranscript(call.getId(), 1L))
-                    .isInstanceOf(CallTranscriptNotFoundException.class);
-        }
-
-        @Test
-        @DisplayName("통화 참여자가 아니면 CallParticipantMismatchException")
-        void getTranscript_whenNotParticipant_throws() {
-            // given
-            final Call call = saveEndedCall(1L, 2L);
-            callTranscriptRepository.save(CallTranscript.startProcessing(call.getId()));
-
-            // when & then
-            assertThatThrownBy(() -> callTranscriptService.getTranscript(call.getId(), 99L))
-                    .isInstanceOf(CallParticipantMismatchException.class);
-        }
-    }
-
-    @Nested
     @DisplayName("complete: SQS 결과 수신 후 영속화")
     class Complete {
 
         @Test
-        @DisplayName("PROCESSING 상태에서 COMPLETED로 전이되고 content가 채워진다")
-        void complete_whenProcessing_transitionsToCompleted() {
+        @DisplayName("transcript에 content가 비어있으면 segments로 채운다")
+        void complete_whenEmpty_fillsContent() {
             // given
             final Call call = saveEndedCall(1L, 2L);
-            callTranscriptRepository.save(CallTranscript.startProcessing(call.getId()));
+            callTranscriptRepository.save(CallTranscript.create(call.getId()));
             final List<TranscriptSegment> segments = List.of(
                     new TranscriptSegment(1L, 0.0, 2.1, "안녕"),
                     new TranscriptSegment(2L, 2.5, 4.8, "오 안녕")
@@ -225,16 +159,15 @@ class CallTranscriptServiceTest extends ServiceIntegrationHelper {
 
             // then
             final CallTranscript saved = callTranscriptRepository.findByCallId(call.getId()).orElseThrow();
-            assertThat(saved.getStatus()).isEqualTo(CallTranscriptStatus.COMPLETED);
             assertThat(saved.getContent().segments()).hasSize(2);
         }
 
         @Test
-        @DisplayName("이미 COMPLETED 상태에서 다시 호출하면 무시된다 (멱등)")
+        @DisplayName("이미 content가 채워져 있으면 다시 호출해도 덮어쓰지 않는다 (멱등)")
         void complete_whenAlreadyCompleted_isIdempotent() {
             // given
             final Call call = saveEndedCall(1L, 2L);
-            final CallTranscript transcript = CallTranscript.startProcessing(call.getId());
+            final CallTranscript transcript = CallTranscript.create(call.getId());
             final List<TranscriptSegment> initialSegments = List.of(
                     new TranscriptSegment(1L, 0.0, 1.0, "initial")
             );

@@ -4,6 +4,7 @@ import com.lingring.domain.callanalysis.dao.CallAnalysisRepository;
 import com.lingring.domain.callanalysis.domain.CallAnalysis;
 import com.lingring.domain.callanalysis.domain.vo.AnalysisResult;
 import com.lingring.domain.callanalysis.dto.response.CallAnalysisResponse;
+import com.lingring.domain.callanalysis.dto.response.CallAnalysisStatusResponse;
 import com.lingring.domain.callanalysis.exception.CallAnalysisNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -46,5 +47,12 @@ public class CallAnalysisService {
         final CallAnalysis analysis = callAnalysisRepository.findByCallIdAndUserId(callId, userId)
                 .orElseThrow(() -> new CallAnalysisNotFoundException(callId, userId));
         return CallAnalysisResponse.from(analysis);
+    }
+
+    @Transactional(readOnly = true)
+    public CallAnalysisStatusResponse getStatus(final Long callId, final Long userId) {
+        final CallAnalysis analysis = callAnalysisRepository.findByCallIdAndUserId(callId, userId)
+                .orElseThrow(() -> new CallAnalysisNotFoundException(callId, userId));
+        return new CallAnalysisStatusResponse(analysis.getStatus());
     }
 }

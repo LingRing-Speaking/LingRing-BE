@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.lingring.domain.call.dao.CallTranscriptRepository;
 import com.lingring.domain.call.domain.CallTranscript;
-import com.lingring.domain.call.domain.CallTranscriptStatus;
 import com.lingring.domain.callanalysis.dao.CallAnalysisRepository;
 import com.lingring.domain.callanalysis.domain.CallAnalysis;
 import com.lingring.domain.callanalysis.domain.CallAnalysisStatus;
@@ -37,10 +36,10 @@ class CallAnalysisCompletionFacadeTest extends ServiceIntegrationHelper {
     private CallAnalysisRepository callAnalysisRepository;
 
     @Test
-    @DisplayName("transcript와 두 사용자 분석을 모두 COMPLETED로 전이시킨다")
+    @DisplayName("transcript에 segments를 채우고 두 사용자 분석을 COMPLETED로 전이시킨다")
     void complete_marksAllAsCompleted() {
         // given
-        callTranscriptRepository.save(CallTranscript.startProcessing(CALL_ID));
+        callTranscriptRepository.save(CallTranscript.create(CALL_ID));
         callAnalysisRepository.save(CallAnalysis.processing(CALL_ID, USER_A));
         callAnalysisRepository.save(CallAnalysis.processing(CALL_ID, USER_B));
 
@@ -80,7 +79,6 @@ class CallAnalysisCompletionFacadeTest extends ServiceIntegrationHelper {
 
         // then
         final CallTranscript transcript = callTranscriptRepository.findByCallId(CALL_ID).orElseThrow();
-        assertThat(transcript.getStatus()).isEqualTo(CallTranscriptStatus.COMPLETED);
         assertThat(transcript.getContent().segments()).hasSize(2);
 
         final CallAnalysis a = callAnalysisRepository.findByCallIdAndUserId(CALL_ID, USER_A).orElseThrow();
