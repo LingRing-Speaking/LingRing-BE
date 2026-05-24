@@ -9,6 +9,7 @@ import com.lingring.domain.call.dto.response.CallsResponse;
 import com.lingring.domain.call.dto.response.CallSummaryResponse;
 import com.lingring.domain.call.dto.response.PartnerResponse;
 import com.lingring.domain.call.facade.CallHistoryFacade;
+import com.lingring.domain.callanalysis.dto.response.CallAnalysisStatusView;
 import com.lingring.global.auth.context.AuthContext;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -48,7 +49,7 @@ class CallControllerTest {
     class GetAll {
 
         @Test
-        @DisplayName("page/size를 명시하면 200 응답과 items + hasNext + analysisId를 반환한다")
+        @DisplayName("page/size를 명시하면 200 응답과 items + hasNext + analysisId + analysisStatus를 반환한다")
         void getAll_whenWithParams_returns200WithItemsAndHasNext() throws Exception {
             // given
             final Long userId = 1L;
@@ -64,7 +65,8 @@ class CallControllerTest {
                                             new PartnerResponse(7L, "Sophie", "https://cdn.example.com/p/sophie.png"),
                                             startedAt,
                                             312,
-                                            777L
+                                            777L,
+                                            CallAnalysisStatusView.COMPLETED
                                     )
                             ),
                             true
@@ -95,12 +97,13 @@ class CallControllerTest {
             assertThat(first.get("startedAt").asString()).isEqualTo("2026-04-29T19:30:00+09:00");
             assertThat(first.get("durationSec").asInt()).isEqualTo(312);
             assertThat(first.get("analysisId").asLong()).isEqualTo(777L);
+            assertThat(first.get("analysisStatus").asString()).isEqualTo("COMPLETED");
             assertThat(data.get("hasNext").asBoolean()).isTrue();
         }
 
         @Test
-        @DisplayName("분석 요청 안 한 통화는 analysisId가 null로 반환된다")
-        void getAll_whenNotRequested_returnsNullAnalysisId() throws Exception {
+        @DisplayName("분석 요청 안 한 통화는 analysisId=null, analysisStatus=READY 로 반환된다")
+        void getAll_whenNotRequested_returnsReady() throws Exception {
             // given
             final Long userId = 1L;
             AuthContext.set(userId);
@@ -115,7 +118,8 @@ class CallControllerTest {
                                             new PartnerResponse(7L, "Sophie", null),
                                             startedAt,
                                             120,
-                                            null
+                                            null,
+                                            CallAnalysisStatusView.READY
                                     )
                             ),
                             false
@@ -132,6 +136,7 @@ class CallControllerTest {
             assertThat(response.getStatus()).isEqualTo(200);
             final JsonNode data = objectMapper.readTree(response.getContentAsString()).get("data");
             assertThat(data.get("items").get(0).get("analysisId").isNull()).isTrue();
+            assertThat(data.get("items").get(0).get("analysisStatus").asString()).isEqualTo("READY");
         }
 
         @Test

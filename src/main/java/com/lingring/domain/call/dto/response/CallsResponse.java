@@ -1,6 +1,7 @@
 package com.lingring.domain.call.dto.response;
 
 import com.lingring.domain.call.dao.dto.CallSummaryProjection;
+import com.lingring.domain.callanalysis.service.CallAnalysisSummary;
 import java.util.List;
 import java.util.Map;
 import org.springframework.data.domain.Slice;
@@ -12,10 +13,10 @@ public record CallsResponse(
 
     public static CallsResponse from(
             final Slice<CallSummaryProjection> slice,
-            final Map<Long, Long> analysisIdByCallId
+            final Map<Long, CallAnalysisSummary> analysisSummaryByCallId
     ) {
         final List<CallSummaryResponse> items = slice.getContent().stream()
-                .map(p -> CallSummaryResponse.from(p, analysisIdByCallId.get(p.getId())))
+                .map(p -> CallSummaryResponse.from(p, analysisSummaryByCallId.get(p.getId())))
                 .toList();
         return new CallsResponse(items, slice.hasNext());
     }

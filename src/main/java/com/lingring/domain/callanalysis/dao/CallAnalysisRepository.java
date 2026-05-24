@@ -1,6 +1,6 @@
 package com.lingring.domain.callanalysis.dao;
 
-import com.lingring.domain.callanalysis.dao.dto.CallAnalysisIdProjection;
+import com.lingring.domain.callanalysis.dao.dto.CallAnalysisSummaryProjection;
 import com.lingring.domain.callanalysis.domain.CallAnalysis;
 import java.util.Collection;
 import java.util.List;
@@ -17,13 +17,14 @@ public interface CallAnalysisRepository extends JpaRepository<CallAnalysis, Long
 
     @Query("""
             SELECT ca.callId AS callId,
-                   ca.id     AS analysisId
+                   ca.id     AS analysisId,
+                   ca.status AS status
             FROM CallAnalysis ca
             WHERE ca.userId = :userId
               AND ca.callId IN :callIds
               AND ca.requested = true
             """)
-    List<CallAnalysisIdProjection> findRequestedAnalysisIds(
+    List<CallAnalysisSummaryProjection> findRequestedAnalysisSummaries(
             @Param("userId") Long userId,
             @Param("callIds") Collection<Long> callIds
     );

@@ -1,7 +1,7 @@
 package com.lingring.domain.callanalysis.service;
 
 import com.lingring.domain.callanalysis.dao.CallAnalysisRepository;
-import com.lingring.domain.callanalysis.dao.dto.CallAnalysisIdProjection;
+import com.lingring.domain.callanalysis.dao.dto.CallAnalysisSummaryProjection;
 import com.lingring.domain.callanalysis.domain.CallAnalysis;
 import com.lingring.domain.callanalysis.domain.vo.AnalysisResult;
 import com.lingring.domain.callanalysis.dto.response.CallAnalysisResponse;
@@ -66,17 +66,17 @@ public class CallAnalysisService {
     }
 
     @Transactional(readOnly = true)
-    public Map<Long, Long> findRequestedAnalysisIdsByCallIds(
+    public Map<Long, CallAnalysisSummary> findRequestedAnalysisSummariesByCallIds(
             final Long userId,
             final Collection<Long> callIds
     ) {
         if (callIds.isEmpty()) {
             return Map.of();
         }
-        return callAnalysisRepository.findRequestedAnalysisIds(userId, callIds).stream()
+        return callAnalysisRepository.findRequestedAnalysisSummaries(userId, callIds).stream()
                 .collect(Collectors.toMap(
-                        CallAnalysisIdProjection::getCallId,
-                        CallAnalysisIdProjection::getAnalysisId
+                        CallAnalysisSummaryProjection::getCallId,
+                        p -> new CallAnalysisSummary(p.getAnalysisId(), p.getStatus())
                 ));
     }
 

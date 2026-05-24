@@ -8,6 +8,13 @@ import com.lingring.domain.call.dto.response.CallSummaryResponse;
 import com.lingring.domain.call.dto.response.CallsResponse;
 import com.lingring.domain.call.service.CallService;
 import com.lingring.domain.callanalysis.domain.CallAnalysis;
+import com.lingring.domain.callanalysis.domain.vo.AnalysisResult;
+import com.lingring.domain.callanalysis.domain.vo.FeedbackTag;
+import com.lingring.domain.callanalysis.domain.vo.MistakeItem;
+import com.lingring.domain.callanalysis.domain.vo.Mistakes;
+import com.lingring.domain.callanalysis.domain.vo.PositiveItem;
+import com.lingring.domain.callanalysis.domain.vo.Positives;
+import com.lingring.domain.callanalysis.dto.response.CallAnalysisStatusView;
 import com.lingring.domain.callanalysis.service.CallAnalysisService;
 import com.lingring.domain.user.dao.UserRepository;
 import com.lingring.domain.user.domain.Provider;
@@ -15,6 +22,7 @@ import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -40,8 +48,10 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
     @Autowired
     private UserRepository userRepository;
 
+    private static final String MODEL = "gemini-2.5-flash";
+
     @Nested
-    @DisplayName("getCallsByUserId: 통화 목록 (analysisId enrichment 포함)")
+    @DisplayName("getCallsByUserId: 통화 목록 (analysis enrichment 포함)")
     class GetCallsByUserId {
 
         @Test
@@ -207,12 +217,12 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
     }
 
     @Nested
-    @DisplayName("analysisId enrichment")
-    class AnalysisIdEnrichment {
+    @DisplayName("analysis enrichment (analysisId + analysisStatus)")
+    class AnalysisEnrichment {
 
         @Test
-        @DisplayName("분석 요청 안 한 통화는 analysisId가 null")
-        void enrichment_whenNotRequested_returnsNull() {
+        @DisplayName("분석 요청 안 한 통화는 analysisId=null, analysisStatus=READY")
+        void enrichment_whenNotRequested_returnsReady() {
             // given
             final Long me = saveUser("me").getId();
             final Long partner = saveUser("Sophie").getId();
@@ -224,11 +234,12 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             // then
             assertThat(response.items()).hasSize(1);
             assertThat(response.items().get(0).analysisId()).isNull();
+            assertThat(response.items().get(0).analysisStatus()).isEqualTo(CallAnalysisStatusView.READY);
         }
 
         @Test
-        @DisplayName("내가 직접 requestForUser 한 통화는 본인 analysisId가 채워진다")
-        void enrichment_whenSelfRequested_returnsAnalysisId() {
+        @DisplayName("내가 직접 requestForUser 한 직후 통화는 analysisId 채워지고 analysisStatus=PROCESSING")
+        void enrichment_whenSelfRequested_returnsProcessing() {
             // given
             final Long me = saveUser("me").getId();
             final Long partner = saveUser("Sophie").getId();
@@ -241,27 +252,50 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             // then
             assertThat(response.items()).hasSize(1);
             assertThat(response.items().get(0).analysisId()).isEqualTo(mine.getId());
+            assertThat(response.items().get(0).analysisStatus()).isEqualTo(CallAnalysisStatusView.PROCESSING);
         }
 
         @Test
-        @DisplayName("상대만 requestForUser 했고 본인은 ensureExistsForUser만 된 통화는 analysisId가 null")
-        void enrichment_whenOnlyPeerRequested_returnsNullForSelf() {
-            // given: 상대가 트리거. 본인 행은 placeholder(requested=false)로 생성됨
+        @DisplayName("본인 분석이 완료되면 analysisStatus=COMPLETED")
+        void enrichment_whenCompleted_returnsCompleted() {
+            // given
             final Long me = saveUser("me").getId();
             final Long partner = saveUser("Sophie").getId();
             final Call call = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(5));
-            callAnalysisService.requestForUser(call.getId(), partner);
-            callAnalysisService.ensureExistsForUser(call.getId(), me);
+            final CallAnalysis mine = callAnalysisService.requestForUser(call.getId(), me);
+            callAnalysisService.complete(call.getId(), me, sampleResult(), MODEL);
 
             // when
             final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
 
             // then
-            assertThat(response.items().get(0).analysisId()).isNull();
+            assertThat(response.items()).hasSize(1);
+            assertThat(response.items().get(0).analysisId()).isEqualTo(mine.getId());
+            assertThat(response.items().get(0).analysisStatus()).isEqualTo(CallAnalysisStatusView.COMPLETED);
         }
 
         @Test
-        @DisplayName("여러 통화가 섞여 있을 때 각 통화의 본인 analysisId 매핑이 올바르다 (N+1 없이 한 쿼리로 enrichment)")
+        @DisplayName("상대만 requestForUser 한 통화는 본인 시점에 analysisStatus=READY (분석이 실제로 완료됐어도 격리됨)")
+        void enrichment_whenOnlyPeerRequestedAndCompleted_returnsReadyForSelf() {
+            // given: 상대만 트리거, 분석이 양쪽 다 완료된 상황
+            final Long me = saveUser("me").getId();
+            final Long partner = saveUser("Sophie").getId();
+            final Call call = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(5));
+            callAnalysisService.requestForUser(call.getId(), partner);
+            callAnalysisService.ensureExistsForUser(call.getId(), me);
+            callAnalysisService.complete(call.getId(), partner, sampleResult(), MODEL);
+            callAnalysisService.complete(call.getId(), me, sampleResult(), MODEL);
+
+            // when
+            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+
+            // then: 본인이 요청 안 했으므로 READY
+            assertThat(response.items().get(0).analysisId()).isNull();
+            assertThat(response.items().get(0).analysisStatus()).isEqualTo(CallAnalysisStatusView.READY);
+        }
+
+        @Test
+        @DisplayName("여러 통화가 섞여 있을 때 각 통화의 본인 analysisId/Status 매핑이 올바르다")
         void enrichment_acrossMultipleCalls_mapsCorrectly() {
             // given
             final Long me = saveUser("me").getId();
@@ -270,6 +304,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             final Call c2 = saveEndedCall(me, partner, FIXED_NOW.minusHours(2), FIXED_NOW.minusHours(2).plusMinutes(2));
             final Call c3 = saveEndedCall(me, partner, FIXED_NOW.minusHours(1), FIXED_NOW.minusHours(1).plusMinutes(2));
             final CallAnalysis a1 = callAnalysisService.requestForUser(c1.getId(), me);
+            callAnalysisService.complete(c1.getId(), me, sampleResult(), MODEL);
             // c2 — 본인 요청 안 함
             callAnalysisService.ensureExistsForUser(c2.getId(), me);
             final CallAnalysis a3 = callAnalysisService.requestForUser(c3.getId(), me);
@@ -281,11 +316,31 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             assertThat(response.items()).hasSize(3);
             assertThat(response.items().get(0).id()).isEqualTo(c3.getId());
             assertThat(response.items().get(0).analysisId()).isEqualTo(a3.getId());
+            assertThat(response.items().get(0).analysisStatus()).isEqualTo(CallAnalysisStatusView.PROCESSING);
             assertThat(response.items().get(1).id()).isEqualTo(c2.getId());
             assertThat(response.items().get(1).analysisId()).isNull();
+            assertThat(response.items().get(1).analysisStatus()).isEqualTo(CallAnalysisStatusView.READY);
             assertThat(response.items().get(2).id()).isEqualTo(c1.getId());
             assertThat(response.items().get(2).analysisId()).isEqualTo(a1.getId());
+            assertThat(response.items().get(2).analysisStatus()).isEqualTo(CallAnalysisStatusView.COMPLETED);
         }
+    }
+
+    private AnalysisResult sampleResult() {
+        return new AnalysisResult(
+                new Mistakes(List.of(new MistakeItem(
+                        FeedbackTag.GRAMMAR,
+                        "I goes",
+                        "I go",
+                        "1인칭 주어",
+                        "나는 간다"
+                ))),
+                new Positives(List.of(new PositiveItem(
+                        "Nice greeting",
+                        "Hello",
+                        "안녕"
+                )))
+        );
     }
 
     private User saveUser(final String name) {

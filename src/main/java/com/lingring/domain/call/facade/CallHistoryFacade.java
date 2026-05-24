@@ -4,6 +4,7 @@ import com.lingring.domain.call.dao.dto.CallSummaryProjection;
 import com.lingring.domain.call.dto.response.CallsResponse;
 import com.lingring.domain.call.service.CallService;
 import com.lingring.domain.callanalysis.service.CallAnalysisService;
+import com.lingring.domain.callanalysis.service.CallAnalysisSummary;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +25,8 @@ public class CallHistoryFacade {
         final List<Long> callIds = slice.getContent().stream()
                 .map(CallSummaryProjection::getId)
                 .toList();
-        final Map<Long, Long> analysisIdByCallId =
-                callAnalysisService.findRequestedAnalysisIdsByCallIds(userId, callIds);
-        return CallsResponse.from(slice, analysisIdByCallId);
+        final Map<Long, CallAnalysisSummary> analysisSummaryByCallId =
+                callAnalysisService.findRequestedAnalysisSummariesByCallIds(userId, callIds);
+        return CallsResponse.from(slice, analysisSummaryByCallId);
     }
 }

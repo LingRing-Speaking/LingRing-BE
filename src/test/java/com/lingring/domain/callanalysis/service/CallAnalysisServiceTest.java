@@ -286,32 +286,52 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
     }
 
     @Nested
-    @DisplayName("findRequestedAnalysisIdsByCallIds: 통화 목록 enrichment 용 일괄 조회")
-    class FindRequestedAnalysisIdsByCallIds {
+    @DisplayName("findRequestedAnalysisSummariesByCallIds: 통화 목록 enrichment 용 일괄 조회")
+    class FindRequestedAnalysisSummariesByCallIds {
 
         @Test
-        @DisplayName("requested=true 인 본인 행만 callId → analysisId 매핑으로 반환한다")
-        void findRequestedAnalysisIdsByCallIds_returnsOnlyRequestedOwnRows() {
+        @DisplayName("requested=true 인 본인 행만 callId → (analysisId, status) 매핑으로 반환한다")
+        void findRequestedAnalysisSummariesByCallIds_returnsOnlyRequestedOwnRows() {
             // given
             final CallAnalysis a1 = callAnalysisService.requestForUser(101L, USER_ID);   // mine, requested
             callAnalysisService.ensureExistsForUser(102L, USER_ID);                       // mine, NOT requested
             callAnalysisService.requestForUser(101L, OTHER_USER_ID);                      // other user — should be excluded
 
             // when
-            final Map<Long, Long> result = callAnalysisService.findRequestedAnalysisIdsByCallIds(
-                    USER_ID, List.of(101L, 102L, 999L));
+            final Map<Long, CallAnalysisSummary> result =
+                    callAnalysisService.findRequestedAnalysisSummariesByCallIds(
+                            USER_ID, List.of(101L, 102L, 999L));
 
             // then
             assertThat(result).hasSize(1);
-            assertThat(result.get(101L)).isEqualTo(a1.getId());
+            assertThat(result.get(101L).analysisId()).isEqualTo(a1.getId());
+            assertThat(result.get(101L).status()).isEqualTo(CallAnalysisStatus.PROCESSING);
+        }
+
+        @Test
+        @DisplayName("분석이 완료되면 status 가 COMPLETED 로 반환된다")
+        void findRequestedAnalysisSummariesByCallIds_reflectsCompletedStatus() {
+            // given
+            final CallAnalysis a1 = callAnalysisService.requestForUser(101L, USER_ID);
+            callAnalysisService.complete(101L, USER_ID, sampleResult(), MODEL);
+
+            // when
+            final Map<Long, CallAnalysisSummary> result =
+                    callAnalysisService.findRequestedAnalysisSummariesByCallIds(
+                            USER_ID, List.of(101L));
+
+            // then
+            assertThat(result.get(101L).analysisId()).isEqualTo(a1.getId());
+            assertThat(result.get(101L).status()).isEqualTo(CallAnalysisStatus.COMPLETED);
         }
 
         @Test
         @DisplayName("callIds 가 비어있으면 빈 Map 을 반환한다")
-        void findRequestedAnalysisIdsByCallIds_whenEmptyCallIds_returnsEmpty() {
+        void findRequestedAnalysisSummariesByCallIds_whenEmptyCallIds_returnsEmpty() {
             // when
-            final Map<Long, Long> result = callAnalysisService.findRequestedAnalysisIdsByCallIds(
-                    USER_ID, List.of());
+            final Map<Long, CallAnalysisSummary> result =
+                    callAnalysisService.findRequestedAnalysisSummariesByCallIds(
+                            USER_ID, List.of());
 
             // then
             assertThat(result).isEmpty();
