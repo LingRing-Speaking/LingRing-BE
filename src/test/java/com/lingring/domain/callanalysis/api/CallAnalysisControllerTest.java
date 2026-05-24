@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.lingring.domain.callanalysis.domain.CallAnalysisStatus;
 import com.lingring.domain.callanalysis.dto.response.CallAnalysisResponse;
 import com.lingring.domain.callanalysis.dto.response.CallAnalysisStartResponse;
+import com.lingring.domain.callanalysis.dto.response.CallAnalysisStatusResponse;
 import com.lingring.domain.callanalysis.dto.response.MistakeItemResponse;
 import com.lingring.domain.callanalysis.dto.response.PositiveItemResponse;
 import com.lingring.domain.callanalysis.facade.CallAnalysisRequestFacade;
@@ -149,6 +150,31 @@ class CallAnalysisControllerTest {
             assertThat(data.get("status").asText()).isEqualTo("PROCESSING");
             assertThat(data.get("mistakes").size()).isEqualTo(0);
             assertThat(data.get("positives").size()).isEqualTo(0);
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/analyses/{analysisId}/status")
+    class GetStatus {
+
+        @Test
+        @DisplayName("본인 분석의 status만 200으로 반환한다")
+        void getStatus_returnsStatusOnly() throws Exception {
+            // given
+            AuthContext.set(USER_ID);
+            given(callAnalysisService.getStatus(eq(ANALYSIS_ID), eq(USER_ID)))
+                    .willReturn(new CallAnalysisStatusResponse(CallAnalysisStatus.PROCESSING));
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(
+                            get("/api/v1/analyses/{analysisId}/status", ANALYSIS_ID))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            assertThat(response.getStatus()).isEqualTo(200);
+            final JsonNode data = objectMapper.readTree(response.getContentAsString()).get("data");
+            assertThat(data.get("status").asText()).isEqualTo("PROCESSING");
         }
     }
 }

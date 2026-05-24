@@ -2,6 +2,7 @@ package com.lingring.domain.callanalysis.api;
 
 import com.lingring.domain.callanalysis.dto.response.CallAnalysisResponse;
 import com.lingring.domain.callanalysis.dto.response.CallAnalysisStartResponse;
+import com.lingring.domain.callanalysis.dto.response.CallAnalysisStatusResponse;
 import com.lingring.domain.callanalysis.facade.CallAnalysisRequestFacade;
 import com.lingring.domain.callanalysis.service.CallAnalysisService;
 import com.lingring.global.common.response.ApiResponse;
@@ -32,6 +33,14 @@ public class CallAnalysisController implements CallAnalysisApi {
         return ApiResponse.success(
                 HttpStatus.OK,
                 callAnalysisService.get(analysisId, userId)
+        );
+    }
+
+    @Override
+    public ApiResponse<CallAnalysisStatusResponse> getStatus(final Long userId, final Long analysisId) {
+        return ApiResponse.success(
+                HttpStatus.OK,
+                callAnalysisService.getStatus(analysisId, userId)
         );
     }
 }
