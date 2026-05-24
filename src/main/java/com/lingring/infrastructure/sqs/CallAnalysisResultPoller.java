@@ -1,6 +1,6 @@
 package com.lingring.infrastructure.sqs;
 
-import com.lingring.domain.call.service.CallTranscriptService;
+import com.lingring.domain.callanalysis.facade.CallAnalysisCompletionFacade;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -15,14 +15,14 @@ import tools.jackson.databind.ObjectMapper;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class CallTranscriptResultPoller {
+public class CallAnalysisResultPoller {
 
     private static final int MAX_MESSAGES = 10;
     private static final int LONG_POLLING_WAIT_SECONDS = 20;
 
     private final SqsClient sqsClient;
     private final SqsProperties sqsProperties;
-    private final CallTranscriptService callTranscriptService;
+    private final CallAnalysisCompletionFacade callAnalysisCompletionFacade;
     private final ObjectMapper objectMapper;
 
     @Scheduled(
@@ -33,7 +33,7 @@ public class CallTranscriptResultPoller {
         final ReceiveMessageResponse response;
         try {
             response = sqsClient.receiveMessage(ReceiveMessageRequest.builder()
-                    .queueUrl(sqsProperties.transcriptResultQueueUrl())
+                    .queueUrl(sqsProperties.callAnalysisResultQueueUrl())
                     .waitTimeSeconds(LONG_POLLING_WAIT_SECONDS)
                     .maxNumberOfMessages(MAX_MESSAGES)
                     .build());
@@ -48,25 +48,26 @@ public class CallTranscriptResultPoller {
     }
 
     private void handle(final Message message) {
-        final TranscriptResultMessage payload;
+        final CallAnalysisResultMessage payload;
         try {
-            payload = objectMapper.readValue(message.body(), TranscriptResultMessage.class);
+            payload = objectMapper.readValue(message.body(), CallAnalysisResultMessage.class);
         } catch (final RuntimeException e) {
-            log.error("transcript SQS 메시지 파싱 실패: messageId={}, body={}", message.messageId(), message.body(), e);
+            log.error("call analysis SQS 메시지 파싱 실패: messageId={}, body={}",
+                    message.messageId(), message.body(), e);
             return;
         }
 
         try {
-            callTranscriptService.complete(payload.callId(), payload.segments());
+            callAnalysisCompletionFacade.complete(payload);
             acknowledge(message.receiptHandle());
         } catch (final RuntimeException e) {
-            log.error("transcript 영속화 실패: callId={}", payload.callId(), e);
+            log.error("call analysis 영속화 실패: callId={}", payload.callId(), e);
         }
     }
 
     private void acknowledge(final String receiptHandle) {
         sqsClient.deleteMessage(DeleteMessageRequest.builder()
-                .queueUrl(sqsProperties.transcriptResultQueueUrl())
+                .queueUrl(sqsProperties.callAnalysisResultQueueUrl())
                 .receiptHandle(receiptHandle)
                 .build());
     }

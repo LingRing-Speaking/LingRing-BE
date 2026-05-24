@@ -1,9 +1,9 @@
-package com.lingring.domain.call.event;
+package com.lingring.domain.callanalysis.event;
 
 import com.lingring.domain.call.domain.vo.RecordingReference;
 import java.util.List;
 
-public record CallTranscriptRequestedEvent(
+public record CallAnalysisRequestedEvent(
         Long callId,
         List<RecordingReference> recordings
 ) {

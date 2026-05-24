@@ -1,6 +1,8 @@
 package com.lingring.domain.call.dto.response;
 
 import com.lingring.domain.call.dao.dto.CallSummaryProjection;
+import com.lingring.domain.callanalysis.dto.response.CallAnalysisStatusView;
+import com.lingring.domain.callanalysis.service.CallAnalysisSummary;
 import com.lingring.global.util.Zones;
 import java.time.OffsetDateTime;
 
@@ -9,22 +11,32 @@ public record CallSummaryResponse(
         PartnerResponse partner,
         OffsetDateTime startedAt,
         int durationSec,
-        boolean analyzed
+        Long analysisId,
+        CallAnalysisStatusView analysisStatus
 ) {
 
-    public static CallSummaryResponse from(final CallSummaryProjection projection) {
+    public static CallSummaryResponse from(
+            final CallSummaryProjection projection,
+            final CallAnalysisSummary analysisSummary
+    ) {
         final OffsetDateTime startedAt = projection.getStartedAt()
                 .atZone(Zones.SEOUL)
                 .toOffsetDateTime();
-        // TODO: call_analyze 도메인 추가 후 실제 분석 여부로 교체
-        final boolean analyzed = false;
         return new CallSummaryResponse(
                 projection.getId(),
                 partnerOf(projection),
                 startedAt,
                 projection.getDurationSec().intValue(),
-                analyzed
+                analysisIdOf(analysisSummary),
+                CallAnalysisStatusView.from(analysisSummary)
         );
+    }
+
+    private static Long analysisIdOf(final CallAnalysisSummary summary) {
+        if (summary == null) {
+            return null;
+        }
+        return summary.analysisId();
     }
 
     private static PartnerResponse partnerOf(final CallSummaryProjection projection) {

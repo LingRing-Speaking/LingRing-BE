@@ -90,6 +90,8 @@ public enum ErrorCode {
     CALL_TRANSCRIPT_NOT_FOUND(NOT_FOUND, "통화 transcript를 찾을 수 없습니다."),
     CALL_TRANSCRIPT_ALREADY_IN_PROGRESS(CONFLICT, "이미 분석이 진행 중입니다."),
     CALL_RECORDINGS_NOT_READY(BAD_REQUEST, "분석을 시작하려면 두 화자의 녹음이 모두 업로드되어야 합니다."),
+    CALL_ANALYSIS_NOT_FOUND(NOT_FOUND, "통화 분석 결과를 찾을 수 없습니다."),
+    CALL_ANALYSIS_ACCESS_FORBIDDEN(FORBIDDEN, "본인의 통화 분석만 조회할 수 있습니다."),
 
     // Matching Error
     MATCH_CONFIRMATION_NOT_FOUND(NOT_FOUND, "수락/거절할 매칭이 없습니다. 다시 매칭을 시작해주세요."),

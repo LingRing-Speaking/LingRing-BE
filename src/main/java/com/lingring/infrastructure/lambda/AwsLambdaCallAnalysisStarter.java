@@ -1,7 +1,7 @@
 package com.lingring.infrastructure.lambda;
 
-import com.lingring.domain.call.domain.TranscriptionStarter;
 import com.lingring.domain.call.domain.vo.RecordingReference;
+import com.lingring.domain.callanalysis.domain.CallAnalysisStarter;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -13,24 +13,24 @@ import tools.jackson.databind.ObjectMapper;
 
 @Component
 @RequiredArgsConstructor
-public class AwsLambdaTranscriptionStarter implements TranscriptionStarter {
+public class AwsLambdaCallAnalysisStarter implements CallAnalysisStarter {
 
     private final LambdaClient lambdaClient;
     private final LambdaProperties lambdaProperties;
     private final ObjectMapper objectMapper;
 
     @Override
-    public void requestTranscript(final Long callId, final List<RecordingReference> recordings) {
+    public void requestAnalysis(final Long callId, final List<RecordingReference> recordings) {
         final String payload = objectMapper.writeValueAsString(
-                new TranscriptInvocationPayload(callId, recordings));
+                new CallAnalysisInvocationPayload(callId, recordings));
         final InvokeRequest request = InvokeRequest.builder()
-                .functionName(lambdaProperties.transcriptFunctionName())
+                .functionName(lambdaProperties.callAnalysisFunctionName())
                 .invocationType(InvocationType.EVENT)
                 .payload(SdkBytes.fromUtf8String(payload))
                 .build();
         lambdaClient.invoke(request);
     }
 
-    private record TranscriptInvocationPayload(Long callId, List<RecordingReference> recordings) {
+    private record CallAnalysisInvocationPayload(Long callId, List<RecordingReference> recordings) {
     }
 }

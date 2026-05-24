@@ -55,7 +55,7 @@ echo "==> Cleaning previous build"
 rm -rf package function.zip
 
 echo "==> Installing dependencies (platform=$PLATFORM python=$PYTHON_VERSION)"
-pip install \
+python3 -m pip install \
     --platform "$PLATFORM" \
     --target ./package \
     --implementation cp \
