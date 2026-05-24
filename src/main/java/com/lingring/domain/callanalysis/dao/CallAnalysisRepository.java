@@ -16,7 +16,8 @@ public interface CallAnalysisRepository extends JpaRepository<CallAnalysis, Long
     boolean existsByCallIdAndUserId(Long callId, Long userId);
 
     @Query("""
-            SELECT new com.lingring.domain.callanalysis.dao.dto.CallAnalysisIdProjection(ca.callId, ca.id)
+            SELECT ca.callId AS callId,
+                   ca.id     AS analysisId
             FROM CallAnalysis ca
             WHERE ca.userId = :userId
               AND ca.callId IN :callIds

@@ -75,8 +75,8 @@ public class CallAnalysisService {
         }
         return callAnalysisRepository.findRequestedAnalysisIds(userId, callIds).stream()
                 .collect(Collectors.toMap(
-                        CallAnalysisIdProjection::callId,
-                        CallAnalysisIdProjection::analysisId
+                        CallAnalysisIdProjection::getCallId,
+                        CallAnalysisIdProjection::getAnalysisId
                 ));
     }
 
