@@ -70,8 +70,8 @@ class CallAnalysisRequestFacadeTest extends ServiceIntegrationHelper {
     }
 
     @Test
-    @DisplayName("두 녹음이 준비되어 있으면 transcript와 분석 행 2개(PROCESSING)를 생성하고 본인 analysisId를 반환한다")
-    void request_whenReady_createsTranscriptAndAnalysesAndReturnsSelfAnalysisId() {
+    @DisplayName("호출자 본인 행은 requested=true, 짝꿍 행은 requested=false 로 생성되고 starter는 1회 호출된다")
+    void request_whenReady_marksSelfRequestedAndPeerNotRequested() {
         // given
         final Call call = saveEndedCall(1L, 2L);
         saveRecording(call.getId(), 1L, "call-recordings/%d/1/abc".formatted(call.getId()));
@@ -86,9 +86,15 @@ class CallAnalysisRequestFacadeTest extends ServiceIntegrationHelper {
         assertThat(response.analysisId()).isEqualTo(selfAnalysisId);
         assertThat(callTranscriptRepository.findByCallId(call.getId())).isPresent();
         assertThat(callAnalysisRepository.findByCallIdAndUserId(call.getId(), 1L))
-                .hasValueSatisfying(a -> assertThat(a.getStatus()).isEqualTo(CallAnalysisStatus.PROCESSING));
+                .hasValueSatisfying(a -> {
+                    assertThat(a.getStatus()).isEqualTo(CallAnalysisStatus.PROCESSING);
+                    assertThat(a.isRequested()).isTrue();
+                });
         assertThat(callAnalysisRepository.findByCallIdAndUserId(call.getId(), 2L))
-                .hasValueSatisfying(a -> assertThat(a.getStatus()).isEqualTo(CallAnalysisStatus.PROCESSING));
+                .hasValueSatisfying(a -> {
+                    assertThat(a.getStatus()).isEqualTo(CallAnalysisStatus.PROCESSING);
+                    assertThat(a.isRequested()).isFalse();
+                });
         assertThat(fakeCallAnalysisStarter.invocations()).hasSize(1);
         assertThat(fakeCallAnalysisStarter.invocations().get(0).callId()).isEqualTo(call.getId());
         assertThat(fakeCallAnalysisStarter.invocations().get(0).recordings())
@@ -96,8 +102,8 @@ class CallAnalysisRequestFacadeTest extends ServiceIntegrationHelper {
     }
 
     @Test
-    @DisplayName("이미 transcript가 존재하면 starter를 재호출하지 않고 호출자 본인 analysisId를 반환한다 (멱등)")
-    void request_whenTranscriptExists_returnsCallersAnalysisIdAndDoesNotReinvoke() {
+    @DisplayName("ClientB가 늦게 POST하면 본인 행만 requested=true 로 flip 되고 starter 재호출 없음")
+    void request_whenPeerLaterPosts_flipsPeerRequestedAndDoesNotReinvoke() {
         // given: userA가 먼저 트리거
         final Call call = saveEndedCall(1L, 2L);
         saveRecording(call.getId(), 1L, "call-recordings/%d/1/abc".formatted(call.getId()));
@@ -105,13 +111,15 @@ class CallAnalysisRequestFacadeTest extends ServiceIntegrationHelper {
         callAnalysisRequestFacade.request(call.getId(), 1L);
         fakeCallAnalysisStarter.reset();
 
-        // when: userB가 동일 통화에 대해 다시 요청
+        // when: userB가 동일 통화에 대해 POST
         final CallAnalysisStartResponse second = callAnalysisRequestFacade.request(call.getId(), 2L);
 
-        // then: userB 본인의 analysisId가 반환되고 starter는 재호출되지 않는다
+        // then: userB 본인의 analysisId 반환, requested 양쪽 다 true, starter 재호출 없음
         final Long userBAnalysisId = callAnalysisRepository.findByCallIdAndUserId(call.getId(), 2L)
                 .orElseThrow().getId();
         assertThat(second.analysisId()).isEqualTo(userBAnalysisId);
+        assertThat(callAnalysisRepository.findByCallIdAndUserId(call.getId(), 1L).orElseThrow().isRequested()).isTrue();
+        assertThat(callAnalysisRepository.findByCallIdAndUserId(call.getId(), 2L).orElseThrow().isRequested()).isTrue();
         assertThat(fakeCallAnalysisStarter.invocations()).isEmpty();
     }
 

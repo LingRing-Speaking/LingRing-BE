@@ -16,6 +16,7 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -53,6 +54,10 @@ public class CallAnalysis extends BaseTimeEntity {
     @Column(name = "result", columnDefinition = "JSON")
     private AnalysisResult result;
 
+    @ColumnDefault("false")
+    @Column(name = "requested", nullable = false)
+    private boolean requested;
+
     private CallAnalysis(
             @NonNull final Long callId,
             @NonNull final Long userId,
@@ -61,6 +66,7 @@ public class CallAnalysis extends BaseTimeEntity {
         this.callId = callId;
         this.userId = userId;
         this.status = status;
+        this.requested = false;
     }
 
     public static CallAnalysis processing(@NonNull final Long callId, @NonNull final Long userId) {
@@ -81,6 +87,10 @@ public class CallAnalysis extends BaseTimeEntity {
             return;
         }
         this.status = CallAnalysisStatus.FAILED;
+    }
+
+    public void markRequested() {
+        this.requested = true;
     }
 
     public boolean isCompleted() {

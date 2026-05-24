@@ -2,6 +2,7 @@ package com.lingring.domain.call.dto.response;
 
 import com.lingring.domain.call.dao.dto.CallSummaryProjection;
 import java.util.List;
+import java.util.Map;
 import org.springframework.data.domain.Slice;
 
 public record CallsResponse(
@@ -9,9 +10,12 @@ public record CallsResponse(
         boolean hasNext
 ) {
 
-    public static CallsResponse from(final Slice<CallSummaryProjection> slice) {
+    public static CallsResponse from(
+            final Slice<CallSummaryProjection> slice,
+            final Map<Long, Long> analysisIdByCallId
+    ) {
         final List<CallSummaryResponse> items = slice.getContent().stream()
-                .map(CallSummaryResponse::from)
+                .map(p -> CallSummaryResponse.from(p, analysisIdByCallId.get(p.getId())))
                 .toList();
         return new CallsResponse(items, slice.hasNext());
     }

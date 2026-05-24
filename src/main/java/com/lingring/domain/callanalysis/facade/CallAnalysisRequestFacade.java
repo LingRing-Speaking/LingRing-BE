@@ -23,9 +23,9 @@ public class CallAnalysisRequestFacade {
     public CallAnalysisStartResponse request(final Long callId, final Long userId) {
         final StartTranscriptResult result = callTranscriptService.startTranscript(callId, userId);
 
-        final CallAnalysis selfAnalysis = callAnalysisService.startProcessing(callId, userId);
+        final CallAnalysis selfAnalysis = callAnalysisService.requestForUser(callId, userId);
         final Long otherUserId = result.userAId().equals(userId) ? result.userBId() : result.userAId();
-        callAnalysisService.startProcessing(callId, otherUserId);
+        callAnalysisService.ensureExistsForUser(callId, otherUserId);
 
         if (result.freshlyCreated()) {
             eventPublisher.publishEvent(new CallAnalysisRequestedEvent(callId, result.recordings()));

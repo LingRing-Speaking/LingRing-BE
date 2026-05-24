@@ -8,7 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.lingring.domain.call.dto.response.CallsResponse;
 import com.lingring.domain.call.dto.response.CallSummaryResponse;
 import com.lingring.domain.call.dto.response.PartnerResponse;
-import com.lingring.domain.call.service.CallService;
+import com.lingring.domain.call.facade.CallHistoryFacade;
 import com.lingring.global.auth.context.AuthContext;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -36,7 +36,7 @@ class CallControllerTest {
     private ObjectMapper objectMapper;
 
     @MockitoBean
-    private CallService callService;
+    private CallHistoryFacade callHistoryFacade;
 
     @AfterEach
     void clearAuthContext() {
@@ -48,7 +48,7 @@ class CallControllerTest {
     class GetAll {
 
         @Test
-        @DisplayName("page/size를 명시하면 200 응답과 items + hasNext를 반환한다")
+        @DisplayName("page/size를 명시하면 200 응답과 items + hasNext + analysisId를 반환한다")
         void getAll_whenWithParams_returns200WithItemsAndHasNext() throws Exception {
             // given
             final Long userId = 1L;
@@ -56,7 +56,7 @@ class CallControllerTest {
             final OffsetDateTime startedAt = LocalDateTime.of(2026, 4, 29, 19, 30)
                     .atZone(java.time.ZoneId.of("Asia/Seoul"))
                     .toOffsetDateTime();
-            given(callService.getCallsByUserId(userId, 0, 2)).willReturn(
+            given(callHistoryFacade.getCallsByUserId(userId, 0, 2)).willReturn(
                     new CallsResponse(
                             List.of(
                                     new CallSummaryResponse(
@@ -64,7 +64,7 @@ class CallControllerTest {
                                             new PartnerResponse(7L, "Sophie", "https://cdn.example.com/p/sophie.png"),
                                             startedAt,
                                             312,
-                                            true
+                                            777L
                                     )
                             ),
                             true
@@ -94,17 +94,53 @@ class CallControllerTest {
             assertThat(first.get("partner").get("profileImage").asString()).isEqualTo("https://cdn.example.com/p/sophie.png");
             assertThat(first.get("startedAt").asString()).isEqualTo("2026-04-29T19:30:00+09:00");
             assertThat(first.get("durationSec").asInt()).isEqualTo(312);
-            assertThat(first.get("analyzed").asBoolean()).isTrue();
+            assertThat(first.get("analysisId").asLong()).isEqualTo(777L);
             assertThat(data.get("hasNext").asBoolean()).isTrue();
         }
 
         @Test
-        @DisplayName("page/size를 생략하면 default(0, 20)로 서비스가 호출된다")
+        @DisplayName("분석 요청 안 한 통화는 analysisId가 null로 반환된다")
+        void getAll_whenNotRequested_returnsNullAnalysisId() throws Exception {
+            // given
+            final Long userId = 1L;
+            AuthContext.set(userId);
+            final OffsetDateTime startedAt = LocalDateTime.of(2026, 4, 29, 19, 30)
+                    .atZone(java.time.ZoneId.of("Asia/Seoul"))
+                    .toOffsetDateTime();
+            given(callHistoryFacade.getCallsByUserId(userId, 0, 20)).willReturn(
+                    new CallsResponse(
+                            List.of(
+                                    new CallSummaryResponse(
+                                            1042L,
+                                            new PartnerResponse(7L, "Sophie", null),
+                                            startedAt,
+                                            120,
+                                            null
+                                    )
+                            ),
+                            false
+                    )
+            );
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(
+                            get("/api/v1/calls").accept(MediaType.APPLICATION_JSON))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            assertThat(response.getStatus()).isEqualTo(200);
+            final JsonNode data = objectMapper.readTree(response.getContentAsString()).get("data");
+            assertThat(data.get("items").get(0).get("analysisId").isNull()).isTrue();
+        }
+
+        @Test
+        @DisplayName("page/size를 생략하면 default(0, 20)로 facade가 호출된다")
         void getAll_whenNoParams_usesDefaults() throws Exception {
             // given
             final Long userId = 1L;
             AuthContext.set(userId);
-            given(callService.getCallsByUserId(userId, 0, 20)).willReturn(
+            given(callHistoryFacade.getCallsByUserId(userId, 0, 20)).willReturn(
                     new CallsResponse(List.of(), false)
             );
 
@@ -112,7 +148,7 @@ class CallControllerTest {
             mockMvc.perform(get("/api/v1/calls").accept(MediaType.APPLICATION_JSON));
 
             // then
-            then(callService).should().getCallsByUserId(userId, 0, 20);
+            then(callHistoryFacade).should().getCallsByUserId(userId, 0, 20);
         }
     }
 }

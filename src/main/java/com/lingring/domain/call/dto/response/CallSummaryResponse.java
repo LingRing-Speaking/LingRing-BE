@@ -9,21 +9,19 @@ public record CallSummaryResponse(
         PartnerResponse partner,
         OffsetDateTime startedAt,
         int durationSec,
-        boolean analyzed
+        Long analysisId
 ) {
 
-    public static CallSummaryResponse from(final CallSummaryProjection projection) {
+    public static CallSummaryResponse from(final CallSummaryProjection projection, final Long analysisId) {
         final OffsetDateTime startedAt = projection.getStartedAt()
                 .atZone(Zones.SEOUL)
                 .toOffsetDateTime();
-        // TODO: call_analyze 도메인 추가 후 실제 분석 여부로 교체
-        final boolean analyzed = false;
         return new CallSummaryResponse(
                 projection.getId(),
                 partnerOf(projection),
                 startedAt,
                 projection.getDurationSec().intValue(),
-                analyzed
+                analysisId
         );
     }
 
