@@ -14,8 +14,8 @@ public class EncryptedStringConverter implements AttributeConverter<String, Stri
     private final TextEncryptor encryptor;
 
     public EncryptedStringConverter(
-            @Value("${apple.token-encrypt-password}") final String password,
-            @Value("${apple.token-encrypt-salt}") final String saltHex
+            @Value("${auth.apple.token-encrypt-password}") final String password,
+            @Value("${auth.apple.token-encrypt-salt}") final String saltHex
     ) {
         this.encryptor = Encryptors.delux(password, saltHex);
     }
