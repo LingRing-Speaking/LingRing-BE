@@ -8,7 +8,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
-import com.lingring.domain.user.dto.request.request.AgreementCreateRequest;
+import com.lingring.domain.user.dto.request.AgreementCreateRequest;
 import com.lingring.domain.user.dto.response.AgreementResponse;
 import com.lingring.domain.user.dto.response.AgreementResponse.UserSummary;
 import com.lingring.domain.user.service.UserAgreementService;

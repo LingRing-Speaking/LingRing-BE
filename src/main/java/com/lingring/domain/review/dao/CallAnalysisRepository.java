@@ -1,0 +1,31 @@
+package com.lingring.domain.review.dao;
+
+import com.lingring.domain.review.dao.dto.CallAnalysisSummaryProjection;
+import com.lingring.domain.review.domain.analysis.CallAnalysis;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+public interface CallAnalysisRepository extends JpaRepository<CallAnalysis, Long> {
+
+    Optional<CallAnalysis> findByCallIdAndUserId(Long callId, Long userId);
+
+    boolean existsByCallIdAndUserId(Long callId, Long userId);
+
+    @Query("""
+            SELECT ca.callId AS callId,
+                   ca.id     AS analysisId,
+                   ca.status AS status
+            FROM CallAnalysis ca
+            WHERE ca.userId = :userId
+              AND ca.callId IN :callIds
+              AND ca.requested = true
+            """)
+    List<CallAnalysisSummaryProjection> findRequestedAnalysisSummaries(
+            @Param("userId") Long userId,
+            @Param("callIds") Collection<Long> callIds
+    );
+}

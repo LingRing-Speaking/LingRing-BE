@@ -2,7 +2,7 @@ package com.lingring.domain.user.service;
 
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.AgreementItem;
-import com.lingring.domain.user.dto.request.request.AgreementCreateRequest;
+import com.lingring.domain.user.dto.request.AgreementCreateRequest;
 import com.lingring.domain.user.dto.response.AgreementResponse;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
