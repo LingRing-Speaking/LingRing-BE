@@ -1,6 +1,6 @@
 package com.lingring.domain.matching.service;
 
-import com.lingring.domain.matching.MatchingProperties;
+import com.lingring.global.config.MatchingProperties;
 import com.lingring.domain.matching.dao.MatchConfirmationRepository;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.domain.MatchingCandidate;

@@ -1,4 +1,4 @@
-package com.lingring.domain.matching;
+package com.lingring.global.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
