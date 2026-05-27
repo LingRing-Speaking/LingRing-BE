@@ -6,8 +6,6 @@ import com.lingring.domain.call.dao.CallRepository;
 import com.lingring.domain.matching.dao.MatchConfirmationRepository;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.domain.MatchConfirmation;
-import com.lingring.domain.matching.scheduler.MatchConfirmationExpiryWorker;
-import com.lingring.domain.matching.scheduler.MatchingWorker;
 import com.lingring.domain.userblock.dao.UserBlockRepository;
 import com.lingring.domain.userblock.domain.UserBlock;
 import com.lingring.global.config.ServiceIntegrationHelper;
@@ -17,7 +15,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 class MatchingExecutorTest extends ServiceIntegrationHelper {
 
@@ -37,14 +34,6 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
 
     @Autowired
     private UserBlockRepository userBlockRepository;
-
-    @MockitoBean
-    @SuppressWarnings("unused")
-    private MatchingWorker matchingWorker;
-
-    @MockitoBean
-    @SuppressWarnings("unused")
-    private MatchConfirmationExpiryWorker matchConfirmationExpiryWorker;
 
     @Nested
     @DisplayName("executeRound: 한 라운드 페어링")

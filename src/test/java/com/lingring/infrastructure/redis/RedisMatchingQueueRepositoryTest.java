@@ -5,8 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.domain.MatchingCandidate;
 import com.lingring.domain.matching.domain.MatchingResult;
-import com.lingring.domain.matching.scheduler.MatchConfirmationExpiryWorker;
-import com.lingring.domain.matching.scheduler.MatchingWorker;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,7 +14,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 class RedisMatchingQueueRepositoryTest extends ServiceIntegrationHelper {
 
@@ -25,14 +22,6 @@ class RedisMatchingQueueRepositoryTest extends ServiceIntegrationHelper {
 
     @Autowired
     private MatchingQueueRepository matchingQueueRepository;
-
-    @MockitoBean
-    @SuppressWarnings("unused")
-    private MatchingWorker matchingWorker;
-
-    @MockitoBean
-    @SuppressWarnings("unused")
-    private MatchConfirmationExpiryWorker matchConfirmationExpiryWorker;
 
     @Nested
     @DisplayName("enqueue / contains / remove")

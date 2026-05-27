@@ -12,8 +12,6 @@ import com.lingring.domain.matching.domain.MatchConfirmation;
 import com.lingring.domain.matching.domain.MatchingPollStatus;
 import com.lingring.domain.matching.dto.response.MatchingStatusResponse;
 import com.lingring.domain.matching.exception.MatchConfirmationNotFoundException;
-import com.lingring.domain.matching.scheduler.MatchConfirmationExpiryWorker;
-import com.lingring.domain.matching.scheduler.MatchingWorker;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.util.FixedDateTimeProvider;
 import java.time.LocalDateTime;
@@ -24,7 +22,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @Import(MatchingServiceTestConfig.class)
 class MatchingServiceTest extends ServiceIntegrationHelper {
@@ -48,14 +45,6 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
 
     @Autowired
     private CallRepository callRepository;
-
-    @MockitoBean
-    @SuppressWarnings("unused")
-    private MatchingWorker matchingWorker;
-
-    @MockitoBean
-    @SuppressWarnings("unused")
-    private MatchConfirmationExpiryWorker matchConfirmationExpiryWorker;
 
     @BeforeEach
     void stubDefaultTime() {
