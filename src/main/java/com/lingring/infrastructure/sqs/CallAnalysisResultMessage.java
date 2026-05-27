@@ -1,6 +1,6 @@
 package com.lingring.infrastructure.sqs;
 
-import com.lingring.domain.call.domain.vo.TranscriptSegment;
+import com.lingring.domain.callanalysis.domain.vo.TranscriptSegment;
 import java.util.List;
 
 public record CallAnalysisResultMessage(

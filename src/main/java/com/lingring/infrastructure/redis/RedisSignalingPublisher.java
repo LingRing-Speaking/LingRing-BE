@@ -1,7 +1,7 @@
 package com.lingring.infrastructure.redis;
 
-import com.lingring.domain.signaling.domain.SignalingMessage;
-import com.lingring.domain.signaling.service.SignalingPublisher;
+import com.lingring.domain.call.domain.SignalingMessage;
+import com.lingring.domain.call.service.SignalingPublisher;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;

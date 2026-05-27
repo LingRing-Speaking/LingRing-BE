@@ -3,13 +3,13 @@ package com.lingring.domain.callanalysis.facade;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.lingring.domain.call.dao.CallRecordingRepository;
+import com.lingring.domain.callanalysis.dao.CallRecordingRepository;
 import com.lingring.domain.call.dao.CallRepository;
-import com.lingring.domain.call.dao.CallTranscriptRepository;
+import com.lingring.domain.callanalysis.dao.CallTranscriptRepository;
 import com.lingring.domain.call.domain.Call;
-import com.lingring.domain.call.domain.CallRecording;
+import com.lingring.domain.callanalysis.domain.CallRecording;
 import com.lingring.domain.call.exception.CallParticipantMismatchException;
-import com.lingring.domain.call.exception.CallRecordingsNotReadyException;
+import com.lingring.domain.callanalysis.exception.CallRecordingsNotReadyException;
 import com.lingring.domain.callanalysis.dao.CallAnalysisRepository;
 import com.lingring.domain.callanalysis.domain.CallAnalysisStarter;
 import com.lingring.domain.callanalysis.domain.CallAnalysisStatus;

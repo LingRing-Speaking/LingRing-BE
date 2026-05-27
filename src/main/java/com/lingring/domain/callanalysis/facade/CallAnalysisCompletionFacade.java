@@ -1,6 +1,6 @@
 package com.lingring.domain.callanalysis.facade;
 
-import com.lingring.domain.call.service.CallTranscriptService;
+import com.lingring.domain.callanalysis.service.CallTranscriptService;
 import com.lingring.domain.callanalysis.domain.vo.AnalysisResult;
 import com.lingring.domain.callanalysis.domain.vo.FeedbackTag;
 import com.lingring.domain.callanalysis.domain.vo.MistakeItem;

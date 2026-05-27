@@ -1,6 +1,6 @@
 package com.lingring.infrastructure.lambda;
 
-import com.lingring.domain.call.domain.vo.RecordingReference;
+import com.lingring.domain.callanalysis.domain.vo.RecordingReference;
 import com.lingring.domain.callanalysis.domain.CallAnalysisStarter;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

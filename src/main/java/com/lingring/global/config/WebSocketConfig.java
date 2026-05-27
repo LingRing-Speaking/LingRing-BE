@@ -1,7 +1,7 @@
 package com.lingring.global.config;
 
-import com.lingring.domain.signaling.api.SignalingHandshakeInterceptor;
-import com.lingring.domain.signaling.api.SignalingWebSocketHandler;
+import com.lingring.domain.call.api.SignalingHandshakeInterceptor;
+import com.lingring.domain.call.api.SignalingWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;

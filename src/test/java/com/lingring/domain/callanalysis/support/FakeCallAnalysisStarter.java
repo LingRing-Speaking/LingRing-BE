@@ -1,6 +1,6 @@
 package com.lingring.domain.callanalysis.support;
 
-import com.lingring.domain.call.domain.vo.RecordingReference;
+import com.lingring.domain.callanalysis.domain.vo.RecordingReference;
 import com.lingring.domain.callanalysis.domain.CallAnalysisStarter;
 import java.util.ArrayList;
 import java.util.List;

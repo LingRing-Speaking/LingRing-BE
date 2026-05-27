@@ -1,7 +1,7 @@
 package com.lingring.domain.callanalysis.facade;
 
-import com.lingring.domain.call.service.CallTranscriptService;
-import com.lingring.domain.call.service.CallTranscriptService.StartTranscriptResult;
+import com.lingring.domain.callanalysis.service.CallTranscriptService;
+import com.lingring.domain.callanalysis.service.CallTranscriptService.StartTranscriptResult;
 import com.lingring.domain.callanalysis.domain.CallAnalysis;
 import com.lingring.domain.callanalysis.dto.response.CallAnalysisStartResponse;
 import com.lingring.domain.callanalysis.event.CallAnalysisRequestedEvent;

@@ -1,7 +1,7 @@
 package com.lingring.infrastructure.redis;
 
-import com.lingring.domain.signaling.domain.SignalingMessage;
-import com.lingring.domain.signaling.service.SignalingSessionMessenger;
+import com.lingring.domain.call.domain.SignalingMessage;
+import com.lingring.domain.call.service.SignalingSessionMessenger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.Message;

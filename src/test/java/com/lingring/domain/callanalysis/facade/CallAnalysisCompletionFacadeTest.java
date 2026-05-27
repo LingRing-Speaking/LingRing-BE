@@ -2,8 +2,8 @@ package com.lingring.domain.callanalysis.facade;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.lingring.domain.call.dao.CallTranscriptRepository;
-import com.lingring.domain.call.domain.CallTranscript;
+import com.lingring.domain.callanalysis.dao.CallTranscriptRepository;
+import com.lingring.domain.callanalysis.domain.CallTranscript;
 import com.lingring.domain.callanalysis.dao.CallAnalysisRepository;
 import com.lingring.domain.callanalysis.domain.CallAnalysis;
 import com.lingring.domain.callanalysis.domain.CallAnalysisStatus;
@@ -12,7 +12,7 @@ import com.lingring.infrastructure.sqs.CallAnalysisResultMessage.MistakeItemPart
 import com.lingring.infrastructure.sqs.CallAnalysisResultMessage.PositiveItemPart;
 import com.lingring.infrastructure.sqs.CallAnalysisResultMessage.TranscriptPart;
 import com.lingring.infrastructure.sqs.CallAnalysisResultMessage.UserAnalysisPart;
-import com.lingring.domain.call.domain.vo.TranscriptSegment;
+import com.lingring.domain.callanalysis.domain.vo.TranscriptSegment;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
