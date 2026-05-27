@@ -5,12 +5,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
-import com.lingring.domain.callanalysis.dao.CallTranscriptRepository;
-import com.lingring.domain.callanalysis.domain.transcript.CallTranscript;
-import com.lingring.domain.callanalysis.dao.CallAnalysisRepository;
-import com.lingring.domain.callanalysis.domain.analysis.CallAnalysis;
-import com.lingring.domain.callanalysis.domain.analysis.CallAnalysisStatus;
-import com.lingring.domain.callanalysis.domain.analysis.vo.FeedbackTag;
+import com.lingring.domain.review.dao.CallTranscriptRepository;
+import com.lingring.domain.review.domain.transcript.CallTranscript;
+import com.lingring.domain.review.dao.CallAnalysisRepository;
+import com.lingring.domain.review.domain.analysis.CallAnalysis;
+import com.lingring.domain.review.domain.analysis.CallAnalysisStatus;
+import com.lingring.domain.review.domain.analysis.vo.FeedbackTag;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.DisplayName;
