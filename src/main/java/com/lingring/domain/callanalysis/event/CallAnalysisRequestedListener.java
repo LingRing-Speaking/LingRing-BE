@@ -1,6 +1,6 @@
 package com.lingring.domain.callanalysis.event;
 
-import com.lingring.domain.callanalysis.domain.CallAnalysisStarter;
+import com.lingring.domain.callanalysis.domain.port.CallAnalysisStarter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

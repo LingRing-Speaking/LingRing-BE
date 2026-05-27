@@ -2,7 +2,7 @@ package com.lingring.domain.matching.service;
 
 import com.lingring.domain.call.dao.CallRepository;
 import com.lingring.domain.call.domain.Call;
-import com.lingring.domain.matching.MatchingProperties;
+import com.lingring.global.config.MatchingProperties;
 import com.lingring.domain.matching.dao.MatchConfirmationRepository;
 import com.lingring.domain.matching.dao.MatchConfirmationRepository.AcceptOutcome;
 import com.lingring.domain.matching.dao.MatchConfirmationRepository.AcceptResult;

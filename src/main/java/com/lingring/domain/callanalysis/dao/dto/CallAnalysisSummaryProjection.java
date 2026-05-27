@@ -1,6 +1,6 @@
 package com.lingring.domain.callanalysis.dao.dto;
 
-import com.lingring.domain.callanalysis.domain.CallAnalysisStatus;
+import com.lingring.domain.callanalysis.domain.analysis.CallAnalysisStatus;
 
 public interface CallAnalysisSummaryProjection {
 

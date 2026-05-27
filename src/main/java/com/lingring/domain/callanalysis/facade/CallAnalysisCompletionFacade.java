@@ -1,12 +1,12 @@
 package com.lingring.domain.callanalysis.facade;
 
-import com.lingring.domain.call.service.CallTranscriptService;
-import com.lingring.domain.callanalysis.domain.vo.AnalysisResult;
-import com.lingring.domain.callanalysis.domain.vo.FeedbackTag;
-import com.lingring.domain.callanalysis.domain.vo.MistakeItem;
-import com.lingring.domain.callanalysis.domain.vo.Mistakes;
-import com.lingring.domain.callanalysis.domain.vo.PositiveItem;
-import com.lingring.domain.callanalysis.domain.vo.Positives;
+import com.lingring.domain.callanalysis.service.CallTranscriptService;
+import com.lingring.domain.callanalysis.domain.analysis.vo.AnalysisResult;
+import com.lingring.domain.callanalysis.domain.analysis.vo.FeedbackTag;
+import com.lingring.domain.callanalysis.domain.analysis.vo.MistakeItem;
+import com.lingring.domain.callanalysis.domain.analysis.vo.Mistakes;
+import com.lingring.domain.callanalysis.domain.analysis.vo.PositiveItem;
+import com.lingring.domain.callanalysis.domain.analysis.vo.Positives;
 import com.lingring.domain.callanalysis.service.CallAnalysisService;
 import com.lingring.infrastructure.sqs.CallAnalysisResultMessage;
 import com.lingring.infrastructure.sqs.CallAnalysisResultMessage.MistakeItemPart;

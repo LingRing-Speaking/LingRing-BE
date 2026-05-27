@@ -2,7 +2,7 @@ package com.lingring.domain.user.service;
 
 import com.lingring.domain.user.dao.UserRepository;
 import com.lingring.domain.user.dao.UserStatsRepository;
-import com.lingring.domain.user.domain.ProfileImageStorage;
+import com.lingring.domain.user.domain.port.ProfileImageStorage;
 import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.UserStats;

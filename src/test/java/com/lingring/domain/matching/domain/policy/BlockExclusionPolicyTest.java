@@ -3,8 +3,8 @@ package com.lingring.domain.matching.domain.policy;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.lingring.domain.matching.domain.MatchingCandidate;
-import com.lingring.domain.userblock.dao.UserBlockRepository;
-import com.lingring.domain.userblock.domain.UserBlock;
+import com.lingring.domain.moderation.dao.UserBlockRepository;
+import com.lingring.domain.moderation.domain.UserBlock;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.time.LocalDateTime;
 import java.util.List;

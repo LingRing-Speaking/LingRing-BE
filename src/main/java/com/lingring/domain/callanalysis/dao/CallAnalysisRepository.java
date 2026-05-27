@@ -1,7 +1,7 @@
 package com.lingring.domain.callanalysis.dao;
 
 import com.lingring.domain.callanalysis.dao.dto.CallAnalysisSummaryProjection;
-import com.lingring.domain.callanalysis.domain.CallAnalysis;
+import com.lingring.domain.callanalysis.domain.analysis.CallAnalysis;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
