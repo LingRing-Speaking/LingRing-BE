@@ -11,7 +11,7 @@ import com.lingring.domain.user.event.UserWithdrawnEvent;
 import com.lingring.domain.user.service.UserService;
 import com.lingring.domain.user.service.UserStatsService;
 import com.lingring.domain.userblock.service.UserBlockService;
-import com.lingring.domain.userexpression.service.UserExpressionService;
+import com.lingring.domain.expression.service.UserExpressionService;
 import com.lingring.domain.userreport.service.UserReportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

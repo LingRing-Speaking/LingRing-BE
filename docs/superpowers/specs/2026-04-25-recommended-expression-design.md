@@ -119,8 +119,8 @@ package com.lingring.domain.recommendedexpression.domain;
 import static jakarta.persistence.GenerationType.IDENTITY;
 import static lombok.AccessLevel.PROTECTED;
 
-import com.lingring.domain.recommendedexpression.domain.vo.Expression;
-import com.lingring.domain.recommendedexpression.domain.vo.Meaning;
+import com.lingring.domain.userexpression.domain.vo.recommendedexpression.Expression;
+import com.lingring.domain.userexpression.domain.vo.recommendedexpression.Meaning;
 import com.lingring.global.common.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
@@ -180,7 +180,7 @@ RECOMMENDED_EXPRESSION_NOT_FOUND(NOT_FOUND, "오늘의 추천 표현을 찾을 �
 ```java
 package com.lingring.domain.recommendedexpression.dao;
 
-import com.lingring.domain.recommendedexpression.domain.RecommendedExpression;
+import com.lingring.domain.userexpression.domain.RecommendedExpression;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -205,9 +205,9 @@ package com.lingring.domain.recommendedexpression.service;
 
 import static org.springframework.data.domain.Sort.Direction.ASC;
 
-import com.lingring.domain.recommendedexpression.dao.RecommendedExpressionRepository;
-import com.lingring.domain.recommendedexpression.domain.RecommendedExpression;
-import com.lingring.domain.recommendedexpression.dto.response.RecommendedExpressionResponse;
+import com.lingring.domain.userexpression.dao.RecommendedExpressionRepository;
+import com.lingring.domain.userexpression.domain.RecommendedExpression;
+import com.lingring.domain.userexpression.dto.response.RecommendedExpressionResponse;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.NotFoundException;
 import com.lingring.global.util.DateTimeProvider;
@@ -255,7 +255,7 @@ public class RecommendedExpressionService {
 ```java
 package com.lingring.domain.recommendedexpression.dto.response;
 
-import com.lingring.domain.recommendedexpression.domain.RecommendedExpression;
+import com.lingring.domain.userexpression.domain.RecommendedExpression;
 import java.time.LocalDateTime;
 
 public record RecommendedExpressionResponse(
@@ -382,9 +382,9 @@ public class RecommendedExpressionController implements RecommendedExpressionApi
 
 ## 8. 체크리스트
 
-- [ ] `com.lingring.domain.recommendedexpression.domain.vo.Expression` 추가
-- [ ] `com.lingring.domain.recommendedexpression.domain.vo.Meaning` 추가
-- [ ] `com.lingring.domain.recommendedexpression.domain.RecommendedExpression` 추가
+- [ ] `com.lingring.domain.userexpression.domain.vo.recommendedexpression.Expression` 추가
+- [ ] `com.lingring.domain.userexpression.domain.vo.recommendedexpression.Meaning` 추가
+- [ ] `com.lingring.domain.userexpression.domain.RecommendedExpression` 추가
 - [ ] `com.lingring.global.error.ErrorCode`에 `INVALID_RECOMMENDED_EXPRESSION`, `INVALID_RECOMMENDED_MEANING`, `RECOMMENDED_EXPRESSION_NOT_FOUND` 추가
 - [ ] `RecommendedExpressionRepository` 추가
 - [ ] `RecommendedExpressionService` 추가 (`getDaily()`)
