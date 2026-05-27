@@ -6,7 +6,7 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
-import com.lingring.domain.callanalysis.domain.CallAnalysisStatus;
+import com.lingring.domain.callanalysis.domain.analysis.CallAnalysisStatus;
 import com.lingring.domain.callanalysis.dto.response.CallAnalysisResponse;
 import com.lingring.domain.callanalysis.dto.response.CallAnalysisStartResponse;
 import com.lingring.domain.callanalysis.dto.response.CallAnalysisStatusResponse;

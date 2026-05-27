@@ -1,6 +1,6 @@
 package com.lingring.domain.callanalysis.dto.response;
 
-import com.lingring.domain.callanalysis.domain.vo.MistakeItem;
+import com.lingring.domain.callanalysis.domain.analysis.vo.MistakeItem;
 
 public record MistakeItemResponse(
         String tag,

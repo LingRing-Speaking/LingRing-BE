@@ -1,4 +1,4 @@
-package com.lingring.domain.callanalysis.domain.vo;
+package com.lingring.domain.callanalysis.domain.transcript.vo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

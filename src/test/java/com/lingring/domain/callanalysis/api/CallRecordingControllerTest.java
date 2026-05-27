@@ -10,7 +10,7 @@ import com.lingring.domain.callanalysis.dto.request.CallRecordingCreateRequest;
 import com.lingring.domain.callanalysis.dto.request.CallRecordingPresignedUrlRequest;
 import com.lingring.domain.callanalysis.dto.response.CallRecordingCreateResponse;
 import com.lingring.domain.callanalysis.dto.response.CallRecordingPresignedUrlResponse;
-import com.lingring.domain.callanalysis.domain.CallRecordingStatus;
+import com.lingring.domain.callanalysis.domain.recording.CallRecordingStatus;
 import com.lingring.domain.callanalysis.service.CallRecordingService;
 import com.lingring.global.auth.context.AuthContext;
 import org.junit.jupiter.api.AfterEach;

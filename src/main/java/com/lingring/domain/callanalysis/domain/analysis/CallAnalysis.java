@@ -1,10 +1,10 @@
-package com.lingring.domain.callanalysis.domain;
+package com.lingring.domain.callanalysis.domain.analysis;
 
 import static jakarta.persistence.EnumType.STRING;
 import static jakarta.persistence.GenerationType.IDENTITY;
 import static lombok.AccessLevel.PROTECTED;
 
-import com.lingring.domain.callanalysis.domain.vo.AnalysisResult;
+import com.lingring.domain.callanalysis.domain.analysis.vo.AnalysisResult;
 import com.lingring.global.common.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

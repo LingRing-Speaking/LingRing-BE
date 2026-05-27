@@ -1,9 +1,9 @@
-package com.lingring.domain.callanalysis.domain;
+package com.lingring.domain.callanalysis.domain.transcript;
 
 import static jakarta.persistence.GenerationType.IDENTITY;
 import static lombok.AccessLevel.PROTECTED;
 
-import com.lingring.domain.callanalysis.domain.vo.TranscriptContent;
+import com.lingring.domain.callanalysis.domain.transcript.vo.TranscriptContent;
 import com.lingring.global.common.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

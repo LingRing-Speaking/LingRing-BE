@@ -1,10 +1,10 @@
-package com.lingring.domain.callanalysis.domain;
+package com.lingring.domain.callanalysis.domain.transcript;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.lingring.domain.callanalysis.domain.vo.TranscriptContent;
-import com.lingring.domain.callanalysis.domain.vo.TranscriptSegment;
+import com.lingring.domain.callanalysis.domain.transcript.vo.TranscriptContent;
+import com.lingring.domain.callanalysis.domain.transcript.vo.TranscriptSegment;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

@@ -1,4 +1,4 @@
-package com.lingring.domain.callanalysis.domain.vo;
+package com.lingring.domain.callanalysis.domain.recording.vo;
 
 import com.lingring.domain.callanalysis.exception.CallRecordingKeyForbiddenException;
 import java.util.UUID;

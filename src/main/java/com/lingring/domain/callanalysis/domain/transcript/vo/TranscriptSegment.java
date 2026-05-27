@@ -1,4 +1,4 @@
-package com.lingring.domain.callanalysis.domain.vo;
+package com.lingring.domain.callanalysis.domain.transcript.vo;
 
 public record TranscriptSegment(
         Long userId,

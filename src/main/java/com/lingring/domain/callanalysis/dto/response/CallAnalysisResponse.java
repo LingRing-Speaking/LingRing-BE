@@ -1,8 +1,8 @@
 package com.lingring.domain.callanalysis.dto.response;
 
-import com.lingring.domain.callanalysis.domain.CallAnalysis;
-import com.lingring.domain.callanalysis.domain.CallAnalysisStatus;
-import com.lingring.domain.callanalysis.domain.vo.AnalysisResult;
+import com.lingring.domain.callanalysis.domain.analysis.CallAnalysis;
+import com.lingring.domain.callanalysis.domain.analysis.CallAnalysisStatus;
+import com.lingring.domain.callanalysis.domain.analysis.vo.AnalysisResult;
 import java.util.List;
 
 public record CallAnalysisResponse(

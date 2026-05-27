@@ -1,4 +1,4 @@
-package com.lingring.domain.callanalysis.domain.policy;
+package com.lingring.domain.callanalysis.domain.recording.policy;
 
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;

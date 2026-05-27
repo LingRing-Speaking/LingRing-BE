@@ -1,6 +1,6 @@
 package com.lingring.domain.callanalysis.dao;
 
-import com.lingring.domain.callanalysis.domain.CallRecording;
+import com.lingring.domain.callanalysis.domain.recording.CallRecording;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 

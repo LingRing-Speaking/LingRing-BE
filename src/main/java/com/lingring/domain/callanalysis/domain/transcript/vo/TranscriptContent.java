@@ -1,4 +1,4 @@
-package com.lingring.domain.callanalysis.domain.vo;
+package com.lingring.domain.callanalysis.domain.transcript.vo;
 
 import java.util.List;
 import java.util.Objects;

@@ -1,4 +1,4 @@
-package com.lingring.domain.callanalysis.domain;
+package com.lingring.domain.callanalysis.domain.analysis;
 
 public enum CallAnalysisStatus {
 

@@ -1,7 +1,7 @@
 package com.lingring.domain.callanalysis.dto.response;
 
-import com.lingring.domain.callanalysis.domain.CallRecording;
-import com.lingring.domain.callanalysis.domain.CallRecordingStatus;
+import com.lingring.domain.callanalysis.domain.recording.CallRecording;
+import com.lingring.domain.callanalysis.domain.recording.CallRecordingStatus;
 
 public record CallRecordingCreateResponse(
         Long recordingId,
