@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Import;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-@Import(TestcontainersConfiguration.class)
+@Import({TestcontainersConfiguration.class, TestSchedulingConfiguration.class})
 public @interface TestContainersTest {
 
 }

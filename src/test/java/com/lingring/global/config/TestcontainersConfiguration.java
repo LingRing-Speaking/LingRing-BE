@@ -12,20 +12,30 @@ import org.testcontainers.utility.DockerImageName;
 @EnableConfigurationProperties({DatabaseProperties.class, RedisContainerProperties.class})
 public class TestcontainersConfiguration {
 
-    @Bean
+    private static MySQLContainer mysqlInstance;
+    private static RedisContainer redisInstance;
+
+    @Bean(destroyMethod = "")
     @ServiceConnection
     static MySQLContainer mysqlContainer(final DatabaseProperties databaseProperties) {
-        return new MySQLContainer(MySQLContainer.NAME + ":" + databaseProperties.version())
-                .withReuse(true)
-                .withDatabaseName(databaseProperties.databaseName())
-                .withUsername(databaseProperties.username())
-                .withPassword(databaseProperties.password());
+        if (mysqlInstance == null) {
+            mysqlInstance = new MySQLContainer(MySQLContainer.NAME + ":" + databaseProperties.version())
+                    .withReuse(true)
+                    .withDatabaseName(databaseProperties.databaseName())
+                    .withUsername(databaseProperties.username())
+                    .withPassword(databaseProperties.password());
+            mysqlInstance.start();
+        }
+        return mysqlInstance;
     }
 
-    @Bean
+    @Bean(destroyMethod = "")
     @ServiceConnection
     static RedisContainer redisContainer(final RedisContainerProperties redisProperties) {
-        return new RedisContainer(DockerImageName.parse(redisProperties.image()))
-                .withReuse(true);
+        if (redisInstance == null) {
+            redisInstance = new RedisContainer(DockerImageName.parse(redisProperties.image()));
+            redisInstance.start();
+        }
+        return redisInstance;
     }
 }
