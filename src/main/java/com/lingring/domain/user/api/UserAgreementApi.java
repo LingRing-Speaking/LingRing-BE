@@ -1,6 +1,6 @@
 package com.lingring.domain.user.api;
 
-import com.lingring.domain.user.dto.request.request.AgreementCreateRequest;
+import com.lingring.domain.user.dto.request.AgreementCreateRequest;
 import com.lingring.domain.user.dto.response.AgreementResponse;
 import com.lingring.global.auth.annotation.AuthUser;
 import com.lingring.global.common.response.ApiResponse;
