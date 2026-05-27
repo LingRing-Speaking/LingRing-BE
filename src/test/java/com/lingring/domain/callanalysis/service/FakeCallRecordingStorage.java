@@ -1,7 +1,7 @@
 package com.lingring.domain.callanalysis.service;
 
-import com.lingring.domain.callanalysis.domain.CallRecordingStorage;
-import com.lingring.domain.callanalysis.domain.PresignedUpload;
+import com.lingring.domain.callanalysis.domain.port.CallRecordingStorage;
+import com.lingring.domain.callanalysis.domain.port.PresignedUpload;
 import java.util.HashMap;
 import java.util.Map;
 

@@ -1,6 +1,6 @@
 package com.lingring.domain.callanalysis.dto.response;
 
-import com.lingring.domain.callanalysis.domain.PresignedUpload;
+import com.lingring.domain.callanalysis.domain.port.PresignedUpload;
 
 public record CallRecordingPresignedUrlResponse(
         String url,

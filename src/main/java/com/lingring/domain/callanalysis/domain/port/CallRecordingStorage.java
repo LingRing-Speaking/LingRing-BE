@@ -1,4 +1,6 @@
-package com.lingring.domain.callanalysis.domain;
+package com.lingring.domain.callanalysis.domain.port;
+
+import com.lingring.domain.callanalysis.domain.port.PresignedUpload;
 
 public interface CallRecordingStorage {
 

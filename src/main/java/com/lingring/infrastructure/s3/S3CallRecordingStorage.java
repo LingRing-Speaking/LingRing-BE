@@ -1,7 +1,7 @@
 package com.lingring.infrastructure.s3;
 
-import com.lingring.domain.callanalysis.domain.CallRecordingStorage;
-import com.lingring.domain.callanalysis.domain.PresignedUpload;
+import com.lingring.domain.callanalysis.domain.port.CallRecordingStorage;
+import com.lingring.domain.callanalysis.domain.port.PresignedUpload;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.s3.S3Client;

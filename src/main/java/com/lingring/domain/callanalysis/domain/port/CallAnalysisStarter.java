@@ -1,4 +1,4 @@
-package com.lingring.domain.callanalysis.domain;
+package com.lingring.domain.callanalysis.domain.port;
 
 import com.lingring.domain.callanalysis.domain.vo.RecordingReference;
 import java.util.List;

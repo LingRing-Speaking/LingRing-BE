@@ -1,4 +1,4 @@
-package com.lingring.domain.call.service;
+package com.lingring.domain.call.domain.port;
 
 import com.lingring.domain.call.domain.SignalingMessage;
 import java.util.UUID;

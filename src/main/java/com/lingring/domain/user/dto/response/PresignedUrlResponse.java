@@ -1,6 +1,6 @@
 package com.lingring.domain.user.dto.response;
 
-import com.lingring.domain.user.domain.PresignedUploadUrl;
+import com.lingring.domain.user.domain.port.PresignedUploadUrl;
 
 public record PresignedUrlResponse(
         String uploadUrl,

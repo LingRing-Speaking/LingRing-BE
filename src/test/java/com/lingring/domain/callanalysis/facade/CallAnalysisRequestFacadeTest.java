@@ -11,7 +11,7 @@ import com.lingring.domain.callanalysis.domain.CallRecording;
 import com.lingring.domain.call.exception.CallParticipantMismatchException;
 import com.lingring.domain.callanalysis.exception.CallRecordingsNotReadyException;
 import com.lingring.domain.callanalysis.dao.CallAnalysisRepository;
-import com.lingring.domain.callanalysis.domain.CallAnalysisStarter;
+import com.lingring.domain.callanalysis.domain.port.CallAnalysisStarter;
 import com.lingring.domain.callanalysis.domain.CallAnalysisStatus;
 import com.lingring.domain.callanalysis.dto.response.CallAnalysisStartResponse;
 import com.lingring.domain.callanalysis.support.FakeCallAnalysisStarter;
