@@ -1,7 +1,7 @@
 package com.lingring.domain.matching.domain.policy;
 
 import com.lingring.domain.matching.domain.MatchingCandidate;
-import com.lingring.domain.userblock.dao.UserBlockRepository;
+import com.lingring.domain.moderation.dao.UserBlockRepository;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
