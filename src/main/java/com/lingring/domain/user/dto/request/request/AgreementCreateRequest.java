@@ -1,4 +1,4 @@
-package com.lingring.domain.useragreement.dto.request;
+package com.lingring.domain.user.dto.request.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;

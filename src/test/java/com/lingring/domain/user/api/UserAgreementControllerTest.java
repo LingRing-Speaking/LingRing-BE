@@ -1,4 +1,4 @@
-package com.lingring.domain.useragreement.api;
+package com.lingring.domain.user.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -8,10 +8,10 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
-import com.lingring.domain.useragreement.dto.request.AgreementCreateRequest;
-import com.lingring.domain.useragreement.dto.response.AgreementResponse;
-import com.lingring.domain.useragreement.dto.response.AgreementResponse.UserSummary;
-import com.lingring.domain.useragreement.service.UserAgreementService;
+import com.lingring.domain.user.dto.request.request.AgreementCreateRequest;
+import com.lingring.domain.user.dto.response.AgreementResponse;
+import com.lingring.domain.user.dto.response.AgreementResponse.UserSummary;
+import com.lingring.domain.user.service.UserAgreementService;
 import com.lingring.global.auth.context.AuthContext;
 import java.util.Set;
 import org.junit.jupiter.api.AfterEach;

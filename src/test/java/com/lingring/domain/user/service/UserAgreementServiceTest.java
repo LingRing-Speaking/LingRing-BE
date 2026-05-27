@@ -1,4 +1,4 @@
-package com.lingring.domain.useragreement.service;
+package com.lingring.domain.user.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -7,8 +7,8 @@ import com.lingring.domain.user.dao.UserRepository;
 import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.vo.Name;
-import com.lingring.domain.useragreement.dto.request.AgreementCreateRequest;
-import com.lingring.domain.useragreement.dto.response.AgreementResponse;
+import com.lingring.domain.user.dto.request.request.AgreementCreateRequest;
+import com.lingring.domain.user.dto.response.AgreementResponse;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;

@@ -1,4 +1,4 @@
-package com.lingring.domain.useragreement.dto.response;
+package com.lingring.domain.user.dto.response;
 
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.vo.ProfileImage;

@@ -1,4 +1,4 @@
-package com.lingring.domain.useragreement.domain;
+package com.lingring.domain.user.domain;
 
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;

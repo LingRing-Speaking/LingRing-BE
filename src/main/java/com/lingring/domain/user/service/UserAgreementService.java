@@ -1,10 +1,9 @@
-package com.lingring.domain.useragreement.service;
+package com.lingring.domain.user.service;
 
 import com.lingring.domain.user.domain.User;
-import com.lingring.domain.user.service.UserService;
-import com.lingring.domain.useragreement.domain.AgreementItem;
-import com.lingring.domain.useragreement.dto.request.AgreementCreateRequest;
-import com.lingring.domain.useragreement.dto.response.AgreementResponse;
+import com.lingring.domain.user.domain.AgreementItem;
+import com.lingring.domain.user.dto.request.request.AgreementCreateRequest;
+import com.lingring.domain.user.dto.response.AgreementResponse;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
 import com.lingring.global.util.DateTimeProvider;
