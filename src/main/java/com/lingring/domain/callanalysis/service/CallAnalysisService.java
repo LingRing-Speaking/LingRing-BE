@@ -2,8 +2,8 @@ package com.lingring.domain.callanalysis.service;
 
 import com.lingring.domain.callanalysis.dao.CallAnalysisRepository;
 import com.lingring.domain.callanalysis.dao.dto.CallAnalysisSummaryProjection;
-import com.lingring.domain.callanalysis.domain.CallAnalysis;
-import com.lingring.domain.callanalysis.domain.vo.AnalysisResult;
+import com.lingring.domain.callanalysis.domain.analysis.CallAnalysis;
+import com.lingring.domain.callanalysis.domain.analysis.vo.AnalysisResult;
 import com.lingring.domain.callanalysis.dto.response.CallAnalysisResponse;
 import com.lingring.domain.callanalysis.dto.response.CallAnalysisStatusResponse;
 import com.lingring.domain.callanalysis.exception.CallAnalysisAccessForbiddenException;

@@ -1,7 +1,7 @@
 package com.lingring.infrastructure.s3;
 
-import com.lingring.domain.user.domain.PresignedUploadUrl;
-import com.lingring.domain.user.domain.ProfileImageStorage;
+import com.lingring.domain.user.domain.port.PresignedUploadUrl;
+import com.lingring.domain.user.domain.port.ProfileImageStorage;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

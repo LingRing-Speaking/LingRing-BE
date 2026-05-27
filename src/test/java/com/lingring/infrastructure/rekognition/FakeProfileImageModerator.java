@@ -1,7 +1,7 @@
 package com.lingring.infrastructure.rekognition;
 
-import com.lingring.domain.user.domain.ModerationVerdict;
-import com.lingring.domain.user.domain.ProfileImageModerator;
+import com.lingring.domain.user.domain.port.ModerationVerdict;
+import com.lingring.domain.user.domain.port.ProfileImageModerator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

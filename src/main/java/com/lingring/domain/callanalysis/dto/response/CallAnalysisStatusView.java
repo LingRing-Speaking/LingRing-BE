@@ -1,6 +1,6 @@
 package com.lingring.domain.callanalysis.dto.response;
 
-import com.lingring.domain.callanalysis.domain.CallAnalysisStatus;
+import com.lingring.domain.callanalysis.domain.analysis.CallAnalysisStatus;
 import com.lingring.domain.callanalysis.service.CallAnalysisSummary;
 
 public enum CallAnalysisStatusView {

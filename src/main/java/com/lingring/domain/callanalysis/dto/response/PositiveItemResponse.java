@@ -1,6 +1,6 @@
 package com.lingring.domain.callanalysis.dto.response;
 
-import com.lingring.domain.callanalysis.domain.vo.PositiveItem;
+import com.lingring.domain.callanalysis.domain.analysis.vo.PositiveItem;
 
 public record PositiveItemResponse(
         String sentence,

@@ -51,18 +51,10 @@ public enum ErrorCode {
     // UserStats Error
     USER_STATS_NOT_FOUND(NOT_FOUND, "사용자 통계를 찾을 수 없습니다."),
 
-    // UserExpression Error
+    // Expression Error
     INVALID_EXPRESSION(BAD_REQUEST, "유효하지 않은 표현입니다."),
     INVALID_MEANING(BAD_REQUEST, "유효하지 않은 뜻입니다."),
-
-    // RecommendedExpression Error
-    INVALID_RECOMMENDED_EXPRESSION(BAD_REQUEST, "유효하지 않은 추천 표현입니다."),
-    INVALID_RECOMMENDED_MEANING(BAD_REQUEST, "유효하지 않은 추천 뜻입니다."),
     RECOMMENDED_EXPRESSION_NOT_FOUND(NOT_FOUND, "오늘의 추천 표현을 찾을 수 없습니다."),
-
-    // Icebreaker Error
-    INVALID_ICEBREAKER_EXPRESSION(BAD_REQUEST, "유효하지 않은 아이스브레이커 표현입니다."),
-    INVALID_ICEBREAKER_MEANING(BAD_REQUEST, "유효하지 않은 아이스브레이커 뜻입니다."),
     ICEBREAKER_NOT_FOUND(NOT_FOUND, "아이스브레이커를 찾을 수 없습니다."),
 
     // UserBlock Error
