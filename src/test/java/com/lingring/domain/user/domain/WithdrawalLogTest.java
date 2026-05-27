@@ -1,4 +1,4 @@
-package com.lingring.domain.withdrawallog.domain;
+package com.lingring.domain.user.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

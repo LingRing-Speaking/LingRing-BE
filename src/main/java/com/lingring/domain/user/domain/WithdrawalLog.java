@@ -1,11 +1,10 @@
-package com.lingring.domain.withdrawallog.domain;
+package com.lingring.domain.user.domain;
 
 import static jakarta.persistence.EnumType.STRING;
 import static jakarta.persistence.GenerationType.IDENTITY;
 import static lombok.AccessLevel.PROTECTED;
 
-import com.lingring.domain.user.domain.WithdrawReason;
-import com.lingring.domain.withdrawallog.domain.vo.WithdrawDescription;
+import com.lingring.domain.user.domain.vo.WithdrawDescription;
 import com.lingring.global.common.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;

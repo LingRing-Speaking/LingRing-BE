@@ -1,7 +1,6 @@
-package com.lingring.domain.withdrawallog.event;
+package com.lingring.domain.user.event;
 
-import com.lingring.domain.user.event.UserWithdrawnEvent;
-import com.lingring.domain.withdrawallog.service.WithdrawalLogService;
+import com.lingring.domain.user.service.WithdrawalLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;

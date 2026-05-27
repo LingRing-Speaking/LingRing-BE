@@ -1,8 +1,8 @@
-package com.lingring.domain.withdrawallog.service;
+package com.lingring.domain.user.service;
 
+import com.lingring.domain.user.dao.WithdrawalLogRepository;
 import com.lingring.domain.user.domain.WithdrawReason;
-import com.lingring.domain.withdrawallog.dao.WithdrawalLogRepository;
-import com.lingring.domain.withdrawallog.domain.WithdrawalLog;
+import com.lingring.domain.user.domain.WithdrawalLog;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

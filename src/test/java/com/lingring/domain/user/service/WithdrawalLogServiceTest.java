@@ -1,10 +1,10 @@
-package com.lingring.domain.withdrawallog.service;
+package com.lingring.domain.user.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.lingring.domain.user.dao.WithdrawalLogRepository;
 import com.lingring.domain.user.domain.WithdrawReason;
-import com.lingring.domain.withdrawallog.dao.WithdrawalLogRepository;
-import com.lingring.domain.withdrawallog.domain.WithdrawalLog;
+import com.lingring.domain.user.domain.WithdrawalLog;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
