@@ -1,11 +1,11 @@
-package com.lingring.domain.review.facade;
+package com.lingring.domain.call.facade;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.lingring.domain.call.dao.CallRepository;
 import com.lingring.domain.call.domain.Call;
-import com.lingring.domain.review.dto.response.CallSummaryResponse;
-import com.lingring.domain.review.dto.response.CallsResponse;
+import com.lingring.domain.call.dto.response.CallSummaryResponse;
+import com.lingring.domain.call.dto.response.CallsResponse;
 import com.lingring.domain.call.service.CallService;
 import com.lingring.domain.review.domain.analysis.CallAnalysis;
 import com.lingring.domain.review.domain.analysis.vo.AnalysisResult;
@@ -14,7 +14,7 @@ import com.lingring.domain.review.domain.analysis.vo.MistakeItem;
 import com.lingring.domain.review.domain.analysis.vo.Mistakes;
 import com.lingring.domain.review.domain.analysis.vo.PositiveItem;
 import com.lingring.domain.review.domain.analysis.vo.Positives;
-import com.lingring.domain.review.dto.response.CallAnalysisStatusView;
+import com.lingring.domain.call.dto.response.CallAnalysisStatusView;
 import com.lingring.domain.review.service.CallAnalysisService;
 import com.lingring.domain.user.dao.UserRepository;
 import com.lingring.domain.user.domain.Provider;

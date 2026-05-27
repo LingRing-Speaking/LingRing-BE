@@ -1,15 +1,15 @@
-package com.lingring.domain.review.api;
+package com.lingring.domain.call.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
-import com.lingring.domain.review.dto.response.CallsResponse;
-import com.lingring.domain.review.dto.response.CallSummaryResponse;
-import com.lingring.domain.review.dto.response.PartnerResponse;
-import com.lingring.domain.review.facade.CallHistoryFacade;
-import com.lingring.domain.review.dto.response.CallAnalysisStatusView;
+import com.lingring.domain.call.dto.response.CallsResponse;
+import com.lingring.domain.call.dto.response.CallSummaryResponse;
+import com.lingring.domain.call.dto.response.PartnerResponse;
+import com.lingring.domain.call.facade.CallHistoryFacade;
+import com.lingring.domain.call.dto.response.CallAnalysisStatusView;
 import com.lingring.global.auth.context.AuthContext;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;

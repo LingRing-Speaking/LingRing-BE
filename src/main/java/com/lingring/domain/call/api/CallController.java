@@ -1,7 +1,7 @@
-package com.lingring.domain.review.api;
+package com.lingring.domain.call.api;
 
-import com.lingring.domain.review.dto.response.CallsResponse;
-import com.lingring.domain.review.facade.CallHistoryFacade;
+import com.lingring.domain.call.dto.response.CallsResponse;
+import com.lingring.domain.call.facade.CallHistoryFacade;
 import com.lingring.global.common.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
