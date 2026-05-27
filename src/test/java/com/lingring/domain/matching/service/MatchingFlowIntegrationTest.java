@@ -9,13 +9,10 @@ import com.lingring.domain.matching.dao.PairCooldownRepository;
 import com.lingring.domain.matching.domain.MatchConfirmation;
 import com.lingring.domain.matching.domain.MatchingPollStatus;
 import com.lingring.domain.matching.dto.response.MatchingStatusResponse;
-import com.lingring.domain.matching.scheduler.MatchConfirmationExpiryWorker;
-import com.lingring.domain.matching.scheduler.MatchingWorker;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 class MatchingFlowIntegrationTest extends ServiceIntegrationHelper {
 
@@ -36,14 +33,6 @@ class MatchingFlowIntegrationTest extends ServiceIntegrationHelper {
 
     @Autowired
     private CallRepository callRepository;
-
-    @MockitoBean
-    @SuppressWarnings("unused")
-    private MatchingWorker matchingWorker;
-
-    @MockitoBean
-    @SuppressWarnings("unused")
-    private MatchConfirmationExpiryWorker matchConfirmationExpiryWorker;
 
     @Test
     @DisplayName("happy path: 양쪽 큐 입장 → 라운드 실행 → 양쪽 accept → MATCHED + Call 1건")
