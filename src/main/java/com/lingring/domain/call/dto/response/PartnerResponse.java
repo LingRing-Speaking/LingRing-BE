@@ -1,4 +1,4 @@
-package com.lingring.domain.review.dto.response;
+package com.lingring.domain.call.dto.response;
 
 public record PartnerResponse(
         Long id,
