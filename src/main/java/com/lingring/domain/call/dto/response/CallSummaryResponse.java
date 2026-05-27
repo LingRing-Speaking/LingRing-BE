@@ -1,8 +1,7 @@
-package com.lingring.domain.review.dto.response;
+package com.lingring.domain.call.dto.response;
 
 import com.lingring.domain.call.dao.dto.CallSummaryProjection;
-import com.lingring.domain.review.dto.response.CallAnalysisStatusView;
-import com.lingring.domain.review.service.CallAnalysisSummary;
+import com.lingring.domain.call.domain.port.AnalysisSummaryView;
 import com.lingring.global.util.Zones;
 import java.time.OffsetDateTime;
 
@@ -17,7 +16,7 @@ public record CallSummaryResponse(
 
     public static CallSummaryResponse from(
             final CallSummaryProjection projection,
-            final CallAnalysisSummary analysisSummary
+            final AnalysisSummaryView analysisSummary
     ) {
         final OffsetDateTime startedAt = projection.getStartedAt()
                 .atZone(Zones.SEOUL)
@@ -32,7 +31,7 @@ public record CallSummaryResponse(
         );
     }
 
-    private static Long analysisIdOf(final CallAnalysisSummary summary) {
+    private static Long analysisIdOf(final AnalysisSummaryView summary) {
         if (summary == null) {
             return null;
         }

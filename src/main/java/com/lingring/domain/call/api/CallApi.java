@@ -1,6 +1,6 @@
-package com.lingring.domain.review.api;
+package com.lingring.domain.call.api;
 
-import com.lingring.domain.review.dto.response.CallsResponse;
+import com.lingring.domain.call.dto.response.CallsResponse;
 import com.lingring.global.auth.annotation.AuthUser;
 import com.lingring.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
