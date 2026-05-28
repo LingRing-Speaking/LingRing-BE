@@ -1,6 +1,7 @@
 package com.lingring.domain.user.event;
 
-import com.lingring.domain.user.service.WithdrawalLogService;
+import com.lingring.domain.user.dao.WithdrawalLogRepository;
+import com.lingring.domain.user.domain.WithdrawalLog;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -12,11 +13,11 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class WithdrawalLogListener {
 
-    private final WithdrawalLogService withdrawalLogService;
+    private final WithdrawalLogRepository withdrawalLogRepository;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void on(final UserWithdrawnEvent event) {
-        withdrawalLogService.record(event.reason(), event.description());
+        withdrawalLogRepository.save(WithdrawalLog.record(event.reason(), event.description()));
     }
 }
