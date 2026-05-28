@@ -19,8 +19,8 @@ import com.lingring.domain.user.dto.response.MeResponse;
 import com.lingring.domain.user.dto.response.PresignedUrlResponse;
 import com.lingring.domain.user.dto.response.UpdateProfileResponse;
 import com.lingring.domain.user.dto.response.UserProfileResponse;
-import com.lingring.domain.user.facade.UserWithdrawalFacade;
 import com.lingring.domain.user.service.UserService;
+import com.lingring.domain.user.service.UserWithdrawalService;
 import com.lingring.global.auth.context.AuthContext;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
@@ -54,7 +54,7 @@ class UserControllerTest {
     private UserService userService;
 
     @MockitoBean
-    private UserWithdrawalFacade userWithdrawalFacade;
+    private UserWithdrawalService userWithdrawalService;
 
     @AfterEach
     void clearAuthContext() {
@@ -177,7 +177,7 @@ class UserControllerTest {
     class Withdraw {
 
         @Test
-        @DisplayName("탈퇴가 정상 처리되면 204 응답과 함께 facade.withdraw가 호출된다")
+        @DisplayName("탈퇴가 정상 처리되면 204 응답과 함께 service.withdraw가 호출된다")
         void withdraw_whenSuccess_returns204() throws Exception {
             // given
             final Long userId = 1L;
@@ -196,11 +196,11 @@ class UserControllerTest {
 
             // then
             assertThat(response.getStatus()).isEqualTo(204);
-            then(userWithdrawalFacade).should(only()).withdraw(userId, WithdrawReason.NO_GOOD_MATCH, null);
+            then(userWithdrawalService).should(only()).withdraw(userId, WithdrawReason.NO_GOOD_MATCH, null);
         }
 
         @Test
-        @DisplayName("OTHER 사유로 description을 동봉하면 204 응답과 함께 facade.withdraw가 호출된다")
+        @DisplayName("OTHER 사유로 description을 동봉하면 204 응답과 함께 service.withdraw가 호출된다")
         void withdraw_whenOtherWithDescription_returns204() throws Exception {
             // given
             final Long userId = 1L;
@@ -220,7 +220,7 @@ class UserControllerTest {
 
             // then
             assertThat(response.getStatus()).isEqualTo(204);
-            then(userWithdrawalFacade).should(only()).withdraw(userId, WithdrawReason.OTHER, description);
+            then(userWithdrawalService).should(only()).withdraw(userId, WithdrawReason.OTHER, description);
         }
 
         @Test
@@ -247,7 +247,7 @@ class UserControllerTest {
                     .isEqualTo(ErrorCode.INVALID_INPUT_VALUE.getHttpStatus().value());
             assertThat(responseBody.get("message").asText())
                     .isEqualTo(ErrorCode.INVALID_INPUT_VALUE.getMessage());
-            verifyNoInteractions(userWithdrawalFacade);
+            verifyNoInteractions(userWithdrawalService);
         }
 
         @Test
@@ -270,7 +270,7 @@ class UserControllerTest {
             final JsonNode responseBody = objectMapper.readTree(response.getContentAsString());
             assertThat(responseBody.get("status").asInt())
                     .isEqualTo(ErrorCode.INVALID_INPUT_VALUE.getHttpStatus().value());
-            verifyNoInteractions(userWithdrawalFacade);
+            verifyNoInteractions(userWithdrawalService);
         }
 
         @Test
@@ -282,7 +282,7 @@ class UserControllerTest {
             willThrow(new NotFoundException(
                     ErrorCode.USER_NOT_FOUND,
                     "ID가 %d인 사용자를 찾을 수 없습니다.".formatted(userId)
-            )).given(userWithdrawalFacade).withdraw(userId, WithdrawReason.NO_GOOD_MATCH, null);
+            )).given(userWithdrawalService).withdraw(userId, WithdrawReason.NO_GOOD_MATCH, null);
             final String body = objectMapper.writeValueAsString(
                     new WithdrawRequest(WithdrawReason.NO_GOOD_MATCH, null)
             );

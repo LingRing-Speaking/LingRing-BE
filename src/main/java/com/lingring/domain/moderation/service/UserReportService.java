@@ -31,11 +31,6 @@ public class UserReportService {
         return UserReportResponse.from(saved);
     }
 
-    @Transactional
-    public void anonymizeReporter(final Long userId) {
-        userReportRepository.anonymizeReporter(userId);
-    }
-
     private void autoBlock(final Long userId, final Long reportedUserId) {
         if (userBlockRepository.existsByUserIdAndBlockedUserId(userId, reportedUserId)) {
             return;

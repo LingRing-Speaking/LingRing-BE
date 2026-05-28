@@ -38,11 +38,6 @@ public class UserBlockService {
                 .ifPresent(userBlockRepository::delete);
     }
 
-    @Transactional
-    public void deleteByUserId(final Long userId) {
-        userBlockRepository.deleteByUserId(userId);
-    }
-
     @Transactional(readOnly = true)
     public UserBlocksResponse getAllByUserId(final Long userId, final int page, final int size) {
         final PageSize pageSize = PageSize.clamp(size);

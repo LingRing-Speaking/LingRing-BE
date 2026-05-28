@@ -52,11 +52,6 @@ public class UserStatsService {
         userStats.resetStreakDaysToOne();
     }
 
-    @Transactional
-    public void deleteByUserId(final Long userId) {
-        userStatsRepository.deleteByUserId(userId);
-    }
-
     private UserStats findByUserId(final Long userId) {
         return userStatsRepository.findByUserId(userId)
                 .orElseThrow(() -> new NotFoundException(
