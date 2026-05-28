@@ -46,8 +46,4 @@ public class UserExpressionService {
                 });
     }
 
-    @Transactional
-    public void deleteByUserId(final Long userId) {
-        userExpressionRepository.deleteByUserId(userId);
-    }
 }

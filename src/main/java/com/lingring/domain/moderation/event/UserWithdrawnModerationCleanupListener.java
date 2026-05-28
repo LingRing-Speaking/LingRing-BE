@@ -1,7 +1,8 @@
-package com.lingring.domain.user.event;
+package com.lingring.domain.moderation.event;
 
-import com.lingring.domain.user.dao.WithdrawalLogRepository;
-import com.lingring.domain.user.domain.WithdrawalLog;
+import com.lingring.domain.moderation.dao.UserBlockRepository;
+import com.lingring.domain.moderation.dao.UserReportRepository;
+import com.lingring.domain.user.event.UserWithdrawnEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -11,13 +12,15 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 @Component
 @RequiredArgsConstructor
-public class WithdrawalLogListener {
+public class UserWithdrawnModerationCleanupListener {
 
-    private final WithdrawalLogRepository withdrawalLogRepository;
+    private final UserBlockRepository userBlockRepository;
+    private final UserReportRepository userReportRepository;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void on(final UserWithdrawnEvent event) {
-        withdrawalLogRepository.save(WithdrawalLog.record(event.reason(), event.description()));
+        userBlockRepository.deleteByUserId(event.userId());
+        userReportRepository.anonymizeReporter(event.userId());
     }
 }

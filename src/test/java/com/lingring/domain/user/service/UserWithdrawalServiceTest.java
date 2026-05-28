@@ -1,4 +1,4 @@
-package com.lingring.domain.user.facade;
+package com.lingring.domain.user.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -39,11 +39,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 
-@Import(UserWithdrawalFacadeTest.FakeAppleAuthClientConfig.class)
-class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
+@Import(UserWithdrawalServiceTest.FakeAppleAuthClientConfig.class)
+class UserWithdrawalServiceTest extends ServiceIntegrationHelper {
 
     @Autowired
-    private UserWithdrawalFacade userWithdrawalFacade;
+    private UserWithdrawalService userWithdrawalService;
 
     @Autowired
     private UserRepository userRepository;
@@ -97,7 +97,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             final User me = saveUser("링링", "kakao-me");
 
             // when
-            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+            userWithdrawalService.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             assertThat(userRepository.findById(me.getId())).isEmpty();
@@ -113,7 +113,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             userStatsRepository.save(UserStats.create(other.getId()));
 
             // when
-            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+            userWithdrawalService.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             assertThat(userStatsRepository.findByUserId(me.getId())).isEmpty();
@@ -131,7 +131,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             userExpressionRepository.save(UserExpression.create(other.getId(), "expr-other", "meaning-other"));
 
             // when
-            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+            userWithdrawalService.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             assertThat(userExpressionRepository.findAllByUserIdOrderByCreatedAtDesc(
@@ -153,7 +153,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             userBlockRepository.save(UserBlock.create(b.getId(), me.getId()));
 
             // when
-            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+            userWithdrawalService.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             assertThat(userBlockRepository.findBlockedUserIdsByUserId(me.getId())).isEmpty();
@@ -178,7 +178,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             final boolean meIsAInCallB = callB.getUserAId().equals(me.getId());
 
             // when
-            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+            userWithdrawalService.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             final Call reloadedA = callRepository.findById(callA.getId()).orElseThrow();
@@ -211,7 +211,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             ));
 
             // when
-            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+            userWithdrawalService.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             final Call reloaded = callRepository.findById(call.getId()).orElseThrow();
@@ -233,7 +233,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             ));
 
             // when
-            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+            userWithdrawalService.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             final UserReport reloaded = userReportRepository.findById(saved.getId()).orElseThrow();
@@ -257,7 +257,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             ));
 
             // when
-            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+            userWithdrawalService.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             final UserReport reloaded = userReportRepository.findById(saved.getId()).orElseThrow();
@@ -273,7 +273,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             refreshTokenRepository.save(me.getId(), "refresh-token-value");
 
             // when
-            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+            userWithdrawalService.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             assertThat(refreshTokenRepository.exists(me.getId())).isFalse();
@@ -286,7 +286,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             final Long missingId = 9_999_999L;
 
             // when & then
-            assertThatThrownBy(() -> userWithdrawalFacade.withdraw(missingId, WithdrawReason.NO_GOOD_MATCH, null))
+            assertThatThrownBy(() -> userWithdrawalService.withdraw(missingId, WithdrawReason.NO_GOOD_MATCH, null))
                     .isInstanceOf(NotFoundException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.USER_NOT_FOUND);
@@ -300,7 +300,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             final String description = "더 이상 사용할 일이 없어요";
 
             // when
-            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.OTHER, description);
+            userWithdrawalService.withdraw(me.getId(), WithdrawReason.OTHER, description);
 
             // then
             final List<WithdrawalLog> logs = withdrawalLogRepository.findAll();
@@ -316,7 +316,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             final User me = saveUser("링링", "kakao-me");
 
             // when
-            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.RARELY_USE, "이건 무시됨");
+            userWithdrawalService.withdraw(me.getId(), WithdrawReason.RARELY_USE, "이건 무시됨");
 
             // then
             final List<WithdrawalLog> logs = withdrawalLogRepository.findAll();
@@ -338,7 +338,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             final User me = saveAppleUser("애플유저", "apple-me", "apple-rt-stored");
 
             // when
-            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+            userWithdrawalService.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             assertThat(fakeAppleAuthClient().revokedTokens()).containsExactly("apple-rt-stored");
@@ -354,7 +354,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             final User me = saveAppleUser("애플유저", "apple-me", "apple-rt-stored");
 
             // when
-            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+            userWithdrawalService.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             assertThat(userRepository.findById(me.getId())).isEmpty();
@@ -370,7 +370,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             );
 
             // when
-            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+            userWithdrawalService.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             assertThat(fakeAppleAuthClient().revokedTokens()).isEmpty();
@@ -385,7 +385,7 @@ class UserWithdrawalFacadeTest extends ServiceIntegrationHelper {
             final User me = saveUser("카카오유저", "kakao-me");
 
             // when
-            userWithdrawalFacade.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+            userWithdrawalService.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
 
             // then
             assertThat(fakeAppleAuthClient().revokedTokens()).isEmpty();

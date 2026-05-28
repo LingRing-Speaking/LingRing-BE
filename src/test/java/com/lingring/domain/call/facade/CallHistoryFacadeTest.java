@@ -6,7 +6,6 @@ import com.lingring.domain.call.dao.CallRepository;
 import com.lingring.domain.call.domain.Call;
 import com.lingring.domain.call.dto.response.CallSummaryResponse;
 import com.lingring.domain.call.dto.response.CallsResponse;
-import com.lingring.domain.call.service.CallService;
 import com.lingring.domain.review.domain.analysis.CallAnalysis;
 import com.lingring.domain.review.domain.analysis.vo.AnalysisResult;
 import com.lingring.domain.review.domain.analysis.vo.FeedbackTag;
@@ -28,6 +27,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 class CallHistoryFacadeTest extends ServiceIntegrationHelper {
 
@@ -37,9 +38,6 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
     private CallHistoryFacade callHistoryFacade;
 
     @Autowired
-    private CallService callService;
-
-    @Autowired
     private CallAnalysisService callAnalysisService;
 
     @Autowired
@@ -47,6 +45,9 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
 
     private static final String MODEL = "gemini-2.5-flash";
 
@@ -204,7 +205,8 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             final Call ended = saveEndedCall(me, partner.getId(), FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(5));
 
             // when
-            callService.anonymizeUser(partner.getId());
+            new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+                    callRepository.anonymizeUser(partner.getId()));
             userRepository.deleteById(partner.getId());
 
             final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
