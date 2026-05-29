@@ -1,45 +1,20 @@
 spring:
-  datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-  data:
-    redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
   jpa:
     hibernate:
       ddl-auto: update
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
-    show-sql: false
-    open-in-view: false
+    show-sql: true
 
 logging:
   level:
     root: info
+    com.lingring: debug
 
 auth:
   jwt:
-    secret: ${JWT_SECRET}
     access-ttl: PT1H
-    refresh-ttl: P30D
-  kakao:
-    iss: https://kauth.kakao.com
-    aud: ${KAKAO_AUD}
-    jwks-uri: https://kauth.kakao.com/.well-known/jwks.json
-  apple:
-    iss: https://appleid.apple.com
-    aud: ${APPLE_AUD}
-    jwks-uri: https://appleid.apple.com/auth/keys
-    team-id: ${APPLE_TEAM_ID}
-    key-id: ${APPLE_KEY_ID}
-    client-id: ${APPLE_CLIENT_ID}
-    private-key: ${APPLE_PRIVATE_KEY}
-    token-encrypt-password: ${APPLE_TOKEN_ENCRYPT_PASSWORD}
-    token-encrypt-salt: ${APPLE_TOKEN_ENCRYPT_SALT}
   demo:
     enabled: true
     tokens:
@@ -47,42 +22,17 @@ auth:
       ${DEMO_TOKEN_B}: REVIEWER_B
       ${DEMO_TOKEN_C}: REVIEWER_C
 
-aws:
-  s3:
-    bucket: ${AWS_S3_BUCKET}
-    region: ap-northeast-2
-    presigned-url-expiration-seconds: 300
-    call-recording:
-      prefix: call-recordings/
-      upload-ttl: PT10M
-  rekognition:
-    region: ap-northeast-2
-    min-confidence: 80
-    blocked-categories:
-      - "Explicit"
-      - "Violence"
-      - "Visually Disturbing"
-      - "Hate Symbols"
-      - "Drugs & Tobacco"
-  lambda:
-    region: ap-northeast-2
-    call-analysis-function-name: ${AWS_LAMBDA_CALL_ANALYSIS_ARN}
-  sqs:
-    region: ap-northeast-2
-    call-analysis-result-queue-url: ${AWS_SQS_CALL_ANALYSIS_URL}
-    poll-interval-ms: 10000
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
 
-profile-image:
-  allowed-content-type-prefix: image/
-  max-content-length-bytes: 31457280
-
-call-recording:
-  allowed-content-types:
-    - audio/m4a
-    - audio/mp4
-    - audio/webm
-  max-content-length: 52428800
-
-matching:
-  confirm-deadline-seconds: 15
-  cooldown-minutes: 10
+springdoc:
+  swagger-ui:
+    enabled: true
+  api-docs:
+    enabled: true

@@ -1,22 +1,22 @@
 spring:
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
-        format_sql: true
-    show-sql: true
+        format_sql: false
+    show-sql: false
 
 logging:
   level:
     root: info
-    com.lingring: debug
+    com.lingring: info
 
 auth:
   jwt:
-    access-ttl: PT24H
+    access-ttl: PT30M
   demo:
-    enabled: true
+    enabled: true                # App Store/Play Store 심사 리뷰어용. 토큰 노출 주의.
     tokens:
       ${DEMO_TOKEN_A}: REVIEWER_A
       ${DEMO_TOKEN_B}: REVIEWER_B
@@ -26,13 +26,15 @@ management:
   endpoints:
     web:
       exposure:
-        include: "*"
+        include: health,info
   endpoint:
     health:
-      show-details: always
+      show-details: never
+      probes:
+        enabled: true
 
 springdoc:
   swagger-ui:
-    enabled: true
+    enabled: false
   api-docs:
-    enabled: true
+    enabled: false
