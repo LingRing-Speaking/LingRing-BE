@@ -2,9 +2,10 @@
 # Build (and optionally deploy) the call-transcript-processor Lambda.
 #
 # Usage:
-#   ./build.sh                  # build for x86_64 → function.zip
-#   ./build.sh --arch arm64     # build for arm64
-#   ./build.sh --upload         # build + upload via AWS CLI
+#   ./build.sh                                                # build for x86_64 → function.zip
+#   ./build.sh --arch arm64                                   # build for arm64
+#   ./build.sh --upload                                       # build + upload to dev Lambda
+#   ./build.sh --upload --function-name lingring-prod-call-transcript-processor  # prod
 #   ./build.sh --upload --arch arm64
 #
 # Requires: python3 + pip, zip, (optional) aws CLI
@@ -16,7 +17,7 @@ cd "$SCRIPT_DIR"
 
 ARCH="x86_64"
 PYTHON_VERSION="3.12"
-FUNCTION_NAME="call-transcript-processor"
+FUNCTION_NAME="call-transcript-processor"  # default = dev. prod는 --function-name으로 override.
 REGION="ap-northeast-2"
 DO_UPLOAD=0
 
@@ -24,6 +25,10 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --arch)
             ARCH="$2"
+            shift 2
+            ;;
+        --function-name)
+            FUNCTION_NAME="$2"
             shift 2
             ;;
         --upload)
