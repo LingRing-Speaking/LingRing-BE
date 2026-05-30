@@ -19,14 +19,14 @@ import lombok.NonNull;
 
 @Entity
 @Table(
-        name = "call_recordings",
+        name = "call_recording",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_call_recordings_call_user",
+                name = "uk_call_recording_call_user",
                 columnNames = {"call_id", "user_id"}
         ),
         indexes = {
-                @Index(name = "idx_call_recordings_call_id", columnList = "call_id"),
-                @Index(name = "idx_call_recordings_user_id", columnList = "user_id")
+                @Index(name = "idx_call_recording_call_id", columnList = "call_id"),
+                @Index(name = "idx_call_recording_user_id", columnList = "user_id")
         }
 )
 @Getter

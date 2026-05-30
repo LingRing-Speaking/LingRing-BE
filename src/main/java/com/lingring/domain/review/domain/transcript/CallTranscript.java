@@ -19,9 +19,9 @@ import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(
-        name = "call_transcripts",
+        name = "call_transcript",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_call_transcripts_call_id",
+                name = "uk_call_transcript_call_id",
                 columnNames = "call_id"
         )
 )
