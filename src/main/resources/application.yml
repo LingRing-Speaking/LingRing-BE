@@ -1,0 +1,107 @@
+spring:
+  application:
+    name: backend
+  profiles:
+    active: local
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}   # default localhost (prod: 동일 EC2 컨테이너)
+      port: ${REDIS_PORT:6379}        # default 6379 (Redis 표준 포트)
+  jpa:
+    hibernate:
+      ddl-auto: validate         # 안전 기본값. 스키마 자동 변경 금지. dev/local에서 override.
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: false        # 안전 기본값. SQL 로깅 정렬 미사용. dev/local에서 override.
+    show-sql: false              # 안전 기본값. SQL 로깅 미사용. dev/local에서 override.
+    open-in-view: false
+
+logging:
+  level:
+    root: info
+    com.lingring: info           # 안전 기본값. dev/local에서 debug로 override.
+
+auth:
+  jwt:
+    secret: ${JWT_SECRET}
+    access-ttl: PT30M            # 안전 기본값. dev/local에서 더 길게 override.
+    refresh-ttl: P30D
+  kakao:
+    iss: https://kauth.kakao.com
+    aud: 71d9c43427f1b2f02c9c7f19b3f8bfe7   # Kakao Native App Key (공개 식별자)
+    jwks-uri: https://kauth.kakao.com/.well-known/jwks.json
+  apple:
+    iss: https://appleid.apple.com
+    aud: com.lingring.app                    # iOS Bundle ID (App Store 공개)
+    jwks-uri: https://appleid.apple.com/auth/keys
+    team-id: ${APPLE_TEAM_ID}
+    key-id: ${APPLE_KEY_ID}
+    client-id: com.lingring.app                # iOS Bundle ID와 동일 (APPLE_AUD 값과 같음)
+    private-key: ${APPLE_PRIVATE_KEY}
+    token-encrypt-password: ${APPLE_TOKEN_ENCRYPT_PASSWORD}
+    token-encrypt-salt: ${APPLE_TOKEN_ENCRYPT_SALT}
+  demo:
+    enabled: false               # 안전 기본값. profile에서 명시적으로 enable.
+    tokens: {}                   # 안전 기본값.
+
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET}
+    region: ap-northeast-2
+    presigned-url-expiration-seconds: 300
+    call-recording:
+      prefix: call-recordings/
+      upload-ttl: PT10M
+  rekognition:
+    region: ap-northeast-2
+    min-confidence: 80
+    blocked-categories:
+      - "Explicit"
+      - "Violence"
+      - "Visually Disturbing"
+      - "Hate Symbols"
+      - "Drugs & Tobacco"
+  lambda:
+    region: ap-northeast-2
+    call-analysis-function-name: ${AWS_LAMBDA_CALL_ANALYSIS_ARN}
+  sqs:
+    region: ap-northeast-2
+    call-analysis-result-queue-url: ${AWS_SQS_CALL_ANALYSIS_URL}
+    poll-interval-ms: 10000
+
+profile-image:
+  allowed-content-type-prefix: image/
+  max-content-length-bytes: 31457280
+
+call-recording:
+  allowed-content-types:
+    - audio/m4a
+    - audio/mp4
+    - audio/webm
+  max-content-length: 52428800
+
+matching:
+  confirm-deadline-seconds: 15
+  cooldown-minutes: 10
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info     # 안전 기본값. dev/local에서 "*"로 override.
+  endpoint:
+    health:
+      show-details: never        # 안전 기본값.
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    enabled: false               # 안전 기본값. dev/local에서 활성화.
+  api-docs:
+    enabled: false

@@ -1,0 +1,38 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: true
+
+logging:
+  level:
+    root: info
+    com.lingring: debug
+
+auth:
+  jwt:
+    access-ttl: PT24H
+  demo:
+    enabled: true
+    tokens:
+      ${DEMO_TOKEN_A}: REVIEWER_A
+      ${DEMO_TOKEN_B}: REVIEWER_B
+      ${DEMO_TOKEN_C}: REVIEWER_C
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+springdoc:
+  swagger-ui:
+    enabled: true
+  api-docs:
+    enabled: true
