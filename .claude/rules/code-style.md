@@ -40,3 +40,4 @@
 - @Enumerated는 항상 EnumType.STRING을 사용한다
 - @GeneratedValue의 경우, IDENTITY를 사용한다
 - 검증 로직이나 도메인 로직이 담길 경우, VO 객체로 감싼다
+- @Table 이름은 단수형을 기본으로 한다. 단, SQL 예약어(USER, CALL 등)와 충돌할 때만 복수형으로 회피한다 (`users`, `calls`). unique/index 제약명(uk_/idx_)도 테이블명에 맞춰 단수로 짓는다
