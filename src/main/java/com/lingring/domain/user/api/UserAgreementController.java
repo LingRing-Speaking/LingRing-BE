@@ -1,0 +1,24 @@
+package com.lingring.domain.user.api;
+
+import com.lingring.domain.user.dto.request.AgreementCreateRequest;
+import com.lingring.domain.user.dto.response.AgreementResponse;
+import com.lingring.domain.user.service.UserAgreementService;
+import com.lingring.global.common.response.ApiResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequiredArgsConstructor
+public class UserAgreementController implements UserAgreementApi {
+
+    private final UserAgreementService userAgreementService;
+
+    @Override
+    public ApiResponse<AgreementResponse> accept(
+            final Long userId,
+            final AgreementCreateRequest request
+    ) {
+        return ApiResponse.success(HttpStatus.OK, userAgreementService.accept(userId, request));
+    }
+}
