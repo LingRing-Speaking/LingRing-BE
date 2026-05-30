@@ -22,9 +22,9 @@ import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(
-        name = "call_analyses",
+        name = "call_analysis",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_call_analyses_call_id_user_id",
+                name = "uk_call_analysis_call_id_user_id",
                 columnNames = {"call_id", "user_id"}
         )
 )
