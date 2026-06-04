@@ -1,4 +1,4 @@
-package com.lingring.domain.call.facade;
+package com.lingring.domain.call.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -30,12 +30,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-class CallHistoryFacadeTest extends ServiceIntegrationHelper {
+class CallHistoryServiceTest extends ServiceIntegrationHelper {
 
     private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 5, 2, 10, 0);
 
     @Autowired
-    private CallHistoryFacade callHistoryFacade;
+    private CallHistoryService callHistoryService;
 
     @Autowired
     private CallAnalysisService callAnalysisService;
@@ -65,7 +65,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             callRepository.save(Call.start(me, partner, UUID.randomUUID(), FIXED_NOW.minusMinutes(2))); // active
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
             assertThat(response.items()).hasSize(1);
@@ -82,7 +82,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             final Call newer = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(30), FIXED_NOW.minusMinutes(25));
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
             assertThat(response.items()).extracting(CallSummaryResponse::id)
@@ -99,7 +99,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             saveEndedCall(u2, u3, FIXED_NOW.minusHours(1), FIXED_NOW.minusMinutes(50));
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
             assertThat(response.items()).isEmpty();
@@ -116,7 +116,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             saveEndedCall(me, noImage, FIXED_NOW.minusHours(1), FIXED_NOW.minusHours(1).plusMinutes(1));
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
             assertThat(response.items()).hasSize(2);
@@ -137,7 +137,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(10).plusSeconds(312));
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
             assertThat(response.items().get(0).durationSec()).isEqualTo(312);
@@ -154,7 +154,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             }
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 2);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 2);
 
             // then
             assertThat(response.items()).hasSize(2);
@@ -172,7 +172,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             }
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 100);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 100);
 
             // then
             assertThat(response.items()).hasSize(50);
@@ -189,7 +189,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             final Call longEnough = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(5), FIXED_NOW.minusMinutes(5).plusMinutes(2));
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
             assertThat(response.items()).hasSize(1);
@@ -209,7 +209,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
                     callRepository.anonymizeUser(partner.getId()));
             userRepository.deleteById(partner.getId());
 
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
             assertThat(response.items()).hasSize(1);
@@ -231,7 +231,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(5));
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
             assertThat(response.items()).hasSize(1);
@@ -249,7 +249,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             final CallAnalysis mine = callAnalysisService.requestForUser(call.getId(), me);
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
             assertThat(response.items()).hasSize(1);
@@ -268,7 +268,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             callAnalysisService.complete(call.getId(), me, sampleResult(), MODEL);
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
             assertThat(response.items()).hasSize(1);
@@ -289,7 +289,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             callAnalysisService.complete(call.getId(), me, sampleResult(), MODEL);
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then: 본인이 요청 안 했으므로 READY
             assertThat(response.items().get(0).analysisId()).isNull();
@@ -312,7 +312,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             final CallAnalysis a3 = callAnalysisService.requestForUser(c3.getId(), me);
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then: 정렬은 startedAt DESC 라 c3, c2, c1 순
             assertThat(response.items()).hasSize(3);

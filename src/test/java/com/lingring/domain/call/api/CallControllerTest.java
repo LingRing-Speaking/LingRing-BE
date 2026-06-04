@@ -8,7 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.lingring.domain.call.dto.response.CallsResponse;
 import com.lingring.domain.call.dto.response.CallSummaryResponse;
 import com.lingring.domain.call.dto.response.PartnerResponse;
-import com.lingring.domain.call.facade.CallHistoryFacade;
+import com.lingring.domain.call.service.CallHistoryService;
 import com.lingring.domain.call.dto.response.CallAnalysisStatusView;
 import com.lingring.global.auth.context.AuthContext;
 import java.time.LocalDateTime;
@@ -37,7 +37,7 @@ class CallControllerTest {
     private ObjectMapper objectMapper;
 
     @MockitoBean
-    private CallHistoryFacade callHistoryFacade;
+    private CallHistoryService callHistoryService;
 
     @AfterEach
     void clearAuthContext() {
@@ -57,7 +57,7 @@ class CallControllerTest {
             final OffsetDateTime startedAt = LocalDateTime.of(2026, 4, 29, 19, 30)
                     .atZone(java.time.ZoneId.of("Asia/Seoul"))
                     .toOffsetDateTime();
-            given(callHistoryFacade.getCallsByUserId(userId, 0, 2)).willReturn(
+            given(callHistoryService.getCallsByUserId(userId, 0, 2)).willReturn(
                     new CallsResponse(
                             List.of(
                                     new CallSummaryResponse(
@@ -110,7 +110,7 @@ class CallControllerTest {
             final OffsetDateTime startedAt = LocalDateTime.of(2026, 4, 29, 19, 30)
                     .atZone(java.time.ZoneId.of("Asia/Seoul"))
                     .toOffsetDateTime();
-            given(callHistoryFacade.getCallsByUserId(userId, 0, 20)).willReturn(
+            given(callHistoryService.getCallsByUserId(userId, 0, 20)).willReturn(
                     new CallsResponse(
                             List.of(
                                     new CallSummaryResponse(
@@ -140,12 +140,12 @@ class CallControllerTest {
         }
 
         @Test
-        @DisplayName("page/size를 생략하면 default(0, 20)로 facade가 호출된다")
+        @DisplayName("page/size를 생략하면 default(0, 20)로 service가 호출된다")
         void getAll_whenNoParams_usesDefaults() throws Exception {
             // given
             final Long userId = 1L;
             AuthContext.set(userId);
-            given(callHistoryFacade.getCallsByUserId(userId, 0, 20)).willReturn(
+            given(callHistoryService.getCallsByUserId(userId, 0, 20)).willReturn(
                     new CallsResponse(List.of(), false)
             );
 
@@ -153,7 +153,7 @@ class CallControllerTest {
             mockMvc.perform(get("/api/v1/calls").accept(MediaType.APPLICATION_JSON));
 
             // then
-            then(callHistoryFacade).should().getCallsByUserId(userId, 0, 20);
+            then(callHistoryService).should().getCallsByUserId(userId, 0, 20);
         }
     }
 }
