@@ -41,22 +41,32 @@ public class MatchingService {
     public MatchingStatusResponse getStatus(final Long userId) {
         final Optional<MatchingResult> result = matchingQueueRepository.findResult(userId);
         if (result.isPresent()) {
-            final MatchingResult matched = result.get();
-            final Long callId = callRepository.findByRoomId(matched.roomId())
-                    .map(Call::getId)
-                    .orElse(null);
-            return MatchingStatusResponse.matched(matched.partnerId(), matched.roomId(), callId);
+            return matchedResponse(result.get());
         }
         final Optional<MatchConfirmation> confirmation = matchConfirmationRepository.findByUser(userId);
         if (confirmation.isPresent()) {
-            final MatchConfirmation c = confirmation.get();
-            final LocalDateTime now = dateTimeProvider.now();
-            if (c.isExpired(now)) {
-                expireConfirmation(c, now);
-                return MatchingStatusResponse.waiting();
-            }
-            return MatchingStatusResponse.awaitingConfirm(c.partnerOf(userId), c.deadline());
+            return confirmationResponse(userId, confirmation.get());
         }
+        return queuedResponse(userId);
+    }
+
+    private MatchingStatusResponse matchedResponse(final MatchingResult result) {
+        final Long callId = callRepository.findByRoomId(result.roomId())
+                .map(Call::getId)
+                .orElse(null);
+        return MatchingStatusResponse.matched(result.partnerId(), result.roomId(), callId);
+    }
+
+    private MatchingStatusResponse confirmationResponse(final Long userId, final MatchConfirmation confirmation) {
+        final LocalDateTime now = dateTimeProvider.now();
+        if (confirmation.isExpired(now)) {
+            expireConfirmation(confirmation, now);
+            return MatchingStatusResponse.waiting();
+        }
+        return MatchingStatusResponse.awaitingConfirm(confirmation.partnerOf(userId), confirmation.deadline());
+    }
+
+    private MatchingStatusResponse queuedResponse(final Long userId) {
         if (matchingQueueRepository.contains(userId)) {
             return MatchingStatusResponse.waiting();
         }
@@ -120,8 +130,7 @@ public class MatchingService {
     }
 
     private void expireConfirmation(final MatchConfirmation confirmation, final LocalDateTime now) {
-        pairCooldownRepository.put(confirmation.pairKey(),
-                Duration.ofMinutes(matchingProperties.cooldownMinutes()));
+        pairCooldownRepository.put(confirmation.pairKey(), Duration.ofMinutes(matchingProperties.cooldownMinutes()));
         matchConfirmationRepository.delete(confirmation.pairKey());
         matchingQueueRepository.enqueue(confirmation.userAId(), now);
         matchingQueueRepository.enqueue(confirmation.userBId(), now);
