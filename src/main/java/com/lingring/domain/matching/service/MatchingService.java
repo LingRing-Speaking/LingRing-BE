@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -37,7 +36,6 @@ public class MatchingService {
         matchingQueueRepository.enqueue(userId, dateTimeProvider.now());
     }
 
-    @Transactional(readOnly = true)
     public MatchingStatusResponse getStatus(final Long userId) {
         final Optional<MatchingResult> result = matchingQueueRepository.findResult(userId);
         if (result.isPresent()) {
@@ -77,25 +75,16 @@ public class MatchingService {
         matchingQueueRepository.remove(userId);
     }
 
-    @Transactional
     public void acceptMatch(final Long userId) {
         final LocalDateTime now = dateTimeProvider.now();
-        final Optional<MatchConfirmation> before = matchConfirmationRepository.findByUser(userId);
-        if (before.isEmpty()) {
-            throw new MatchConfirmationNotFoundException(userId);
-        }
-        if (before.get().isExpired(now)) {
-            expireConfirmation(before.get(), now);
-            return;
-        }
         final AcceptResult result = matchConfirmationRepository.accept(userId, now);
         final AcceptOutcome outcome = result.outcome();
         if (outcome == AcceptOutcome.NOT_FOUND) {
             throw new MatchConfirmationNotFoundException(userId);
         }
         if (outcome == AcceptOutcome.EXPIRED) {
-            final Optional<MatchConfirmation> stale = matchConfirmationRepository.findByUser(userId);
-            stale.ifPresent(c -> expireConfirmation(c, now));
+            matchConfirmationRepository.findByUser(userId)
+                    .ifPresent(confirmation -> expireConfirmation(confirmation, now));
             return;
         }
         if (outcome == AcceptOutcome.ACCEPTED_WAITING) {
@@ -105,7 +94,6 @@ public class MatchingService {
         persistCallForMatched(userId, now);
     }
 
-    @Transactional
     public void declineMatch(final Long userId) {
         final LocalDateTime now = dateTimeProvider.now();
         final MatchConfirmation confirmation = matchConfirmationRepository.findByUser(userId)
@@ -113,7 +101,6 @@ public class MatchingService {
         expireConfirmation(confirmation, now);
     }
 
-    @Transactional
     public void expireOverdueConfirmations() {
         final LocalDateTime now = dateTimeProvider.now();
         final List<MatchConfirmation> expired = matchConfirmationRepository.findAllExpired(now);
