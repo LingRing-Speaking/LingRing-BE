@@ -1,5 +1,6 @@
 package com.lingring.domain.matching.dao;
 
+import com.lingring.domain.matching.dao.dto.AcceptResult;
 import com.lingring.domain.matching.domain.MatchConfirmation;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,8 +28,4 @@ public interface MatchConfirmationRepository {
     void delete(String pairKey);
 
     List<MatchConfirmation> findAllExpired(LocalDateTime now);
-
-    enum AcceptOutcome { NOT_FOUND, EXPIRED, ACCEPTED_WAITING, MATCHED }
-
-    record AcceptResult(AcceptOutcome outcome, MatchConfirmation confirmation) {}
 }
