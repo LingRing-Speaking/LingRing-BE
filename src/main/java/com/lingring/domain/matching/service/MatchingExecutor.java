@@ -25,7 +25,6 @@ public class MatchingExecutor {
     private final MatchingQueueRepository matchingQueueRepository;
     private final MatchConfirmationRepository matchConfirmationRepository;
     private final MatchingPolicies matchingPolicies;
-    private final RoomIdGenerator roomIdGenerator;
     private final DateTimeProvider dateTimeProvider;
     private final MatchingProperties matchingProperties;
 
@@ -51,7 +50,7 @@ public class MatchingExecutor {
             return;
         }
         final Long partnerId = partner.get().userId();
-        final UUID roomId = roomIdGenerator.generate();
+        final UUID roomId = UUID.randomUUID();
         final LocalDateTime now = dateTimeProvider.now();
         final LocalDateTime deadline = now.plusSeconds(matchingProperties.confirmDeadlineSeconds());
         final boolean committed = matchConfirmationRepository.commit(self.userId(), partnerId, roomId, deadline);
