@@ -13,6 +13,7 @@ class MatchConfirmationTest {
 
     private static final UUID ROOM_ID = UUID.randomUUID();
     private static final LocalDateTime DEADLINE = LocalDateTime.of(2026, 5, 12, 12, 0, 15);
+    private static final LocalDateTime ENQUEUED_AT = LocalDateTime.of(2026, 5, 12, 11, 59, 0);
 
     @Nested
     @DisplayName("pairKey: 두 userId를 정렬해 만든다")
@@ -145,6 +146,6 @@ class MatchConfirmationTest {
     ) {
         final Long a = Math.min(userA, userB);
         final Long b = Math.max(userA, userB);
-        return new MatchConfirmation(a, b, userAAccepted == 1, userBAccepted == 1, ROOM_ID, deadline);
+        return new MatchConfirmation(a, b, userAAccepted == 1, userBAccepted == 1, ROOM_ID, deadline, ENQUEUED_AT, ENQUEUED_AT);
     }
 }

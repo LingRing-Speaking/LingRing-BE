@@ -58,7 +58,7 @@ public class MatchingService {
     private MatchingStatusResponse confirmationResponse(final Long userId, final MatchConfirmation confirmation) {
         final LocalDateTime now = dateTimeProvider.now();
         if (confirmation.isExpired(now)) {
-            expireConfirmation(confirmation, now);
+            cancelByDeadline(confirmation, now);
             return MatchingStatusResponse.waiting();
         }
         return MatchingStatusResponse.awaitingConfirm(confirmation.partnerOf(userId), confirmation.deadline());
@@ -84,7 +84,7 @@ public class MatchingService {
         }
         if (outcome == AcceptOutcome.EXPIRED) {
             matchConfirmationRepository.findByUser(userId)
-                    .ifPresent(confirmation -> expireConfirmation(confirmation, now));
+                    .ifPresent(confirmation -> cancelByDeadline(confirmation, now));
             return;
         }
         if (outcome == AcceptOutcome.ACCEPTED_WAITING) {
@@ -95,17 +95,16 @@ public class MatchingService {
     }
 
     public void declineMatch(final Long userId) {
-        final LocalDateTime now = dateTimeProvider.now();
         final MatchConfirmation confirmation = matchConfirmationRepository.findByUser(userId)
                 .orElseThrow(() -> new MatchConfirmationNotFoundException(userId));
-        expireConfirmation(confirmation, now);
+        cancelByDecline(confirmation);
     }
 
     public void expireOverdueConfirmations() {
         final LocalDateTime now = dateTimeProvider.now();
         final List<MatchConfirmation> expired = matchConfirmationRepository.findAllExpired(now);
         for (final MatchConfirmation c : expired) {
-            expireConfirmation(c, now);
+            cancelByDeadline(c, now);
         }
     }
 
@@ -116,10 +115,31 @@ public class MatchingService {
         callRepository.save(Call.start(userId, promoted.partnerId(), promoted.roomId(), now));
     }
 
-    private void expireConfirmation(final MatchConfirmation confirmation, final LocalDateTime now) {
+    // 마감 만료: 수락한 쪽은 원래 대기순서 보존, 무응답은 now로 강등
+    private void cancelByDeadline(final MatchConfirmation confirmation, final LocalDateTime now) {
+        removeWithCooldown(confirmation);
+        requeueAfterDeadline(confirmation.userAId(), confirmation.userAAccepted(), confirmation.userAEnqueuedAt(), now);
+        requeueAfterDeadline(confirmation.userBId(), confirmation.userBAccepted(), confirmation.userBEnqueuedAt(), now);
+    }
+
+    // 거절: 양쪽 모두 원래 대기순서 보존 (거절자=권리 행사, 상대=마감 전 중단된 피해자)
+    private void cancelByDecline(final MatchConfirmation confirmation) {
+        removeWithCooldown(confirmation);
+        matchingQueueRepository.enqueue(confirmation.userAId(), confirmation.userAEnqueuedAt());
+        matchingQueueRepository.enqueue(confirmation.userBId(), confirmation.userBEnqueuedAt());
+    }
+
+    private void requeueAfterDeadline(final Long userId, final boolean accepted,
+            final LocalDateTime originalEnqueuedAt, final LocalDateTime now) {
+        if (accepted) {
+            matchingQueueRepository.enqueue(userId, originalEnqueuedAt);
+            return;
+        }
+        matchingQueueRepository.enqueue(userId, now);
+    }
+
+    private void removeWithCooldown(final MatchConfirmation confirmation) {
         pairCooldownRepository.put(confirmation.pairKey(), Duration.ofMinutes(matchingProperties.cooldownMinutes()));
         matchConfirmationRepository.delete(confirmation.pairKey());
-        matchingQueueRepository.enqueue(confirmation.userAId(), now);
-        matchingQueueRepository.enqueue(confirmation.userBId(), now);
     }
 }
