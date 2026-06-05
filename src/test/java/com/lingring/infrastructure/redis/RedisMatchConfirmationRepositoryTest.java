@@ -3,8 +3,8 @@ package com.lingring.infrastructure.redis;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.lingring.domain.matching.dao.MatchConfirmationRepository;
-import com.lingring.domain.matching.dao.MatchConfirmationRepository.AcceptOutcome;
-import com.lingring.domain.matching.dao.MatchConfirmationRepository.AcceptResult;
+import com.lingring.domain.matching.dao.dto.AcceptOutcome;
+import com.lingring.domain.matching.dao.dto.AcceptResult;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.domain.MatchConfirmation;
 import com.lingring.domain.matching.domain.MatchingResult;
