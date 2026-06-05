@@ -4,8 +4,8 @@ import com.lingring.domain.call.dao.CallRepository;
 import com.lingring.domain.call.domain.Call;
 import com.lingring.global.config.MatchingProperties;
 import com.lingring.domain.matching.dao.MatchConfirmationRepository;
-import com.lingring.domain.matching.dao.MatchConfirmationRepository.AcceptOutcome;
-import com.lingring.domain.matching.dao.MatchConfirmationRepository.AcceptResult;
+import com.lingring.domain.matching.dao.dto.AcceptOutcome;
+import com.lingring.domain.matching.dao.dto.AcceptResult;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.dao.PairCooldownRepository;
 import com.lingring.domain.matching.domain.MatchConfirmation;
@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -37,26 +36,35 @@ public class MatchingService {
         matchingQueueRepository.enqueue(userId, dateTimeProvider.now());
     }
 
-    @Transactional(readOnly = true)
     public MatchingStatusResponse getStatus(final Long userId) {
         final Optional<MatchingResult> result = matchingQueueRepository.findResult(userId);
         if (result.isPresent()) {
-            final MatchingResult matched = result.get();
-            final Long callId = callRepository.findByRoomId(matched.roomId())
-                    .map(Call::getId)
-                    .orElse(null);
-            return MatchingStatusResponse.matched(matched.partnerId(), matched.roomId(), callId);
+            return matchedResponse(result.get());
         }
         final Optional<MatchConfirmation> confirmation = matchConfirmationRepository.findByUser(userId);
         if (confirmation.isPresent()) {
-            final MatchConfirmation c = confirmation.get();
-            final LocalDateTime now = dateTimeProvider.now();
-            if (c.isExpired(now)) {
-                expireConfirmation(c, now);
-                return MatchingStatusResponse.waiting();
-            }
-            return MatchingStatusResponse.awaitingConfirm(c.partnerOf(userId), c.deadline());
+            return confirmationResponse(userId, confirmation.get());
         }
+        return queuedResponse(userId);
+    }
+
+    private MatchingStatusResponse matchedResponse(final MatchingResult result) {
+        final Long callId = callRepository.findByRoomId(result.roomId())
+                .map(Call::getId)
+                .orElse(null);
+        return MatchingStatusResponse.matched(result.partnerId(), result.roomId(), callId);
+    }
+
+    private MatchingStatusResponse confirmationResponse(final Long userId, final MatchConfirmation confirmation) {
+        final LocalDateTime now = dateTimeProvider.now();
+        if (confirmation.isExpired(now)) {
+            expireConfirmation(confirmation, now);
+            return MatchingStatusResponse.waiting();
+        }
+        return MatchingStatusResponse.awaitingConfirm(confirmation.partnerOf(userId), confirmation.deadline());
+    }
+
+    private MatchingStatusResponse queuedResponse(final Long userId) {
         if (matchingQueueRepository.contains(userId)) {
             return MatchingStatusResponse.waiting();
         }
@@ -67,25 +75,16 @@ public class MatchingService {
         matchingQueueRepository.remove(userId);
     }
 
-    @Transactional
     public void acceptMatch(final Long userId) {
         final LocalDateTime now = dateTimeProvider.now();
-        final Optional<MatchConfirmation> before = matchConfirmationRepository.findByUser(userId);
-        if (before.isEmpty()) {
-            throw new MatchConfirmationNotFoundException(userId);
-        }
-        if (before.get().isExpired(now)) {
-            expireConfirmation(before.get(), now);
-            return;
-        }
         final AcceptResult result = matchConfirmationRepository.accept(userId, now);
         final AcceptOutcome outcome = result.outcome();
         if (outcome == AcceptOutcome.NOT_FOUND) {
             throw new MatchConfirmationNotFoundException(userId);
         }
         if (outcome == AcceptOutcome.EXPIRED) {
-            final Optional<MatchConfirmation> stale = matchConfirmationRepository.findByUser(userId);
-            stale.ifPresent(c -> expireConfirmation(c, now));
+            matchConfirmationRepository.findByUser(userId)
+                    .ifPresent(confirmation -> expireConfirmation(confirmation, now));
             return;
         }
         if (outcome == AcceptOutcome.ACCEPTED_WAITING) {
@@ -95,7 +94,6 @@ public class MatchingService {
         persistCallForMatched(userId, now);
     }
 
-    @Transactional
     public void declineMatch(final Long userId) {
         final LocalDateTime now = dateTimeProvider.now();
         final MatchConfirmation confirmation = matchConfirmationRepository.findByUser(userId)
@@ -103,7 +101,6 @@ public class MatchingService {
         expireConfirmation(confirmation, now);
     }
 
-    @Transactional
     public void expireOverdueConfirmations() {
         final LocalDateTime now = dateTimeProvider.now();
         final List<MatchConfirmation> expired = matchConfirmationRepository.findAllExpired(now);
@@ -120,8 +117,7 @@ public class MatchingService {
     }
 
     private void expireConfirmation(final MatchConfirmation confirmation, final LocalDateTime now) {
-        pairCooldownRepository.put(confirmation.pairKey(),
-                Duration.ofMinutes(matchingProperties.cooldownMinutes()));
+        pairCooldownRepository.put(confirmation.pairKey(), Duration.ofMinutes(matchingProperties.cooldownMinutes()));
         matchConfirmationRepository.delete(confirmation.pairKey());
         matchingQueueRepository.enqueue(confirmation.userAId(), now);
         matchingQueueRepository.enqueue(confirmation.userBId(), now);

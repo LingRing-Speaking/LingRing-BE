@@ -2,6 +2,8 @@ package com.lingring.infrastructure.redis;
 
 import com.lingring.global.config.MatchingProperties;
 import com.lingring.domain.matching.dao.MatchConfirmationRepository;
+import com.lingring.domain.matching.dao.dto.AcceptOutcome;
+import com.lingring.domain.matching.dao.dto.AcceptResult;
 import com.lingring.domain.matching.domain.MatchConfirmation;
 import com.lingring.global.util.Zones;
 import java.time.Duration;
