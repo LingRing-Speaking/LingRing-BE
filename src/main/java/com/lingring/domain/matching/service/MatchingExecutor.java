@@ -49,11 +49,13 @@ public class MatchingExecutor {
         if (partner.isEmpty()) {
             return;
         }
-        final Long partnerId = partner.get().userId();
+        final MatchingCandidate partnerCandidate = partner.get();
+        final Long partnerId = partnerCandidate.userId();
         final UUID roomId = UUID.randomUUID();
         final LocalDateTime now = dateTimeProvider.now();
         final LocalDateTime deadline = now.plusSeconds(matchingProperties.confirmDeadlineSeconds());
-        final boolean committed = matchConfirmationRepository.commit(self.userId(), partnerId, roomId, deadline);
+        final boolean committed = matchConfirmationRepository.commit(
+                self.userId(), partnerId, roomId, deadline, self.enqueuedAt(), partnerCandidate.enqueuedAt());
         if (!committed) {
             return;
         }
