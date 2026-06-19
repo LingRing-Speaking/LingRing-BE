@@ -18,9 +18,9 @@ auth:
   demo:
     enabled: true                # App Store/Play Store 심사 리뷰어용. 토큰 노출 주의.
     tokens:
-      ${DEMO_TOKEN_A}: REVIEWER_A
-      ${DEMO_TOKEN_B}: REVIEWER_B
-      ${DEMO_TOKEN_C}: REVIEWER_C
+      REVIEWER_A: ${DEMO_TOKEN_A}
+      REVIEWER_B: ${DEMO_TOKEN_B}
+      REVIEWER_C: ${DEMO_TOKEN_C}
 
 management:
   endpoints:
