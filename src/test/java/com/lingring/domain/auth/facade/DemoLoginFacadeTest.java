@@ -37,7 +37,7 @@ class DemoLoginFacadeTest {
     @Test
     @DisplayName("demo 로그인 비활성화 시 DEMO_LOGIN_DISABLED 예외")
     void demoLogin_whenDisabled_throwsForbidden() {
-        final DemoLoginFacade facade = newFacade(false, Map.of("any-token", "REVIEWER_A"));
+        final DemoLoginFacade facade = newFacade(false, Map.of("REVIEWER_A", "any-token"));
 
         assertThatThrownBy(() -> facade.demoLogin("any-token"))
                 .isInstanceOf(ForbiddenException.class)
@@ -48,7 +48,7 @@ class DemoLoginFacadeTest {
     @Test
     @DisplayName("매핑되지 않은 토큰이면 INVALID_DEMO_TOKEN 예외")
     void demoLogin_whenTokenNotMapped_throwsUnauthorized() {
-        final DemoLoginFacade facade = newFacade(true, Map.of("review-token-a", "REVIEWER_A"));
+        final DemoLoginFacade facade = newFacade(true, Map.of("REVIEWER_A", "review-token-a"));
 
         assertThatThrownBy(() -> facade.demoLogin("wrong-token"))
                 .isInstanceOf(UnauthorizedException.class)
@@ -59,7 +59,7 @@ class DemoLoginFacadeTest {
     @Test
     @DisplayName("매핑은 있는데 demo user 가 DB에 시드되지 않으면 DEMO_USER_NOT_SEEDED 예외")
     void demoLogin_whenUserNotSeeded_throwsInternalServerError() {
-        final DemoLoginFacade facade = newFacade(true, Map.of("review-token-a", "REVIEWER_A"));
+        final DemoLoginFacade facade = newFacade(true, Map.of("REVIEWER_A", "review-token-a"));
         given(userService.findByProvider(eq(Provider.KAKAO), eq("REVIEWER_A")))
                 .willReturn(Optional.empty());
 
@@ -73,7 +73,7 @@ class DemoLoginFacadeTest {
     @DisplayName("정상 토큰 + 시드된 user 면 AuthService 가 발급한 토큰을 반환한다")
     void demoLogin_whenValid_returnsAuthTokenResponse() {
         // given
-        final DemoLoginFacade facade = newFacade(true, Map.of("review-token-a", "REVIEWER_A"));
+        final DemoLoginFacade facade = newFacade(true, Map.of("REVIEWER_A", "review-token-a"));
         final User demoUser = User.createFromOAuth(Provider.KAKAO, "REVIEWER_A", new Name("Reviewer A"), null);
         given(userService.findByProvider(eq(Provider.KAKAO), eq("REVIEWER_A")))
                 .willReturn(Optional.of(demoUser));
@@ -95,7 +95,7 @@ class DemoLoginFacadeTest {
     @Test
     @DisplayName("disabled 상태에선 user 조회조차 하지 않는다 (조기 차단)")
     void demoLogin_whenDisabled_doesNotQueryUserService() {
-        final DemoLoginFacade facade = newFacade(false, Map.of("any-token", "REVIEWER_A"));
+        final DemoLoginFacade facade = newFacade(false, Map.of("REVIEWER_A", "any-token"));
 
         assertThatThrownBy(() -> facade.demoLogin("any-token"))
                 .isInstanceOf(ForbiddenException.class);
@@ -106,7 +106,7 @@ class DemoLoginFacadeTest {
     @Test
     @DisplayName("매핑되지 않은 토큰일 때도 user 조회는 호출하지 않는다")
     void demoLogin_whenTokenInvalid_doesNotQueryUserService() {
-        final DemoLoginFacade facade = newFacade(true, Map.of("review-token-a", "REVIEWER_A"));
+        final DemoLoginFacade facade = newFacade(true, Map.of("REVIEWER_A", "review-token-a"));
 
         assertThatThrownBy(() -> facade.demoLogin("wrong-token"))
                 .isInstanceOf(UnauthorizedException.class);
