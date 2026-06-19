@@ -10,6 +10,7 @@ import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.ForbiddenException;
 import com.lingring.global.error.exception.InternalServerException;
 import com.lingring.global.error.exception.UnauthorizedException;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,7 +43,14 @@ public class DemoLoginFacade {
             );
         }
 
-        final String demoIdentifier = demoProps.tokens().get(token);
+        // tokens 는 식별자(REVIEWER_*) → 토큰 매핑이다.
+        // (${...} 플레이스홀더는 맵의 "값"에서만 치환되고 "키"에서는 치환되지 않으므로,
+        //  토큰을 값 위치에 두고 받은 토큰과 일치하는 엔트리의 키(식별자)를 역방향 조회한다.)
+        final String demoIdentifier = demoProps.tokens().entrySet().stream()
+                .filter(entry -> entry.getValue().equals(token))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
         if (demoIdentifier == null) {
             throw new UnauthorizedException(
                     ErrorCode.INVALID_DEMO_TOKEN,
