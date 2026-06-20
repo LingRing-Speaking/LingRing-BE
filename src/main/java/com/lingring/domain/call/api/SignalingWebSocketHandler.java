@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import tools.jackson.databind.ObjectMapper;
 
@@ -20,6 +21,9 @@ import tools.jackson.databind.ObjectMapper;
 @RequiredArgsConstructor
 @Slf4j
 public class SignalingWebSocketHandler extends TextWebSocketHandler {
+
+    private static final int SEND_TIME_LIMIT_MS = 10_000;
+    private static final int BUFFER_SIZE_LIMIT_BYTES = 512 * 1024;
 
     private final LocalSessionRegistry sessionRegistry;
     private final SignalingFacade signalingFacade;
@@ -29,7 +33,7 @@ public class SignalingWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(final WebSocketSession session) {
         final Long userId = getUserId(session);
-        sessionRegistry.register(userId, session);
+        sessionRegistry.register(userId, concurrent(session));
         disconnectScheduler.cancel(userId);
     }
 
@@ -56,6 +60,10 @@ public class SignalingWebSocketHandler extends TextWebSocketHandler {
             }
             signalingFacade.handleDisconnect(userId, roomId);
         });
+    }
+
+    private WebSocketSession concurrent(final WebSocketSession session) {
+        return new ConcurrentWebSocketSessionDecorator(session, SEND_TIME_LIMIT_MS, BUFFER_SIZE_LIMIT_BYTES);
     }
 
     private SignalingMessage parse(final TextMessage message) {
