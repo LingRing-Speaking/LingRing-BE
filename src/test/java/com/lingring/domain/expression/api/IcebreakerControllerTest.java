@@ -107,6 +107,8 @@ class IcebreakerControllerTest {
                     .getResponse();
 
             // then
+            assertThat(response.getStatus())
+                    .isEqualTo(ErrorCode.ICEBREAKER_NOT_FOUND.getHttpStatus().value());
             final JsonNode body = objectMapper.readTree(response.getContentAsString());
             assertThat(body.get("status").asInt())
                     .isEqualTo(ErrorCode.ICEBREAKER_NOT_FOUND.getHttpStatus().value());
