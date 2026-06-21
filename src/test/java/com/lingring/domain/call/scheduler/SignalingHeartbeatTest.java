@@ -24,7 +24,8 @@ class SignalingHeartbeatTest {
     @BeforeEach
     void setUp() {
         sessionRegistry = new LocalSessionRegistry();
-        heartbeat = new SignalingHeartbeat(sessionRegistry);
+        // 테스트는 호출 스레드에서 동기 실행해 핑 전송을 결정적으로 검증한다.
+        heartbeat = new SignalingHeartbeat(sessionRegistry, Runnable::run);
     }
 
     @Nested

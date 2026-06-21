@@ -22,7 +22,7 @@ import tools.jackson.databind.ObjectMapper;
 @Slf4j
 public class SignalingWebSocketHandler extends TextWebSocketHandler {
 
-    private static final int SEND_TIME_LIMIT_MS = 10_000;
+    private static final int SEND_TIME_LIMIT_MS = 5_000;
     private static final int BUFFER_SIZE_LIMIT_BYTES = 512 * 1024;
 
     private final LocalSessionRegistry sessionRegistry;
