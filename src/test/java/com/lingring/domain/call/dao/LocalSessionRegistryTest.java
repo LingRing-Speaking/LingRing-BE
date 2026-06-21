@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -110,11 +111,58 @@ class LocalSessionRegistryTest {
             // then
             assertThat(removed).isFalse();
         }
+
+        @Test
+        @DisplayName("등록된 세션과 다른 인스턴스라도 sessionId가 같으면 제거한다 (데코레이터 투명성)")
+        void unregister_whenDifferentInstanceWithSameId_removes() {
+            // given: register는 데코레이터, close 콜백은 raw 세션 — 같은 연결을 가리키는 서로 다른 인스턴스
+            final String sessionId = "ws-1";
+            final WebSocketSession registered = sessionWithId(sessionId);
+            final WebSocketSession closing = sessionWithId(sessionId);
+            registry.register(1L, registered);
+
+            // when
+            final boolean removed = registry.unregister(1L, closing);
+
+            // then
+            assertThat(removed).isTrue();
+            assertThat(registry.find(1L)).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("activeSessions: 등록된 모든 세션 조회")
+    class ActiveSessions {
+
+        @Test
+        @DisplayName("등록된 모든 세션을 반환한다")
+        void activeSessions_returnsAllRegisteredSessions() {
+            // given
+            final WebSocketSession first = openSession();
+            final WebSocketSession second = openSession();
+            registry.register(1L, first);
+            registry.register(2L, second);
+
+            // when & then
+            assertThat(registry.activeSessions()).containsExactlyInAnyOrder(first, second);
+        }
+
+        @Test
+        @DisplayName("등록된 세션이 없으면 빈 컬렉션을 반환한다")
+        void activeSessions_whenEmpty_returnsEmpty() {
+            // when & then
+            assertThat(registry.activeSessions()).isEmpty();
+        }
     }
 
     private WebSocketSession openSession() {
+        return sessionWithId(UUID.randomUUID().toString());
+    }
+
+    private WebSocketSession sessionWithId(final String sessionId) {
         final WebSocketSession session = mock(WebSocketSession.class);
         given(session.isOpen()).willReturn(true);
+        given(session.getId()).willReturn(sessionId);
         return session;
     }
 }

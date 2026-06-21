@@ -89,6 +89,9 @@ matching:
   confirm-deadline-seconds: 15
   cooldown-minutes: 10
 
+signaling:
+  heartbeat-interval: 25s        # 유휴 시그널링 WS keepalive ping 주기. ALB idle timeout(기본 60s)보다 짧게.
+
 management:
   endpoints:
     web:
