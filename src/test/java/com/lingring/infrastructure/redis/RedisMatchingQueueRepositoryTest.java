@@ -6,6 +6,7 @@ import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.domain.MatchingCandidate;
 import com.lingring.domain.matching.domain.MatchingResult;
 import com.lingring.global.config.ServiceIntegrationHelper;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -227,6 +228,34 @@ class RedisMatchingQueueRepositoryTest extends ServiceIntegrationHelper {
             assertThat(committed).isFalse();
             assertThat(matchingQueueRepository.findResult(1L)).isEmpty();
             assertThat(matchingQueueRepository.findResult(2L)).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("markAlive / isAlive")
+    class Liveness {
+
+        @Test
+        @DisplayName("markAlive 후 isAlive는 true를 반환한다")
+        void markAlive_thenIsAliveReturnsTrue() {
+            // given
+            matchingQueueRepository.markAlive(1L, Duration.ofSeconds(30));
+
+            // when
+            final boolean alive = matchingQueueRepository.isAlive(1L);
+
+            // then
+            assertThat(alive).isTrue();
+        }
+
+        @Test
+        @DisplayName("markAlive 하지 않은 사용자의 isAlive는 false를 반환한다")
+        void isAlive_whenNotMarked_returnsFalse() {
+            // when
+            final boolean alive = matchingQueueRepository.isAlive(99L);
+
+            // then
+            assertThat(alive).isFalse();
         }
     }
 }
