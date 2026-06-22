@@ -180,20 +180,20 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
         }
 
         @Test
-        @DisplayName("1분 미만 통화는 목록에서 제외된다")
-        void getCallsByUserId_excludesCallsUnderOneMinute() {
+        @DisplayName("1분 미만 통화도 목록에 포함된다")
+        void getCallsByUserId_includesCallsUnderOneMinute() {
             // given
             final Long me = saveUser("유저").getId();
             final Long partner = saveUser("Sophie").getId();
-            saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(10).plusSeconds(30));
-            final Call longEnough = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(5), FIXED_NOW.minusMinutes(5).plusMinutes(2));
+            final Call under = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(10).plusSeconds(30));
+            final Call over = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(5), FIXED_NOW.minusMinutes(5).plusMinutes(2));
 
             // when
             final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
-            assertThat(response.items()).hasSize(1);
-            assertThat(response.items().get(0).id()).isEqualTo(longEnough.getId());
+            assertThat(response.items()).extracting(CallSummaryResponse::id)
+                    .containsExactly(over.getId(), under.getId());
         }
 
         @Test
