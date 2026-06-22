@@ -50,8 +50,7 @@ public class CallTranscriptService {
     @Transactional(readOnly = true)
     public CallTranscriptResponse getTranscript(final Long callId, final Long userId) {
         requireParticipantCall(callId, userId);
-        final CallTranscript transcript = callTranscriptRepository.findByCallId(callId)
-                .orElseThrow(() -> new CallTranscriptNotFoundException(callId));
+        final CallTranscript transcript = getTranscript(callId);
         if (!transcript.isCompleted()) {
             throw new CallTranscriptNotReadyException(callId);
         }
@@ -60,9 +59,13 @@ public class CallTranscriptService {
 
     @Transactional
     public void complete(final Long callId, final List<TranscriptSegment> segments) {
-        final CallTranscript transcript = callTranscriptRepository.findByCallId(callId)
-                .orElseThrow(() -> new CallTranscriptNotFoundException(callId));
+        final CallTranscript transcript = getTranscript(callId);
         transcript.complete(new TranscriptContent(segments));
+    }
+
+    private CallTranscript getTranscript(final Long callId) {
+        return callTranscriptRepository.findByCallId(callId)
+                .orElseThrow(() -> new CallTranscriptNotFoundException(callId));
     }
 
     private Call requireParticipantCall(final Long callId, final Long userId) {
