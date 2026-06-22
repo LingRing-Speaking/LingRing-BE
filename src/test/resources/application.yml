@@ -9,6 +9,7 @@ scheduling:
 matching:
   confirm-deadline-seconds: 2
   cooldown-minutes: 1
+  alive-ttl-seconds: 30
 
 signaling:
   disconnect-grace-period: 1s
