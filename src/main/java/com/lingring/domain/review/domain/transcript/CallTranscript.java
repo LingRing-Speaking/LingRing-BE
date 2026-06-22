@@ -55,4 +55,8 @@ public class CallTranscript extends BaseTimeEntity {
         }
         this.content = newContent;
     }
+
+    public boolean isCompleted() {
+        return content != null;
+    }
 }

@@ -14,8 +14,10 @@ import com.lingring.domain.review.domain.transcript.vo.TranscriptSegment;
 import com.lingring.domain.call.exception.CallActiveException;
 import com.lingring.domain.call.exception.CallNotFoundException;
 import com.lingring.domain.call.exception.CallParticipantMismatchException;
+import com.lingring.domain.review.dto.response.CallTranscriptResponse;
 import com.lingring.domain.review.exception.CallRecordingsNotReadyException;
 import com.lingring.domain.review.exception.CallTranscriptNotFoundException;
+import com.lingring.domain.review.exception.CallTranscriptNotReadyException;
 import com.lingring.domain.review.service.CallTranscriptService.StartTranscriptResult;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.time.LocalDateTime;
@@ -190,6 +192,79 @@ class CallTranscriptServiceTest extends ServiceIntegrationHelper {
             // when & then
             assertThatThrownBy(() -> callTranscriptService.complete(9999L, List.of()))
                     .isInstanceOf(CallTranscriptNotFoundException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("getTranscript: 완료된 transcript 조회")
+    class GetTranscript {
+
+        @Test
+        @DisplayName("완료된 transcript면 callId와 startSec 오름차순으로 정렬된 segments를 반환한다")
+        void getTranscript_whenCompleted_returnsSortedSegments() {
+            // given
+            final Call call = saveEndedCall(1L, 2L);
+            final CallTranscript transcript = CallTranscript.create(call.getId());
+            transcript.complete(new TranscriptContent(List.of(
+                    new TranscriptSegment(2L, 3.5, 6.1, "second"),
+                    new TranscriptSegment(1L, 0.0, 3.2, "first")
+            )));
+            callTranscriptRepository.save(transcript);
+
+            // when
+            final CallTranscriptResponse response = callTranscriptService.getTranscript(call.getId(), 1L);
+
+            // then
+            assertThat(response.callId()).isEqualTo(call.getId());
+            assertThat(response.segments()).extracting("startSec").containsExactly(0.0, 3.5);
+            assertThat(response.segments().get(0).text()).isEqualTo("first");
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 callId면 CallNotFoundException")
+        void getTranscript_whenCallMissing_throws() {
+            // when & then
+            assertThatThrownBy(() -> callTranscriptService.getTranscript(9999L, 1L))
+                    .isInstanceOf(CallNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("통화 참여자가 아니면 CallParticipantMismatchException")
+        void getTranscript_whenNotParticipant_throws() {
+            // given
+            final Call call = saveEndedCall(1L, 2L);
+            final CallTranscript transcript = CallTranscript.create(call.getId());
+            transcript.complete(new TranscriptContent(List.of(
+                    new TranscriptSegment(1L, 0.0, 3.2, "hi")
+            )));
+            callTranscriptRepository.save(transcript);
+
+            // when & then
+            assertThatThrownBy(() -> callTranscriptService.getTranscript(call.getId(), 99L))
+                    .isInstanceOf(CallParticipantMismatchException.class);
+        }
+
+        @Test
+        @DisplayName("transcript record가 없으면 CallTranscriptNotFoundException")
+        void getTranscript_whenTranscriptMissing_throws() {
+            // given
+            final Call call = saveEndedCall(1L, 2L);
+
+            // when & then
+            assertThatThrownBy(() -> callTranscriptService.getTranscript(call.getId(), 1L))
+                    .isInstanceOf(CallTranscriptNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("transcript는 있으나 STT가 아직 완료되지 않았으면 CallTranscriptNotReadyException")
+        void getTranscript_whenNotReady_throws() {
+            // given
+            final Call call = saveEndedCall(1L, 2L);
+            callTranscriptRepository.save(CallTranscript.create(call.getId()));
+
+            // when & then
+            assertThatThrownBy(() -> callTranscriptService.getTranscript(call.getId(), 1L))
+                    .isInstanceOf(CallTranscriptNotReadyException.class);
         }
     }
 
