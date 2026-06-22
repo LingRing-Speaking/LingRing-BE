@@ -82,6 +82,32 @@ class CallTranscriptTest {
         }
     }
 
+    @Nested
+    @DisplayName("isCompleted: STT 완료 여부")
+    class IsCompleted {
+
+        @Test
+        @DisplayName("content가 채워져 있으면 true를 반환한다")
+        void isCompleted_whenContentPresent_returnsTrue() {
+            // given
+            final CallTranscript transcript = CallTranscript.create(1L);
+            transcript.complete(sampleContent());
+
+            // when & then
+            assertThat(transcript.isCompleted()).isTrue();
+        }
+
+        @Test
+        @DisplayName("content가 null이면 false를 반환한다")
+        void isCompleted_whenContentNull_returnsFalse() {
+            // given
+            final CallTranscript transcript = CallTranscript.create(1L);
+
+            // when & then
+            assertThat(transcript.isCompleted()).isFalse();
+        }
+    }
+
     private TranscriptContent sampleContent() {
         return new TranscriptContent(List.of(
                 new TranscriptSegment(101L, 0.0, 2.1, "안녕"),

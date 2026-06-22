@@ -9,11 +9,13 @@ import com.lingring.domain.review.domain.transcript.CallTranscript;
 import com.lingring.domain.review.domain.recording.vo.RecordingReference;
 import com.lingring.domain.review.domain.transcript.vo.TranscriptContent;
 import com.lingring.domain.review.domain.transcript.vo.TranscriptSegment;
+import com.lingring.domain.review.dto.response.CallTranscriptResponse;
 import com.lingring.domain.call.exception.CallActiveException;
 import com.lingring.domain.call.exception.CallNotFoundException;
 import com.lingring.domain.call.exception.CallParticipantMismatchException;
 import com.lingring.domain.review.exception.CallRecordingsNotReadyException;
 import com.lingring.domain.review.exception.CallTranscriptNotFoundException;
+import com.lingring.domain.review.exception.CallTranscriptNotReadyException;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -45,11 +47,25 @@ public class CallTranscriptService {
         return StartTranscriptResult.created(transcript, call.getUserAId(), call.getUserBId(), references);
     }
 
+    @Transactional(readOnly = true)
+    public CallTranscriptResponse getTranscript(final Long callId, final Long userId) {
+        requireParticipantCall(callId, userId);
+        final CallTranscript transcript = getTranscript(callId);
+        if (!transcript.isCompleted()) {
+            throw new CallTranscriptNotReadyException(callId);
+        }
+        return CallTranscriptResponse.from(transcript);
+    }
+
     @Transactional
     public void complete(final Long callId, final List<TranscriptSegment> segments) {
-        final CallTranscript transcript = callTranscriptRepository.findByCallId(callId)
-                .orElseThrow(() -> new CallTranscriptNotFoundException(callId));
+        final CallTranscript transcript = getTranscript(callId);
         transcript.complete(new TranscriptContent(segments));
+    }
+
+    private CallTranscript getTranscript(final Long callId) {
+        return callTranscriptRepository.findByCallId(callId)
+                .orElseThrow(() -> new CallTranscriptNotFoundException(callId));
     }
 
     private Call requireParticipantCall(final Long callId, final Long userId) {
