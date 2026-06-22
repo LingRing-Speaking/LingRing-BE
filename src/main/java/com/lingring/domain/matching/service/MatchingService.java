@@ -34,9 +34,11 @@ public class MatchingService {
     public void enterQueue(final Long userId) {
         matchingQueueRepository.clearResult(userId);
         matchingQueueRepository.enqueue(userId, dateTimeProvider.now());
+        matchingQueueRepository.markAlive(userId, matchingProperties.aliveTtl());
     }
 
     public MatchingStatusResponse getStatus(final Long userId) {
+        matchingQueueRepository.markAlive(userId, matchingProperties.aliveTtl());
         final Optional<MatchingResult> result = matchingQueueRepository.findResult(userId);
         if (result.isPresent()) {
             return matchedResponse(result.get());

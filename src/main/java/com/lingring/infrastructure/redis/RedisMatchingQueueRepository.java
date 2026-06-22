@@ -24,6 +24,8 @@ import org.springframework.stereotype.Repository;
 public class RedisMatchingQueueRepository implements MatchingQueueRepository {
 
     private static final String QUEUE_KEY = "matching:queue";
+    private static final String ALIVE_KEY_PREFIX = "matching:alive:";
+    private static final String ALIVE_VALUE = "1";
     private static final String RESULT_KEY_PREFIX = "matching:result:";
     private static final String RESULT_DELIMITER = ":";
     private static final Duration RESULT_TTL = Duration.ofSeconds(15);
@@ -51,6 +53,16 @@ public class RedisMatchingQueueRepository implements MatchingQueueRepository {
     @Override
     public boolean contains(final Long userId) {
         return redisTemplate.opsForZSet().score(QUEUE_KEY, userId.toString()) != null;
+    }
+
+    @Override
+    public void markAlive(final Long userId, final Duration ttl) {
+        redisTemplate.opsForValue().set(aliveKey(userId), ALIVE_VALUE, ttl);
+    }
+
+    @Override
+    public boolean isAlive(final Long userId) {
+        return Boolean.TRUE.equals(redisTemplate.hasKey(aliveKey(userId)));
     }
 
     @Override
@@ -107,6 +119,10 @@ public class RedisMatchingQueueRepository implements MatchingQueueRepository {
     @Override
     public void clearResult(final Long userId) {
         redisTemplate.delete(resultKey(userId));
+    }
+
+    private String aliveKey(final Long userId) {
+        return ALIVE_KEY_PREFIX + userId;
     }
 
     private String resultKey(final Long userId) {

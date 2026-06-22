@@ -130,6 +130,16 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
             // then
             assertThat(matchingQueueRepository.contains(1L)).isTrue();
         }
+
+        @Test
+        @DisplayName("입장 시 생존(alive) 표시가 등록된다")
+        void enter_marksUserAlive() {
+            // when
+            matchingService.enterQueue(1L);
+
+            // then
+            assertThat(matchingQueueRepository.isAlive(1L)).isTrue();
+        }
     }
 
     @Nested
@@ -199,6 +209,20 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
             assertThat(response.partnerId()).isNull();
             assertThat(response.roomId()).isNull();
             assertThat(response.callId()).isNull();
+        }
+
+        @Test
+        @DisplayName("폴링(getStatus) 시 호출자의 생존(alive) 표시가 갱신된다")
+        void getStatus_marksCallerAlive() {
+            // given: 큐에는 있지만 alive 표시가 없는 상태
+            matchingQueueRepository.enqueue(1L, FIXED_NOW);
+            assertThat(matchingQueueRepository.isAlive(1L)).isFalse();
+
+            // when
+            matchingService.getStatus(1L);
+
+            // then
+            assertThat(matchingQueueRepository.isAlive(1L)).isTrue();
         }
     }
 

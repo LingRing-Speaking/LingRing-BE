@@ -9,6 +9,7 @@ import com.lingring.domain.matching.domain.MatchConfirmation;
 import com.lingring.domain.moderation.dao.UserBlockRepository;
 import com.lingring.domain.moderation.domain.UserBlock;
 import com.lingring.global.config.ServiceIntegrationHelper;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -19,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 class MatchingExecutorTest extends ServiceIntegrationHelper {
 
     private static final LocalDateTime BASE = LocalDateTime.of(2026, 4, 27, 10, 0);
+    private static final Duration ALIVE_TTL = Duration.ofSeconds(30);
 
     @Autowired
     private MatchingExecutor matchingExecutor;
@@ -34,6 +36,12 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
 
     @Autowired
     private UserBlockRepository userBlockRepository;
+
+    // 큐 적재 + 생존 표시 (정상적으로 폴링 중인 대기 유저를 시뮬레이션)
+    private void enqueueAlive(final Long userId, final LocalDateTime enqueuedAt) {
+        matchingQueueRepository.enqueue(userId, enqueuedAt);
+        matchingQueueRepository.markAlive(userId, ALIVE_TTL);
+    }
 
     @Nested
     @DisplayName("executeRound: 한 라운드 페어링")
@@ -53,7 +61,7 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
         @DisplayName("큐에 한 명만 있으면 페어링하지 않고 그대로 둔다")
         void executeRound_whenSingleUser_keepsInQueue() {
             // given
-            matchingQueueRepository.enqueue(1L, BASE);
+            enqueueAlive(1L, BASE);
 
             // when
             matchingExecutor.executeRound();
@@ -67,8 +75,8 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
         @DisplayName("두 사용자가 큐에 있으면 입장 시각 순으로 confirm record를 생성하고 양쪽 user index를 등록한다")
         void executeRound_pairsTwoUsersByEnqueuedAtOrder() {
             // given
-            matchingQueueRepository.enqueue(1L, BASE);
-            matchingQueueRepository.enqueue(2L, BASE.plusSeconds(1));
+            enqueueAlive(1L, BASE);
+            enqueueAlive(2L, BASE.plusSeconds(1));
 
             // when
             matchingExecutor.executeRound();
@@ -88,8 +96,8 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
         @DisplayName("페어링 성사 시점에는 아직 Call 엔티티가 저장되지 않는다 (accept 완료 시점에 저장)")
         void executeRound_doesNotPersistCallYet() {
             // given
-            matchingQueueRepository.enqueue(1L, BASE);
-            matchingQueueRepository.enqueue(2L, BASE.plusSeconds(1));
+            enqueueAlive(1L, BASE);
+            enqueueAlive(2L, BASE.plusSeconds(1));
 
             // when
             matchingExecutor.executeRound();
@@ -104,9 +112,9 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
         void executeRound_skipsBlockedPair_andPairsRemaining() {
             // given: 3L이 1L을 차단 → 1L과 3L은 매칭 불가
             userBlockRepository.save(UserBlock.create(3L, 1L));
-            matchingQueueRepository.enqueue(3L, BASE);
-            matchingQueueRepository.enqueue(2L, BASE.plusSeconds(1));
-            matchingQueueRepository.enqueue(1L, BASE.plusSeconds(2));
+            enqueueAlive(3L, BASE);
+            enqueueAlive(2L, BASE.plusSeconds(1));
+            enqueueAlive(1L, BASE.plusSeconds(2));
 
             // when
             matchingExecutor.executeRound();
@@ -128,10 +136,10 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
         @DisplayName("한 라운드에 여러 페어를 동시에 매칭한다")
         void executeRound_pairsMultiplePairsInOneRound() {
             // given
-            matchingQueueRepository.enqueue(1L, BASE);
-            matchingQueueRepository.enqueue(2L, BASE.plusSeconds(1));
-            matchingQueueRepository.enqueue(3L, BASE.plusSeconds(2));
-            matchingQueueRepository.enqueue(4L, BASE.plusSeconds(3));
+            enqueueAlive(1L, BASE);
+            enqueueAlive(2L, BASE.plusSeconds(1));
+            enqueueAlive(3L, BASE.plusSeconds(2));
+            enqueueAlive(4L, BASE.plusSeconds(3));
 
             // when
             matchingExecutor.executeRound();
@@ -156,9 +164,9 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
         @DisplayName("같은 사용자가 한 라운드에 여러 페어로 들어가지 않는다")
         void executeRound_doesNotConsumeSameUserTwice() {
             // given
-            matchingQueueRepository.enqueue(1L, BASE);
-            matchingQueueRepository.enqueue(2L, BASE.plusSeconds(1));
-            matchingQueueRepository.enqueue(3L, BASE.plusSeconds(2));
+            enqueueAlive(1L, BASE);
+            enqueueAlive(2L, BASE.plusSeconds(1));
+            enqueueAlive(3L, BASE.plusSeconds(2));
 
             // when
             matchingExecutor.executeRound();
@@ -178,8 +186,8 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
         void executeRound_whenAllBlocked_doesNotPair() {
             // given: 1L과 2L 양방향 차단
             userBlockRepository.save(UserBlock.create(1L, 2L));
-            matchingQueueRepository.enqueue(1L, BASE);
-            matchingQueueRepository.enqueue(2L, BASE.plusSeconds(1));
+            enqueueAlive(1L, BASE);
+            enqueueAlive(2L, BASE.plusSeconds(1));
 
             // when
             matchingExecutor.executeRound();
@@ -189,6 +197,40 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
             assertThat(matchingQueueRepository.contains(2L)).isTrue();
             assertThat(matchConfirmationRepository.findByUser(1L)).isEmpty();
             assertThat(matchConfirmationRepository.findByUser(2L)).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("executeRound: 이탈(alive 키 만료) 후보 청소")
+    class ReapDeadCandidates {
+
+        @Test
+        @DisplayName("alive 키 없는 후보는 큐에서 제거되고 매칭 대상에서 제외된다")
+        void executeRound_reapsDeadCandidate_andExcludesFromMatching() {
+            // given: 1L은 살아있고, 2L은 alive 키 없는 유령(이탈 후 큐에만 잔류)
+            enqueueAlive(1L, BASE);
+            matchingQueueRepository.enqueue(2L, BASE.plusSeconds(1));
+
+            // when
+            matchingExecutor.executeRound();
+
+            // then: 유령 2L은 청소되고, 살아있는 1L만 남아 매칭되지 않는다
+            assertThat(matchingQueueRepository.contains(2L)).isFalse();
+            assertThat(matchingQueueRepository.contains(1L)).isTrue();
+            assertThat(matchConfirmationRepository.findByUser(1L)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("큐에 유령만 혼자 있어도 alive 키 없으면 청소된다")
+        void executeRound_reapsLoneDeadCandidate() {
+            // given
+            matchingQueueRepository.enqueue(1L, BASE);
+
+            // when
+            matchingExecutor.executeRound();
+
+            // then
+            assertThat(matchingQueueRepository.contains(1L)).isFalse();
         }
     }
 }
