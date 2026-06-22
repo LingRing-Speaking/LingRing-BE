@@ -2,7 +2,6 @@ package com.lingring.domain.call.service;
 
 import com.lingring.domain.call.dao.CallRepository;
 import com.lingring.domain.call.dao.dto.CallSummaryProjection;
-import com.lingring.domain.call.domain.policy.CallVisibilityPolicy;
 import com.lingring.domain.call.domain.port.AnalysisSummaryProvider;
 import com.lingring.domain.call.domain.port.AnalysisSummaryView;
 import com.lingring.domain.call.dto.response.CallsResponse;
@@ -26,7 +25,7 @@ public class CallHistoryService {
     public CallsResponse getCallsByUserId(final Long userId, final int page, final int size) {
         final PageSize pageSize = PageSize.clamp(size);
         final Slice<CallSummaryProjection> slice = callRepository.findEndedSummariesByUserId(
-                userId, CallVisibilityPolicy.MIN_DURATION_SEC, PageRequest.of(page, pageSize.value()));
+                userId, PageRequest.of(page, pageSize.value()));
         final List<Long> callIds = slice.getContent().stream()
                 .map(CallSummaryProjection::getId)
                 .toList();
