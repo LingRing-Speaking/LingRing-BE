@@ -4,6 +4,7 @@ import com.lingring.domain.review.dao.CallRecordingRepository;
 import com.lingring.domain.call.dao.CallRepository;
 import com.lingring.domain.review.dao.CallTranscriptRepository;
 import com.lingring.domain.call.domain.Call;
+import com.lingring.domain.review.domain.policy.CallAnalysisPolicy;
 import com.lingring.domain.review.domain.recording.CallRecording;
 import com.lingring.domain.review.domain.transcript.CallTranscript;
 import com.lingring.domain.review.domain.recording.vo.RecordingReference;
@@ -29,6 +30,7 @@ public class CallTranscriptService {
     private final CallRepository callRepository;
     private final CallRecordingRepository callRecordingRepository;
     private final CallTranscriptRepository callTranscriptRepository;
+    private final CallAnalysisPolicy callAnalysisPolicy;
 
     @Transactional
     public StartTranscriptResult startTranscript(final Long callId, final Long userId) {
@@ -36,6 +38,7 @@ public class CallTranscriptService {
         if (call.isActive()) {
             throw new CallActiveException(callId);
         }
+        callAnalysisPolicy.requireEnoughToAnalyze(callId, call.getDurationSec());
 
         final Optional<CallTranscript> existing = callTranscriptRepository.findByCallId(callId);
         if (existing.isPresent()) {
