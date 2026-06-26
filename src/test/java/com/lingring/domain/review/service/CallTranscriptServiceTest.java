@@ -16,6 +16,7 @@ import com.lingring.domain.call.exception.CallNotFoundException;
 import com.lingring.domain.call.exception.CallParticipantMismatchException;
 import com.lingring.domain.review.dto.response.CallTranscriptResponse;
 import com.lingring.domain.review.exception.CallRecordingsNotReadyException;
+import com.lingring.domain.review.exception.CallTooShortException;
 import com.lingring.domain.review.exception.CallTranscriptNotFoundException;
 import com.lingring.domain.review.exception.CallTranscriptNotReadyException;
 import com.lingring.domain.review.service.CallTranscriptService.StartTranscriptResult;
@@ -138,6 +139,17 @@ class CallTranscriptServiceTest extends ServiceIntegrationHelper {
             // when & then
             assertThatThrownBy(() -> callTranscriptService.startTranscript(call.getId(), 1L))
                     .isInstanceOf(CallRecordingsNotReadyException.class);
+        }
+
+        @Test
+        @DisplayName("통화 시간이 1분 미만이면 CallTooShortException")
+        void startTranscript_whenCallTooShort_throws() {
+            // given
+            final Call call = saveCallWithDuration(1L, 2L, 30L);
+
+            // when & then
+            assertThatThrownBy(() -> callTranscriptService.startTranscript(call.getId(), 1L))
+                    .isInstanceOf(CallTooShortException.class);
         }
     }
 
@@ -271,6 +283,12 @@ class CallTranscriptServiceTest extends ServiceIntegrationHelper {
     private Call saveEndedCall(final Long userA, final Long userB) {
         final Call call = callRepository.save(Call.start(userA, userB, UUID.randomUUID(), STARTED_AT));
         call.end(ENDED_AT);
+        return callRepository.save(call);
+    }
+
+    private Call saveCallWithDuration(final Long userA, final Long userB, final long durationSec) {
+        final Call call = callRepository.save(Call.start(userA, userB, UUID.randomUUID(), STARTED_AT));
+        call.end(STARTED_AT.plusSeconds(durationSec));
         return callRepository.save(call);
     }
 
