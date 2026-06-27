@@ -16,7 +16,8 @@ public record CallSummaryResponse(
 
     public static CallSummaryResponse from(
             final CallSummaryProjection projection,
-            final AnalysisSummaryView analysisSummary
+            final AnalysisSummaryView analysisSummary,
+            final boolean recordingsReady
     ) {
         final OffsetDateTime startedAt = projection.getStartedAt()
                 .atZone(Zones.SEOUL)
@@ -27,7 +28,7 @@ public record CallSummaryResponse(
                 startedAt,
                 projection.getDurationSec().intValue(),
                 analysisIdOf(analysisSummary),
-                CallAnalysisStatusView.from(analysisSummary)
+                CallAnalysisStatusView.from(analysisSummary, recordingsReady)
         );
     }
 

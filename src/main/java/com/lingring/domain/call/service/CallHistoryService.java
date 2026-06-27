@@ -4,10 +4,12 @@ import com.lingring.domain.call.dao.CallRepository;
 import com.lingring.domain.call.dao.dto.CallSummaryProjection;
 import com.lingring.domain.call.domain.port.AnalysisSummaryProvider;
 import com.lingring.domain.call.domain.port.AnalysisSummaryView;
+import com.lingring.domain.call.domain.port.RecordingReadinessProvider;
 import com.lingring.domain.call.dto.response.CallsResponse;
 import com.lingring.global.common.pagination.PageSize;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
@@ -20,6 +22,7 @@ public class CallHistoryService {
 
     private final CallRepository callRepository;
     private final AnalysisSummaryProvider analysisSummaryProvider;
+    private final RecordingReadinessProvider recordingReadinessProvider;
 
     @Transactional(readOnly = true)
     public CallsResponse getCallsByUserId(final Long userId, final int page, final int size) {
@@ -31,6 +34,7 @@ public class CallHistoryService {
                 .toList();
         final Map<Long, AnalysisSummaryView> analysisSummaryByCallId =
                 analysisSummaryProvider.findByCallIds(userId, callIds);
-        return CallsResponse.from(slice, analysisSummaryByCallId);
+        final Set<Long> readyCallIds = recordingReadinessProvider.findReadyCallIds(callIds);
+        return CallsResponse.from(slice, analysisSummaryByCallId, readyCallIds);
     }
 }

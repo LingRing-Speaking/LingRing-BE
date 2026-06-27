@@ -14,6 +14,8 @@ import com.lingring.domain.review.domain.analysis.vo.Mistakes;
 import com.lingring.domain.review.domain.analysis.vo.PositiveItem;
 import com.lingring.domain.review.domain.analysis.vo.Positives;
 import com.lingring.domain.call.dto.response.CallAnalysisStatusView;
+import com.lingring.domain.review.dao.CallRecordingRepository;
+import com.lingring.domain.review.domain.recording.CallRecording;
 import com.lingring.domain.review.service.CallAnalysisService;
 import com.lingring.domain.user.dao.UserRepository;
 import com.lingring.domain.user.domain.Provider;
@@ -39,6 +41,9 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
 
     @Autowired
     private CallAnalysisService callAnalysisService;
+
+    @Autowired
+    private CallRecordingRepository callRecordingRepository;
 
     @Autowired
     private CallRepository callRepository;
@@ -223,12 +228,13 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
     class AnalysisEnrichment {
 
         @Test
-        @DisplayName("분석 요청 안 한 통화는 analysisId=null, analysisStatus=READY")
-        void enrichment_whenNotRequested_returnsReady() {
+        @DisplayName("분석 요청 안 했고 두 녹음이 모두 올라왔으면 analysisId=null, analysisStatus=READY")
+        void enrichment_whenNotRequestedAndRecordingsReady_returnsReady() {
             // given
             final Long me = saveUser("me").getId();
             final Long partner = saveUser("Sophie").getId();
-            saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(5));
+            final Call call = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(5));
+            saveBothRecordings(call.getId(), me, partner);
 
             // when
             final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
@@ -237,6 +243,25 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
             assertThat(response.items()).hasSize(1);
             assertThat(response.items().get(0).analysisId()).isNull();
             assertThat(response.items().get(0).analysisStatus()).isEqualTo(CallAnalysisStatusView.READY);
+        }
+
+        @Test
+        @DisplayName("분석 요청 안 했고 녹음이 아직 다 안 올라온 통화는 analysisStatus=WAITING_RECORDINGS (버튼 비활성)")
+        void enrichment_whenNotRequestedAndRecordingsNotReady_returnsWaitingRecordings() {
+            // given: 한쪽 녹음만 올라온 상태 (아직 준비 안 됨)
+            final Long me = saveUser("me").getId();
+            final Long partner = saveUser("Sophie").getId();
+            final Call call = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(5));
+            saveRecording(call.getId(), me);
+
+            // when
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
+
+            // then
+            assertThat(response.items()).hasSize(1);
+            assertThat(response.items().get(0).analysisId()).isNull();
+            assertThat(response.items().get(0).analysisStatus())
+                    .isEqualTo(CallAnalysisStatusView.WAITING_RECORDINGS);
         }
 
         @Test
@@ -283,6 +308,7 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
             final Long me = saveUser("me").getId();
             final Long partner = saveUser("Sophie").getId();
             final Call call = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(5));
+            saveBothRecordings(call.getId(), me, partner);
             callAnalysisService.requestForUser(call.getId(), partner);
             callAnalysisService.ensureExistsForUser(call.getId(), me);
             callAnalysisService.complete(call.getId(), partner, sampleResult(), MODEL);
@@ -291,7 +317,7 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
             // when
             final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
-            // then: 본인이 요청 안 했으므로 READY
+            // then: 본인이 요청 안 했으므로 READY (녹음은 준비된 상태)
             assertThat(response.items().get(0).analysisId()).isNull();
             assertThat(response.items().get(0).analysisStatus()).isEqualTo(CallAnalysisStatusView.READY);
         }
@@ -305,6 +331,9 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
             final Call c1 = saveEndedCall(me, partner, FIXED_NOW.minusHours(3), FIXED_NOW.minusHours(3).plusMinutes(2));
             final Call c2 = saveEndedCall(me, partner, FIXED_NOW.minusHours(2), FIXED_NOW.minusHours(2).plusMinutes(2));
             final Call c3 = saveEndedCall(me, partner, FIXED_NOW.minusHours(1), FIXED_NOW.minusHours(1).plusMinutes(2));
+            saveBothRecordings(c1.getId(), me, partner);
+            saveBothRecordings(c2.getId(), me, partner);
+            saveBothRecordings(c3.getId(), me, partner);
             final CallAnalysis a1 = callAnalysisService.requestForUser(c1.getId(), me);
             callAnalysisService.complete(c1.getId(), me, sampleResult(), MODEL);
             // c2 — 본인 요청 안 함
@@ -364,5 +393,15 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
         final Call call = callRepository.save(Call.start(userA, userB, UUID.randomUUID(), startedAt));
         call.end(endedAt);
         return callRepository.save(call);
+    }
+
+    private void saveBothRecordings(final Long callId, final Long userA, final Long userB) {
+        saveRecording(callId, userA);
+        saveRecording(callId, userB);
+    }
+
+    private void saveRecording(final Long callId, final Long userId) {
+        callRecordingRepository.save(CallRecording.upload(
+                callId, userId, "call-recordings/%d/%d/key".formatted(callId, userId), "audio/m4a"));
     }
 }
