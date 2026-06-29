@@ -18,9 +18,9 @@ auth:
   demo:
     enabled: true
     tokens:
-      ${DEMO_TOKEN_A}: REVIEWER_A
-      ${DEMO_TOKEN_B}: REVIEWER_B
-      ${DEMO_TOKEN_C}: REVIEWER_C
+      REVIEWER_A: ${DEMO_TOKEN_A}
+      REVIEWER_B: ${DEMO_TOKEN_B}
+      REVIEWER_C: ${DEMO_TOKEN_C}
 
 management:
   endpoints:
