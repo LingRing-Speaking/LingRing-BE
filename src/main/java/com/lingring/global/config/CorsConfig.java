@@ -17,6 +17,8 @@ public class CorsConfig {
             "http://localhost:4173",
             "https://lingring.site",
             "capacitor://*",
+            "https://localhost",
+            "http://localhost",
             "https://dev-lingring.site",
             "http://dev-lingring.site"
     );
