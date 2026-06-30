@@ -22,6 +22,7 @@ import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.global.config.ServiceIntegrationHelper;
+import com.lingring.global.util.FixedDateTimeProvider;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -29,12 +30,27 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+@Import(CallHistoryServiceTest.FixedTimeConfig.class)
 class CallHistoryServiceTest extends ServiceIntegrationHelper {
 
     private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 5, 2, 10, 0);
+
+    @TestConfiguration
+    static class FixedTimeConfig {
+
+        @Bean
+        @Primary
+        FixedDateTimeProvider dateTimeProvider() {
+            return new FixedDateTimeProvider(FIXED_NOW);
+        }
+    }
 
     @Autowired
     private CallHistoryService callHistoryService;
@@ -243,6 +259,43 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
             assertThat(response.items()).hasSize(1);
             assertThat(response.items().get(0).analysisId()).isNull();
             assertThat(response.items().get(0).analysisStatus()).isEqualTo(CallAnalysisStatusView.READY);
+        }
+
+        @Test
+        @DisplayName("녹음 보관 기간(30일)이 지난 미요청 통화는 analysisStatus=EXPIRED (READY → EXPIRED)")
+        void enrichment_whenReadyButExpired_returnsExpired() {
+            // given: 종료가 30일을 넘긴 통화
+            final Long me = saveUser("me").getId();
+            final Long partner = saveUser("Sophie").getId();
+            final Call call = saveEndedCall(
+                    me, partner, FIXED_NOW.minusDays(31).minusMinutes(5), FIXED_NOW.minusDays(31));
+            saveBothRecordings(call.getId(), me, partner);
+
+            // when
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
+
+            // then
+            assertThat(response.items()).hasSize(1);
+            assertThat(response.items().get(0).analysisStatus()).isEqualTo(CallAnalysisStatusView.EXPIRED);
+        }
+
+        @Test
+        @DisplayName("완료된 분석은 보관 기간이 지나도 COMPLETED 유지")
+        void enrichment_whenCompletedAndExpired_staysCompleted() {
+            // given: 30일 지난 통화 + 본인 분석 완료
+            final Long me = saveUser("me").getId();
+            final Long partner = saveUser("Sophie").getId();
+            final Call call = saveEndedCall(
+                    me, partner, FIXED_NOW.minusDays(31).minusMinutes(5), FIXED_NOW.minusDays(31));
+            callAnalysisService.requestForUser(call.getId(), me);
+            callAnalysisService.complete(call.getId(), me, sampleResult(), MODEL);
+
+            // when
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
+
+            // then
+            assertThat(response.items()).hasSize(1);
+            assertThat(response.items().get(0).analysisStatus()).isEqualTo(CallAnalysisStatusView.COMPLETED);
         }
 
         @Test

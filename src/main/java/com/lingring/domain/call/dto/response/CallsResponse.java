@@ -15,13 +15,15 @@ public record CallsResponse(
     public static CallsResponse from(
             final Slice<CallSummaryProjection> slice,
             final Map<Long, AnalysisSummaryView> analysisSummaryByCallId,
-            final Set<Long> readyCallIds
+            final Set<Long> readyCallIds,
+            final Set<Long> expiredCallIds
     ) {
         final List<CallSummaryResponse> items = slice.getContent().stream()
                 .map(p -> CallSummaryResponse.from(
                         p,
                         analysisSummaryByCallId.get(p.getId()),
-                        readyCallIds.contains(p.getId())))
+                        readyCallIds.contains(p.getId()),
+                        expiredCallIds.contains(p.getId())))
                 .toList();
         return new CallsResponse(items, slice.hasNext());
     }
