@@ -22,7 +22,6 @@ import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.global.config.ServiceIntegrationHelper;
-import com.lingring.global.util.FixedDateTimeProvider;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -30,27 +29,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-@Import(CallHistoryServiceTest.FixedTimeConfig.class)
 class CallHistoryServiceTest extends ServiceIntegrationHelper {
 
-    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 5, 2, 10, 0);
-
-    @TestConfiguration
-    static class FixedTimeConfig {
-
-        @Bean
-        @Primary
-        FixedDateTimeProvider dateTimeProvider() {
-            return new FixedDateTimeProvider(FIXED_NOW);
-        }
-    }
+    // 실제 시계 기준 상대 시드 — 별도 Spring 컨텍스트(FixedDateTimeProvider override) 생성을 피해
+    // 공유 컨텍스트의 HikariCP/Redis 커넥션 예산을 유지한다.
+    private static final LocalDateTime FIXED_NOW = LocalDateTime.now();
 
     @Autowired
     private CallHistoryService callHistoryService;

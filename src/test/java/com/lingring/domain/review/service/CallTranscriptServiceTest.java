@@ -22,7 +22,6 @@ import com.lingring.domain.review.exception.CallTranscriptNotReadyException;
 import com.lingring.domain.review.exception.CallRecordingExpiredException;
 import com.lingring.domain.review.service.CallTranscriptService.StartTranscriptResult;
 import com.lingring.global.config.ServiceIntegrationHelper;
-import com.lingring.global.util.FixedDateTimeProvider;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -30,27 +29,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 
-@Import(CallTranscriptServiceTest.FixedTimeConfig.class)
 class CallTranscriptServiceTest extends ServiceIntegrationHelper {
 
-    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 6, 28, 10, 30);
-    private static final LocalDateTime ENDED_AT = LocalDateTime.of(2026, 6, 27, 10, 0);
+    // 실제 시계 기준 상대 시드 — 별도 Spring 컨텍스트(FixedDateTimeProvider override) 생성을 피해
+    // 공유 컨텍스트의 HikariCP/Redis 커넥션 예산을 유지한다.
+    private static final LocalDateTime ENDED_AT = LocalDateTime.now().minusDays(1);
     private static final LocalDateTime STARTED_AT = ENDED_AT.minusMinutes(5);
-
-    @TestConfiguration
-    static class FixedTimeConfig {
-
-        @Bean
-        @Primary
-        FixedDateTimeProvider dateTimeProvider() {
-            return new FixedDateTimeProvider(FIXED_NOW);
-        }
-    }
 
     @Autowired
     private CallTranscriptService callTranscriptService;
@@ -174,7 +159,7 @@ class CallTranscriptServiceTest extends ServiceIntegrationHelper {
         @DisplayName("녹음 보관 기간(30일)이 지난 통화면 CallRecordingExpiredException")
         void startTranscript_whenExpired_throws() {
             // given: 31일 전 종료된 통화 + 녹음 2개
-            final LocalDateTime expiredEndedAt = FIXED_NOW.minusDays(31);
+            final LocalDateTime expiredEndedAt = LocalDateTime.now().minusDays(31);
             final Call call = callRepository.save(
                     Call.start(1L, 2L, UUID.randomUUID(), expiredEndedAt.minusMinutes(5)));
             call.end(expiredEndedAt);

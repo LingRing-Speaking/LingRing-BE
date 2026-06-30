@@ -20,7 +20,6 @@ import com.lingring.domain.review.dto.response.CallAnalysisStatusResponse;
 import com.lingring.domain.review.exception.CallAnalysisAccessForbiddenException;
 import com.lingring.domain.review.exception.CallAnalysisNotFoundException;
 import com.lingring.global.config.ServiceIntegrationHelper;
-import com.lingring.global.util.FixedDateTimeProvider;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -29,29 +28,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 
-@Import(CallAnalysisServiceTest.FixedTimeConfig.class)
 class CallAnalysisServiceTest extends ServiceIntegrationHelper {
 
     private static final Long CALL_ID = 100L;
     private static final Long USER_ID = 1L;
     private static final Long OTHER_USER_ID = 2L;
     private static final String MODEL = "gemini-2.5-flash";
-    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 6, 28, 10, 0);
-
-    @TestConfiguration
-    static class FixedTimeConfig {
-
-        @Bean
-        @Primary
-        FixedDateTimeProvider dateTimeProvider() {
-            return new FixedDateTimeProvider(FIXED_NOW);
-        }
-    }
 
     @Autowired
     private CallAnalysisService callAnalysisService;
@@ -220,7 +203,7 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
         @DisplayName("본인 소유 + requested=true 면 status를 반환한다")
         void getStatus_whenOwnedAndRequested_returnsStatus() {
             // given
-            final Long callId = saveEndedCall(USER_ID, OTHER_USER_ID, FIXED_NOW.minusDays(1));
+            final Long callId = saveEndedCall(USER_ID, OTHER_USER_ID, LocalDateTime.now().minusDays(1));
             final CallAnalysis saved = callAnalysisService.requestForUser(callId, USER_ID).analysis();
 
             // when
@@ -234,7 +217,7 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
         @DisplayName("FAILED 분석은 녹음 보관 기간(30일)이 지나면 EXPIRED 로 노출된다")
         void getStatus_whenFailedAndExpired_returnsExpired() {
             // given: 30일을 넘긴 통화의 실패한 분석
-            final Long callId = saveEndedCall(USER_ID, OTHER_USER_ID, FIXED_NOW.minusDays(31));
+            final Long callId = saveEndedCall(USER_ID, OTHER_USER_ID, LocalDateTime.now().minusDays(31));
             final CallAnalysis saved = callAnalysisService.requestForUser(callId, USER_ID).analysis();
             callAnalysisService.fail(callId, USER_ID);
 
