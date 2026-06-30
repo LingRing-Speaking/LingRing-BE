@@ -14,5 +14,7 @@ public interface CallSummaryProjection {
 
     LocalDateTime getStartedAt();
 
+    LocalDateTime getEndedAt();
+
     Long getDurationSec();
 }

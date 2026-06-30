@@ -9,6 +9,7 @@ import com.lingring.domain.review.dao.CallTranscriptRepository;
 import com.lingring.domain.call.domain.Call;
 import com.lingring.domain.review.domain.recording.CallRecording;
 import com.lingring.domain.call.exception.CallParticipantMismatchException;
+import com.lingring.domain.review.exception.CallRecordingExpiredException;
 import com.lingring.domain.review.exception.CallRecordingsNotReadyException;
 import com.lingring.domain.review.dao.CallAnalysisRepository;
 import com.lingring.domain.review.dao.AnalysisQuotaRepository;
@@ -36,9 +37,9 @@ import org.springframework.context.annotation.Primary;
 @Import(CallAnalysisRequestFacadeTest.FakeStarterConfig.class)
 class CallAnalysisRequestFacadeTest extends ServiceIntegrationHelper {
 
-    private static final LocalDateTime ENDED_AT = LocalDateTime.of(2026, 5, 20, 10, 0);
-    private static final LocalDateTime STARTED_AT = ENDED_AT.minusMinutes(5);
     private static final LocalDate TODAY = LocalDate.of(2026, 6, 28);
+    private static final LocalDateTime ENDED_AT = LocalDateTime.of(2026, 6, 26, 10, 0);
+    private static final LocalDateTime STARTED_AT = ENDED_AT.minusMinutes(5);
     private static final LocalDate TOMORROW = TODAY.plusDays(1);
 
     @Autowired
@@ -167,6 +168,25 @@ class CallAnalysisRequestFacadeTest extends ServiceIntegrationHelper {
         assertThatThrownBy(() -> callAnalysisRequestFacade.request(call.getId(), 99L))
                 .isInstanceOf(CallParticipantMismatchException.class);
         assertThat(fakeCallAnalysisStarter.invocations()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("녹음 보관 기간(30일)이 지난 통화는 CallRecordingExpiredException으로 거절하고 starter 호출·차감이 없다")
+    void request_whenExpired_throwsAndDoesNotConsume() {
+        // given: 31일 전 종료된 통화 + 녹음 2개
+        final LocalDateTime expiredEndedAt = TODAY.atStartOfDay().minusDays(31);
+        final Call call = callRepository.save(
+                Call.start(1L, 2L, UUID.randomUUID(), expiredEndedAt.minusMinutes(5)));
+        call.end(expiredEndedAt);
+        callRepository.save(call);
+        saveRecording(call.getId(), 1L, "call-recordings/%d/1/a".formatted(call.getId()));
+        saveRecording(call.getId(), 2L, "call-recordings/%d/2/b".formatted(call.getId()));
+
+        // when & then
+        assertThatThrownBy(() -> callAnalysisRequestFacade.request(call.getId(), 1L))
+                .isInstanceOf(CallRecordingExpiredException.class);
+        assertThat(fakeCallAnalysisStarter.invocations()).isEmpty();
+        assertThat(analysisQuotaRepository.findByUserId(1L)).isEmpty();
     }
 
     @Nested

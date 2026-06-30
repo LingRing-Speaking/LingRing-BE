@@ -21,6 +21,7 @@ public interface CallRepository extends JpaRepository<Call, Long> {
                    u.name.value AS partnerName,
                    u.profileImage.value AS partnerProfileImage,
                    c.startedAt AS startedAt,
+                   c.endedAt AS endedAt,
                    c.durationSec AS durationSec
             FROM Call c
             LEFT JOIN User u ON (u.id = c.userBId AND c.userAId = :userId)

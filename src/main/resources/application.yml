@@ -84,6 +84,7 @@ call-recording:
     - audio/mp4
     - audio/webm
   max-content-length: 52428800
+  retention-days: 30
 
 matching:
   confirm-deadline-seconds: 15
