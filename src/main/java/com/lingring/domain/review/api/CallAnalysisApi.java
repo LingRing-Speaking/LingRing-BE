@@ -22,6 +22,7 @@ public interface CallAnalysisApi {
             summary = "분석 트리거",
             description = "두 화자의 녹음이 모두 업로드된 통화에 대해 STT + LLM 분석 파이프라인을 비동기로 시작한다."
                     + " 이미 처리 중이거나 완료된 경우 기존 분석을 그대로 반환한다 (멱등)."
+                    + " 녹음 보관 기간(30일)이 지난 통화는 400(CALL_RECORDING_EXPIRED)으로 거절된다 (티켓 차감 없음)."
                     + " 응답의 analysisId 로 /analyses/{id}/status 폴링 및 /analyses/{id} 결과 조회를 수행한다."
     )
     @ApiResponses({
@@ -62,6 +63,7 @@ public interface CallAnalysisApi {
     @Operation(
             summary = "분석 상태 조회",
             description = "본인 소유 분석의 진행 상태(PROCESSING/COMPLETED/FAILED)만 가볍게 조회한다."
+                    + " 녹음 보관 기간(30일)이 지난 통화의 미완료 분석은 EXPIRED 로 내려간다(COMPLETED는 유지)."
                     + " 폴링용. 본인 소유가 아닌 analysisId 요청은 403."
     )
     @ApiResponses({

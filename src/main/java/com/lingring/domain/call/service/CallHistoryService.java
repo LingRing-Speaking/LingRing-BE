@@ -7,9 +7,13 @@ import com.lingring.domain.call.domain.port.AnalysisSummaryView;
 import com.lingring.domain.call.domain.port.RecordingReadinessProvider;
 import com.lingring.domain.call.dto.response.CallsResponse;
 import com.lingring.global.common.pagination.PageSize;
+import com.lingring.global.config.CallRecordingRetentionProperties;
+import com.lingring.global.util.DateTimeProvider;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
@@ -23,6 +27,8 @@ public class CallHistoryService {
     private final CallRepository callRepository;
     private final AnalysisSummaryProvider analysisSummaryProvider;
     private final RecordingReadinessProvider recordingReadinessProvider;
+    private final CallRecordingRetentionProperties retentionProperties;
+    private final DateTimeProvider timeProvider;
 
     @Transactional(readOnly = true)
     public CallsResponse getCallsByUserId(final Long userId, final int page, final int size) {
@@ -35,6 +41,16 @@ public class CallHistoryService {
         final Map<Long, AnalysisSummaryView> analysisSummaryByCallId =
                 analysisSummaryProvider.findByCallIds(userId, callIds);
         final Set<Long> readyCallIds = recordingReadinessProvider.findReadyCallIds(callIds);
-        return CallsResponse.from(slice, analysisSummaryByCallId, readyCallIds);
+        final Set<Long> expiredCallIds = expiredCallIds(slice);
+        return CallsResponse.from(slice, analysisSummaryByCallId, readyCallIds, expiredCallIds);
+    }
+
+    private Set<Long> expiredCallIds(final Slice<CallSummaryProjection> slice) {
+        final LocalDateTime expiryThreshold = timeProvider.now()
+                .minusDays(retentionProperties.retentionDays());
+        return slice.getContent().stream()
+                .filter(p -> p.getEndedAt().isBefore(expiryThreshold))
+                .map(CallSummaryProjection::getId)
+                .collect(Collectors.toSet());
     }
 }

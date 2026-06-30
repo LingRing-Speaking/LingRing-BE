@@ -19,6 +19,7 @@ import com.lingring.domain.review.exception.CallRecordingsNotReadyException;
 import com.lingring.domain.review.exception.CallTooShortException;
 import com.lingring.domain.review.exception.CallTranscriptNotFoundException;
 import com.lingring.domain.review.exception.CallTranscriptNotReadyException;
+import com.lingring.domain.review.exception.CallRecordingExpiredException;
 import com.lingring.domain.review.service.CallTranscriptService.StartTranscriptResult;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.time.LocalDateTime;
@@ -31,7 +32,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 class CallTranscriptServiceTest extends ServiceIntegrationHelper {
 
-    private static final LocalDateTime ENDED_AT = LocalDateTime.of(2026, 5, 20, 10, 0);
+    // 실제 시계 기준 상대 시드 — 별도 Spring 컨텍스트(FixedDateTimeProvider override) 생성을 피해
+    // 공유 컨텍스트의 HikariCP/Redis 커넥션 예산을 유지한다.
+    private static final LocalDateTime ENDED_AT = LocalDateTime.now().minusDays(1);
     private static final LocalDateTime STARTED_AT = ENDED_AT.minusMinutes(5);
 
     @Autowired
@@ -150,6 +153,23 @@ class CallTranscriptServiceTest extends ServiceIntegrationHelper {
             // when & then
             assertThatThrownBy(() -> callTranscriptService.startTranscript(call.getId(), 1L))
                     .isInstanceOf(CallTooShortException.class);
+        }
+
+        @Test
+        @DisplayName("녹음 보관 기간(30일)이 지난 통화면 CallRecordingExpiredException")
+        void startTranscript_whenExpired_throws() {
+            // given: 31일 전 종료된 통화 + 녹음 2개
+            final LocalDateTime expiredEndedAt = LocalDateTime.now().minusDays(31);
+            final Call call = callRepository.save(
+                    Call.start(1L, 2L, UUID.randomUUID(), expiredEndedAt.minusMinutes(5)));
+            call.end(expiredEndedAt);
+            callRepository.save(call);
+            saveRecording(call.getId(), 1L, "call-recordings/%d/1/abc".formatted(call.getId()));
+            saveRecording(call.getId(), 2L, "call-recordings/%d/2/def".formatted(call.getId()));
+
+            // when & then
+            assertThatThrownBy(() -> callTranscriptService.startTranscript(call.getId(), 1L))
+                    .isInstanceOf(CallRecordingExpiredException.class);
         }
     }
 
