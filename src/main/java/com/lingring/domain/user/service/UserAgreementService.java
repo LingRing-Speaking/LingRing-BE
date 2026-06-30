@@ -36,7 +36,7 @@ public class UserAgreementService {
         if (!agreed.containsAll(AgreementItem.required())) {
             throw new BadRequestException(
                     ErrorCode.AGREEMENT_ITEMS_INCOMPLETE,
-                    "필수 동의 항목 3개(OVER14, TERMS, PRIVACY)가 모두 포함되어야 합니다."
+                    "필수 동의 항목 %s가 모두 포함되어야 합니다.".formatted(AgreementItem.required())
             );
         }
     }
