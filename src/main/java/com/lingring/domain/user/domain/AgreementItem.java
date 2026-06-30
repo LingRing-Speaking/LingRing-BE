@@ -13,8 +13,8 @@ public enum AgreementItem {
     VOICE_AI,
     ;
 
-    // VOICE_AI 임시 비활성화: enum 값은 유지하되 REQUIRED에서 제외 (재활성화 시 EnumSet.allOf로 복원)
-    private static final Set<AgreementItem> REQUIRED = EnumSet.of(OVER14, TERMS, PRIVACY);
+    // 통화 녹음·분석 기능 제공을 위해 VOICE_AI를 포함한 전 항목을 필수 동의로 둔다
+    private static final Set<AgreementItem> REQUIRED = EnumSet.allOf(AgreementItem.class);
 
     public static Set<AgreementItem> required() {
         return EnumSet.copyOf(REQUIRED);
