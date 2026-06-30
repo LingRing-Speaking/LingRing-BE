@@ -59,7 +59,7 @@ class UserAgreementControllerTest {
             );
             given(userAgreementService.accept(eq(userId), any(AgreementCreateRequest.class)))
                     .willReturn(new AgreementResponse(
-                            new UserSummary(userId, "링링이", null, false)
+                            new UserSummary(userId, "링링이", null, false, "2026-06-30")
                     ));
 
             // when
@@ -134,7 +134,7 @@ class UserAgreementControllerTest {
             );
             given(userAgreementService.accept(eq(userId), any(AgreementCreateRequest.class)))
                     .willReturn(new AgreementResponse(
-                            new UserSummary(userId, "링링이", null, false)
+                            new UserSummary(userId, "링링이", null, false, "2026-06-30")
                     ));
 
             // when

@@ -104,4 +104,11 @@ public class User extends BaseTimeEntity {
     public boolean requiresOnboarding() {
         return this.agreement == null;
     }
+
+    public String agreedTermsVersion() {
+        if (this.agreement == null) {
+            return null;
+        }
+        return this.agreement.getTermsVersion();
+    }
 }
