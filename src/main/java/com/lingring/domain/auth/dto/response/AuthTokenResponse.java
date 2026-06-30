@@ -21,7 +21,8 @@ public record AuthTokenResponse(
                         user.getId(),
                         user.getName().getValue(),
                         extractUrl(user.getProfileImage()),
-                        user.requiresOnboarding()
+                        user.requiresOnboarding(),
+                        user.agreedTermsVersion()
                 )
         );
     }
@@ -37,7 +38,8 @@ public record AuthTokenResponse(
             Long id,
             String nickname,
             String profileImage,
-            boolean requiresOnboarding
+            boolean requiresOnboarding,
+            String agreedTermsVersion
     ) {
     }
 }

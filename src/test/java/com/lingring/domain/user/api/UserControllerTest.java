@@ -72,7 +72,7 @@ class UserControllerTest {
             final Long userId = 1L;
             final String profileImageUrl = "https://lingring-dev.s3.ap-northeast-2.amazonaws.com/profile-images/1/abc.jpg";
             AuthContext.set(userId);
-            given(userService.getMe(userId)).willReturn(new MeResponse(userId, "링링", profileImageUrl, false));
+            given(userService.getMe(userId)).willReturn(new MeResponse(userId, "링링", profileImageUrl, false, "2026-06-30"));
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/me")
@@ -87,6 +87,7 @@ class UserControllerTest {
             assertThat(body.get("data").get("id").asLong()).isEqualTo(userId);
             assertThat(body.get("data").get("nickname").asText()).isEqualTo("링링");
             assertThat(body.get("data").get("profileImage").asText()).isEqualTo(profileImageUrl);
+            assertThat(body.get("data").get("agreedTermsVersion").asText()).isEqualTo("2026-06-30");
         }
 
         @Test

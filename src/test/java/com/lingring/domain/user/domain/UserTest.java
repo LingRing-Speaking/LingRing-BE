@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.domain.user.domain.vo.ProfileImage;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -128,6 +129,36 @@ class UserTest {
             // when & then
             assertThatThrownBy(() -> user.changeProfileImage(null))
                     .isInstanceOf(NullPointerException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("동의 상태: requiresOnboarding / agreedTermsVersion")
+    class Agreement {
+
+        @Test
+        @DisplayName("동의 전에는 requiresOnboarding=true, agreedTermsVersion=null")
+        void beforeAgreement_requiresOnboardingAndNullVersion() {
+            // given
+            final User user = User.createFromOAuth(PROVIDER, PROVIDER_USER_ID, NAME, PROFILE_IMAGE_URL);
+
+            // when & then
+            assertThat(user.requiresOnboarding()).isTrue();
+            assertThat(user.agreedTermsVersion()).isNull();
+        }
+
+        @Test
+        @DisplayName("동의 후에는 requiresOnboarding=false, agreedTermsVersion=동의한 버전")
+        void afterAgreement_returnsAgreedVersion() {
+            // given
+            final User user = User.createFromOAuth(PROVIDER, PROVIDER_USER_ID, NAME, PROFILE_IMAGE_URL);
+
+            // when
+            user.markAgreed("2026-06-30", LocalDateTime.of(2026, 6, 30, 10, 0));
+
+            // then
+            assertThat(user.requiresOnboarding()).isFalse();
+            assertThat(user.agreedTermsVersion()).isEqualTo("2026-06-30");
         }
     }
 }
