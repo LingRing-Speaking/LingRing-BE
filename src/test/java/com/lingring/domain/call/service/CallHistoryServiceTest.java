@@ -271,7 +271,7 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
             final Long me = saveUser("me").getId();
             final Long partner = saveUser("Sophie").getId();
             final Call call = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(5));
-            final CallAnalysis mine = callAnalysisService.requestForUser(call.getId(), me);
+            final CallAnalysis mine = callAnalysisService.requestForUser(call.getId(), me).analysis();
 
             // when
             final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
@@ -289,7 +289,7 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
             final Long me = saveUser("me").getId();
             final Long partner = saveUser("Sophie").getId();
             final Call call = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(5));
-            final CallAnalysis mine = callAnalysisService.requestForUser(call.getId(), me);
+            final CallAnalysis mine = callAnalysisService.requestForUser(call.getId(), me).analysis();
             callAnalysisService.complete(call.getId(), me, sampleResult(), MODEL);
 
             // when
@@ -334,11 +334,11 @@ class CallHistoryServiceTest extends ServiceIntegrationHelper {
             saveBothRecordings(c1.getId(), me, partner);
             saveBothRecordings(c2.getId(), me, partner);
             saveBothRecordings(c3.getId(), me, partner);
-            final CallAnalysis a1 = callAnalysisService.requestForUser(c1.getId(), me);
+            final CallAnalysis a1 = callAnalysisService.requestForUser(c1.getId(), me).analysis();
             callAnalysisService.complete(c1.getId(), me, sampleResult(), MODEL);
             // c2 — 본인 요청 안 함
             callAnalysisService.ensureExistsForUser(c2.getId(), me);
-            final CallAnalysis a3 = callAnalysisService.requestForUser(c3.getId(), me);
+            final CallAnalysis a3 = callAnalysisService.requestForUser(c3.getId(), me).analysis();
 
             // when
             final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
