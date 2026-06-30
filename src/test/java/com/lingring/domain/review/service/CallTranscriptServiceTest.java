@@ -19,8 +19,10 @@ import com.lingring.domain.review.exception.CallRecordingsNotReadyException;
 import com.lingring.domain.review.exception.CallTooShortException;
 import com.lingring.domain.review.exception.CallTranscriptNotFoundException;
 import com.lingring.domain.review.exception.CallTranscriptNotReadyException;
+import com.lingring.domain.review.exception.CallRecordingExpiredException;
 import com.lingring.domain.review.service.CallTranscriptService.StartTranscriptResult;
 import com.lingring.global.config.ServiceIntegrationHelper;
+import com.lingring.global.util.FixedDateTimeProvider;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -28,11 +30,27 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 
+@Import(CallTranscriptServiceTest.FixedTimeConfig.class)
 class CallTranscriptServiceTest extends ServiceIntegrationHelper {
 
-    private static final LocalDateTime ENDED_AT = LocalDateTime.of(2026, 5, 20, 10, 0);
+    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 6, 28, 10, 30);
+    private static final LocalDateTime ENDED_AT = LocalDateTime.of(2026, 6, 27, 10, 0);
     private static final LocalDateTime STARTED_AT = ENDED_AT.minusMinutes(5);
+
+    @TestConfiguration
+    static class FixedTimeConfig {
+
+        @Bean
+        @Primary
+        FixedDateTimeProvider dateTimeProvider() {
+            return new FixedDateTimeProvider(FIXED_NOW);
+        }
+    }
 
     @Autowired
     private CallTranscriptService callTranscriptService;
@@ -150,6 +168,23 @@ class CallTranscriptServiceTest extends ServiceIntegrationHelper {
             // when & then
             assertThatThrownBy(() -> callTranscriptService.startTranscript(call.getId(), 1L))
                     .isInstanceOf(CallTooShortException.class);
+        }
+
+        @Test
+        @DisplayName("녹음 보관 기간(30일)이 지난 통화면 CallRecordingExpiredException")
+        void startTranscript_whenExpired_throws() {
+            // given: 31일 전 종료된 통화 + 녹음 2개
+            final LocalDateTime expiredEndedAt = FIXED_NOW.minusDays(31);
+            final Call call = callRepository.save(
+                    Call.start(1L, 2L, UUID.randomUUID(), expiredEndedAt.minusMinutes(5)));
+            call.end(expiredEndedAt);
+            callRepository.save(call);
+            saveRecording(call.getId(), 1L, "call-recordings/%d/1/abc".formatted(call.getId()));
+            saveRecording(call.getId(), 2L, "call-recordings/%d/2/def".formatted(call.getId()));
+
+            // when & then
+            assertThatThrownBy(() -> callTranscriptService.startTranscript(call.getId(), 1L))
+                    .isInstanceOf(CallRecordingExpiredException.class);
         }
     }
 
