@@ -3,6 +3,9 @@ package com.lingring.domain.review.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.lingring.domain.call.dao.CallRepository;
+import com.lingring.domain.call.domain.Call;
+import com.lingring.domain.call.dto.response.CallAnalysisStatusView;
 import com.lingring.domain.review.dao.CallAnalysisRepository;
 import com.lingring.domain.review.domain.analysis.CallAnalysis;
 import com.lingring.domain.review.domain.analysis.CallAnalysisStatus;
@@ -17,8 +20,10 @@ import com.lingring.domain.review.dto.response.CallAnalysisStatusResponse;
 import com.lingring.domain.review.exception.CallAnalysisAccessForbiddenException;
 import com.lingring.domain.review.exception.CallAnalysisNotFoundException;
 import com.lingring.global.config.ServiceIntegrationHelper;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -37,49 +42,55 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
     @Autowired
     private CallAnalysisRepository callAnalysisRepository;
 
+    @Autowired
+    private CallRepository callRepository;
+
     @Nested
-    @DisplayName("requestForUser: 호출자 본인 행 생성 + requested 마킹")
+    @DisplayName("requestForUser: 호출자 본인 행 생성 + requested 마킹 + 최초 전환 여부 반환")
     class RequestForUser {
 
         @Test
-        @DisplayName("기존 행이 없으면 PROCESSING + requested=true 로 새 행을 저장한다")
+        @DisplayName("기존 행이 없으면 PROCESSING + requested=true 로 저장하고 freshlyRequested=true 다")
         void requestForUser_whenNotExists_createsRowAndMarksRequested() {
             // when
-            final CallAnalysis saved = callAnalysisService.requestForUser(CALL_ID, USER_ID);
+            final RequestResult result = callAnalysisService.requestForUser(CALL_ID, USER_ID);
 
             // then
-            assertThat(saved.getId()).isNotNull();
-            assertThat(saved.getStatus()).isEqualTo(CallAnalysisStatus.PROCESSING);
-            assertThat(saved.isRequested()).isTrue();
+            assertThat(result.analysis().getId()).isNotNull();
+            assertThat(result.analysis().getStatus()).isEqualTo(CallAnalysisStatus.PROCESSING);
+            assertThat(result.analysis().isRequested()).isTrue();
+            assertThat(result.freshlyRequested()).isTrue();
         }
 
         @Test
-        @DisplayName("기존 행이 requested=false 였으면 requested=true 로 갱신한다")
+        @DisplayName("기존 행이 requested=false 였으면 requested=true 로 갱신하고 freshlyRequested=true 다")
         void requestForUser_whenExistsWithRequestedFalse_flipsToTrue() {
             // given: 짝꿍 placeholder처럼 미리 ensureExistsForUser 로 만들어둠 (requested=false)
             final CallAnalysis placeholder = callAnalysisService.ensureExistsForUser(CALL_ID, USER_ID);
             assertThat(placeholder.isRequested()).isFalse();
 
             // when
-            final CallAnalysis result = callAnalysisService.requestForUser(CALL_ID, USER_ID);
+            final RequestResult result = callAnalysisService.requestForUser(CALL_ID, USER_ID);
 
             // then
-            assertThat(result.getId()).isEqualTo(placeholder.getId());
-            assertThat(result.isRequested()).isTrue();
+            assertThat(result.analysis().getId()).isEqualTo(placeholder.getId());
+            assertThat(result.analysis().isRequested()).isTrue();
+            assertThat(result.freshlyRequested()).isTrue();
         }
 
         @Test
-        @DisplayName("이미 requested=true 인 행에 다시 호출해도 멱등하게 동작한다")
+        @DisplayName("이미 requested=true 인 행에 다시 호출하면 freshlyRequested=false 다 (멱등)")
         void requestForUser_whenAlreadyRequested_isIdempotent() {
             // given
-            final CallAnalysis first = callAnalysisService.requestForUser(CALL_ID, USER_ID);
+            final RequestResult first = callAnalysisService.requestForUser(CALL_ID, USER_ID);
 
             // when
-            final CallAnalysis second = callAnalysisService.requestForUser(CALL_ID, USER_ID);
+            final RequestResult second = callAnalysisService.requestForUser(CALL_ID, USER_ID);
 
             // then
-            assertThat(second.getId()).isEqualTo(first.getId());
-            assertThat(second.isRequested()).isTrue();
+            assertThat(second.analysis().getId()).isEqualTo(first.analysis().getId());
+            assertThat(second.analysis().isRequested()).isTrue();
+            assertThat(second.freshlyRequested()).isFalse();
         }
     }
 
@@ -192,13 +203,29 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
         @DisplayName("본인 소유 + requested=true 면 status를 반환한다")
         void getStatus_whenOwnedAndRequested_returnsStatus() {
             // given
-            final CallAnalysis saved = callAnalysisService.requestForUser(CALL_ID, USER_ID);
+            final Long callId = saveEndedCall(USER_ID, OTHER_USER_ID, LocalDateTime.now().minusDays(1));
+            final CallAnalysis saved = callAnalysisService.requestForUser(callId, USER_ID).analysis();
 
             // when
             final CallAnalysisStatusResponse response = callAnalysisService.getStatus(saved.getId(), USER_ID);
 
             // then
-            assertThat(response.status()).isEqualTo(CallAnalysisStatus.PROCESSING);
+            assertThat(response.status()).isEqualTo(CallAnalysisStatusView.PROCESSING);
+        }
+
+        @Test
+        @DisplayName("FAILED 분석은 녹음 보관 기간(30일)이 지나면 EXPIRED 로 노출된다")
+        void getStatus_whenFailedAndExpired_returnsExpired() {
+            // given: 30일을 넘긴 통화의 실패한 분석
+            final Long callId = saveEndedCall(USER_ID, OTHER_USER_ID, LocalDateTime.now().minusDays(31));
+            final CallAnalysis saved = callAnalysisService.requestForUser(callId, USER_ID).analysis();
+            callAnalysisService.fail(callId, USER_ID);
+
+            // when
+            final CallAnalysisStatusResponse response = callAnalysisService.getStatus(saved.getId(), USER_ID);
+
+            // then
+            assertThat(response.status()).isEqualTo(CallAnalysisStatusView.EXPIRED);
         }
 
         @Test
@@ -224,7 +251,7 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
         @DisplayName("타인 소유 analysisId 조회 시 Forbidden")
         void getStatus_whenNotOwned_throwsForbidden() {
             // given
-            final CallAnalysis other = callAnalysisService.requestForUser(CALL_ID, OTHER_USER_ID);
+            final CallAnalysis other = callAnalysisService.requestForUser(CALL_ID, OTHER_USER_ID).analysis();
 
             // when & then
             assertThatThrownBy(() -> callAnalysisService.getStatus(other.getId(), USER_ID))
@@ -240,7 +267,7 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
         @DisplayName("본인 소유 + requested=true 면 응답 DTO 반환")
         void get_whenOwnedAndRequested_returnsResponse() {
             // given
-            final CallAnalysis saved = callAnalysisService.requestForUser(CALL_ID, USER_ID);
+            final CallAnalysis saved = callAnalysisService.requestForUser(CALL_ID, USER_ID).analysis();
             callAnalysisService.complete(CALL_ID, USER_ID, sampleResult(), MODEL);
 
             // when
@@ -277,7 +304,7 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
         @DisplayName("타인 소유 analysisId 조회 시 Forbidden")
         void get_whenNotOwned_throwsForbidden() {
             // given
-            final CallAnalysis other = callAnalysisService.requestForUser(CALL_ID, OTHER_USER_ID);
+            final CallAnalysis other = callAnalysisService.requestForUser(CALL_ID, OTHER_USER_ID).analysis();
 
             // when & then
             assertThatThrownBy(() -> callAnalysisService.get(other.getId(), USER_ID))
@@ -293,7 +320,7 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
         @DisplayName("requested=true 인 본인 행만 callId → (analysisId, status) 매핑으로 반환한다")
         void findRequestedAnalysisSummariesByCallIds_returnsOnlyRequestedOwnRows() {
             // given
-            final CallAnalysis a1 = callAnalysisService.requestForUser(101L, USER_ID);   // mine, requested
+            final CallAnalysis a1 = callAnalysisService.requestForUser(101L, USER_ID).analysis();   // mine, requested
             callAnalysisService.ensureExistsForUser(102L, USER_ID);                       // mine, NOT requested
             callAnalysisService.requestForUser(101L, OTHER_USER_ID);                      // other user — should be excluded
 
@@ -312,7 +339,7 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
         @DisplayName("분석이 완료되면 status 가 COMPLETED 로 반환된다")
         void findRequestedAnalysisSummariesByCallIds_reflectsCompletedStatus() {
             // given
-            final CallAnalysis a1 = callAnalysisService.requestForUser(101L, USER_ID);
+            final CallAnalysis a1 = callAnalysisService.requestForUser(101L, USER_ID).analysis();
             callAnalysisService.complete(101L, USER_ID, sampleResult(), MODEL);
 
             // when
@@ -336,6 +363,13 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
             // then
             assertThat(result).isEmpty();
         }
+    }
+
+    private Long saveEndedCall(final Long userA, final Long userB, final LocalDateTime endedAt) {
+        final Call call = callRepository.save(
+                Call.start(userA, userB, UUID.randomUUID(), endedAt.minusMinutes(5)));
+        call.end(endedAt);
+        return callRepository.save(call).getId();
     }
 
     private AnalysisResult sampleResult() {

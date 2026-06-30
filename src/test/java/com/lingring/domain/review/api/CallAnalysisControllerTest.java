@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import com.lingring.domain.call.dto.response.CallAnalysisStatusView;
 import com.lingring.domain.review.domain.analysis.CallAnalysisStatus;
 import com.lingring.domain.review.dto.response.CallAnalysisResponse;
 import com.lingring.domain.review.dto.response.CallAnalysisStartResponse;
@@ -163,7 +164,7 @@ class CallAnalysisControllerTest {
             // given
             AuthContext.set(USER_ID);
             given(callAnalysisService.getStatus(eq(ANALYSIS_ID), eq(USER_ID)))
-                    .willReturn(new CallAnalysisStatusResponse(CallAnalysisStatus.PROCESSING));
+                    .willReturn(new CallAnalysisStatusResponse(CallAnalysisStatusView.PROCESSING));
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(

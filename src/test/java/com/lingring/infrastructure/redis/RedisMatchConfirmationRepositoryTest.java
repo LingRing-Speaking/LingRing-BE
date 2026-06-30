@@ -3,8 +3,8 @@ package com.lingring.infrastructure.redis;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.lingring.domain.matching.dao.MatchConfirmationRepository;
-import com.lingring.domain.matching.dao.MatchConfirmationRepository.AcceptOutcome;
-import com.lingring.domain.matching.dao.MatchConfirmationRepository.AcceptResult;
+import com.lingring.domain.matching.dao.dto.AcceptOutcome;
+import com.lingring.domain.matching.dao.dto.AcceptResult;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.domain.MatchConfirmation;
 import com.lingring.domain.matching.domain.MatchingResult;
@@ -44,7 +44,7 @@ class RedisMatchConfirmationRepositoryTest extends ServiceIntegrationHelper {
             final UUID roomId = UUID.randomUUID();
 
             // when
-            final boolean committed = repository.commit(1L, 2L, roomId, DEADLINE);
+            final boolean committed = repository.commit(1L, 2L, roomId, DEADLINE, ENQUEUED_AT, ENQUEUED_AT);
 
             // then
             assertThat(committed).isTrue();
@@ -64,12 +64,49 @@ class RedisMatchConfirmationRepositoryTest extends ServiceIntegrationHelper {
             queueRepository.enqueue(1L, ENQUEUED_AT);
 
             // when
-            final boolean committed = repository.commit(1L, 2L, UUID.randomUUID(), DEADLINE);
+            final boolean committed = repository.commit(1L, 2L, UUID.randomUUID(), DEADLINE, ENQUEUED_AT, ENQUEUED_AT);
 
             // then
             assertThat(committed).isFalse();
             assertThat(repository.findByUser(1L)).isEmpty();
             assertThat(queueRepository.contains(1L)).isTrue();
+        }
+
+        @Test
+        @DisplayName("커밋 시 각 user의 enqueuedAt이 confirm에 보존된다 (lo=userA, hi=userB)")
+        void commit_preservesEnqueuedAt() {
+            // given
+            final LocalDateTime aEnqueued = LocalDateTime.of(2026, 5, 12, 11, 0, 0);
+            final LocalDateTime bEnqueued = LocalDateTime.of(2026, 5, 12, 11, 30, 0);
+            queueRepository.enqueue(1L, aEnqueued);
+            queueRepository.enqueue(2L, bEnqueued);
+
+            // when
+            repository.commit(1L, 2L, UUID.randomUUID(), DEADLINE, aEnqueued, bEnqueued);
+
+            // then
+            final MatchConfirmation found = repository.findByUser(1L).orElseThrow();
+            assertThat(found.userAEnqueuedAt()).isEqualTo(aEnqueued);
+            assertThat(found.userBEnqueuedAt()).isEqualTo(bEnqueued);
+        }
+
+        @Test
+        @DisplayName("입력 순서가 (hi, lo)여도 enqueuedAt이 올바른 user에 매핑된다")
+        void commit_preservesEnqueuedAt_whenInputReversed() {
+            // given: userId 2L을 userAId 자리에 넣어 호출 (lo/hi 정규화 필요)
+            final LocalDateTime enqueuedOf2 = LocalDateTime.of(2026, 5, 12, 11, 0, 0);
+            final LocalDateTime enqueuedOf1 = LocalDateTime.of(2026, 5, 12, 11, 30, 0);
+            queueRepository.enqueue(2L, enqueuedOf2);
+            queueRepository.enqueue(1L, enqueuedOf1);
+
+            // when: commit(userAId=2, userBId=1) → enqueuedAt 인자도 그 순서로 따라감
+            repository.commit(2L, 1L, UUID.randomUUID(), DEADLINE, enqueuedOf2, enqueuedOf1);
+
+            // then: 저장은 userA=lo=1L, userB=hi=2L 이므로 각자 enqueuedAt이 올바르게 매핑돼야 함
+            final MatchConfirmation found = repository.findByUser(1L).orElseThrow();
+            assertThat(found.userAId()).isEqualTo(1L);
+            assertThat(found.userAEnqueuedAt()).isEqualTo(enqueuedOf1);
+            assertThat(found.userBEnqueuedAt()).isEqualTo(enqueuedOf2);
         }
     }
 
@@ -181,7 +218,7 @@ class RedisMatchConfirmationRepositoryTest extends ServiceIntegrationHelper {
         queueRepository.enqueue(userA, ENQUEUED_AT);
         queueRepository.enqueue(userB, ENQUEUED_AT);
         final UUID roomId = UUID.randomUUID();
-        repository.commit(userA, userB, roomId, deadline);
+        repository.commit(userA, userB, roomId, deadline, ENQUEUED_AT, ENQUEUED_AT);
         return roomId;
     }
 }

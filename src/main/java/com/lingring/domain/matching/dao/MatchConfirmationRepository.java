@@ -1,5 +1,6 @@
 package com.lingring.domain.matching.dao;
 
+import com.lingring.domain.matching.dao.dto.AcceptResult;
 import com.lingring.domain.matching.domain.MatchConfirmation;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -10,9 +11,11 @@ public interface MatchConfirmationRepository {
 
     /**
      * 큐에서 두 사용자를 원자적으로 제거하고 confirm record를 생성한다.
+     * 각 사용자의 원래 enqueuedAt을 confirm에 보존해, 만료 시 우선순위 복원에 쓴다.
      * @return true=커밋 성공, false=한쪽이 이미 큐에 없음
      */
-    boolean commit(Long userAId, Long userBId, UUID roomId, LocalDateTime deadline);
+    boolean commit(Long userAId, Long userBId, UUID roomId, LocalDateTime deadline,
+            LocalDateTime userAEnqueuedAt, LocalDateTime userBEnqueuedAt);
 
     Optional<MatchConfirmation> findByUser(Long userId);
 
@@ -27,8 +30,4 @@ public interface MatchConfirmationRepository {
     void delete(String pairKey);
 
     List<MatchConfirmation> findAllExpired(LocalDateTime now);
-
-    enum AcceptOutcome { NOT_FOUND, EXPIRED, ACCEPTED_WAITING, MATCHED }
-
-    record AcceptResult(AcceptOutcome outcome, MatchConfirmation confirmation) {}
 }

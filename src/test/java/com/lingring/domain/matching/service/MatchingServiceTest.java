@@ -9,6 +9,7 @@ import com.lingring.domain.matching.dao.MatchConfirmationRepository;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.dao.PairCooldownRepository;
 import com.lingring.domain.matching.domain.MatchConfirmation;
+import com.lingring.domain.matching.domain.MatchingCandidate;
 import com.lingring.domain.matching.domain.MatchingPollStatus;
 import com.lingring.domain.matching.dto.response.MatchingStatusResponse;
 import com.lingring.domain.matching.exception.MatchConfirmationNotFoundException;
@@ -52,11 +53,24 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
     }
 
     private UUID seedConfirmation(final Long userA, final Long userB, final LocalDateTime deadline) {
-        matchingQueueRepository.enqueue(userA, FIXED_NOW);
-        matchingQueueRepository.enqueue(userB, FIXED_NOW);
+        return seedConfirmation(userA, userB, deadline, FIXED_NOW, FIXED_NOW);
+    }
+
+    private UUID seedConfirmation(final Long userA, final Long userB, final LocalDateTime deadline,
+            final LocalDateTime userAEnqueuedAt, final LocalDateTime userBEnqueuedAt) {
+        matchingQueueRepository.enqueue(userA, userAEnqueuedAt);
+        matchingQueueRepository.enqueue(userB, userBEnqueuedAt);
         final UUID roomId = UUID.randomUUID();
-        matchConfirmationRepository.commit(userA, userB, roomId, deadline);
+        matchConfirmationRepository.commit(userA, userB, roomId, deadline, userAEnqueuedAt, userBEnqueuedAt);
         return roomId;
+    }
+
+    private LocalDateTime enqueuedAtOf(final Long userId) {
+        return matchingQueueRepository.findAllOrderByEnqueuedAt().stream()
+                .filter(candidate -> candidate.userId().equals(userId))
+                .map(MatchingCandidate::enqueuedAt)
+                .findFirst()
+                .orElseThrow();
     }
 
     @Nested
@@ -115,6 +129,16 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
 
             // then
             assertThat(matchingQueueRepository.contains(1L)).isTrue();
+        }
+
+        @Test
+        @DisplayName("입장 시 생존(alive) 표시가 등록된다")
+        void enter_marksUserAlive() {
+            // when
+            matchingService.enterQueue(1L);
+
+            // then
+            assertThat(matchingQueueRepository.isAlive(1L)).isTrue();
         }
     }
 
@@ -185,6 +209,20 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
             assertThat(response.partnerId()).isNull();
             assertThat(response.roomId()).isNull();
             assertThat(response.callId()).isNull();
+        }
+
+        @Test
+        @DisplayName("폴링(getStatus) 시 호출자의 생존(alive) 표시가 갱신된다")
+        void getStatus_marksCallerAlive() {
+            // given: 큐에는 있지만 alive 표시가 없는 상태
+            matchingQueueRepository.enqueue(1L, FIXED_NOW);
+            assertThat(matchingQueueRepository.isAlive(1L)).isFalse();
+
+            // when
+            matchingService.getStatus(1L);
+
+            // then
+            assertThat(matchingQueueRepository.isAlive(1L)).isTrue();
         }
     }
 
@@ -361,6 +399,63 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
             assertThat(matchConfirmationRepository.findByUser(3L)).isPresent();
             assertThat(pairCooldownRepository.contains(MatchConfirmation.pairKeyOf(1L, 2L))).isTrue();
             assertThat(pairCooldownRepository.contains(MatchConfirmation.pairKeyOf(3L, 4L))).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("재입장 우선순위 보존 (#137)")
+    class RequeuePriority {
+
+        @Test
+        @DisplayName("마감 만료: 수락한 유저는 원래 대기순서 보존, 무응답 유저는 now로 강등")
+        void deadlineExpire_keepsAccepter_demotesNonResponder() {
+            // given: 둘 다 5분 전 입장, deadline은 미래. 1L만 수락.
+            final LocalDateTime original = FIXED_NOW.minusMinutes(5);
+            final LocalDateTime deadline = FIXED_NOW.plusSeconds(10);
+            seedConfirmation(1L, 2L, deadline, original, original);
+            matchingService.acceptMatch(1L);
+
+            // when: 마감 경과 후 만료 워커 실행
+            final LocalDateTime afterDeadline = deadline.plusSeconds(1);
+            dateTimeProvider.setFixedTime(afterDeadline);
+            matchingService.expireOverdueConfirmations();
+
+            // then
+            assertThat(enqueuedAtOf(1L)).isEqualTo(original);       // 수락 → 보존
+            assertThat(enqueuedAtOf(2L)).isEqualTo(afterDeadline);  // 무응답 → 강등
+        }
+
+        @Test
+        @DisplayName("마감 만료: 둘 다 무응답이면 둘 다 now로 강등")
+        void deadlineExpire_bothNonResponder_demotesBoth() {
+            // given
+            final LocalDateTime original = FIXED_NOW.minusMinutes(5);
+            final LocalDateTime deadline = FIXED_NOW.plusSeconds(10);
+            seedConfirmation(1L, 2L, deadline, original, original);
+
+            // when
+            final LocalDateTime afterDeadline = deadline.plusSeconds(1);
+            dateTimeProvider.setFixedTime(afterDeadline);
+            matchingService.expireOverdueConfirmations();
+
+            // then
+            assertThat(enqueuedAtOf(1L)).isEqualTo(afterDeadline);
+            assertThat(enqueuedAtOf(2L)).isEqualTo(afterDeadline);
+        }
+
+        @Test
+        @DisplayName("거절: 거절자·상대 모두 원래 대기순서 보존 (무응답 강등 없음)")
+        void decline_keepsBothPriority() {
+            // given: 1L이 거절, 2L은 무응답 상태
+            final LocalDateTime original = FIXED_NOW.minusMinutes(5);
+            seedConfirmation(1L, 2L, FIXED_NOW.plusSeconds(10), original, original);
+
+            // when
+            matchingService.declineMatch(1L);
+
+            // then
+            assertThat(enqueuedAtOf(1L)).isEqualTo(original);
+            assertThat(enqueuedAtOf(2L)).isEqualTo(original);
         }
     }
 }

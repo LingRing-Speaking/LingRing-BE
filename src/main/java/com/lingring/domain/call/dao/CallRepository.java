@@ -21,18 +21,17 @@ public interface CallRepository extends JpaRepository<Call, Long> {
                    u.name.value AS partnerName,
                    u.profileImage.value AS partnerProfileImage,
                    c.startedAt AS startedAt,
+                   c.endedAt AS endedAt,
                    c.durationSec AS durationSec
             FROM Call c
             LEFT JOIN User u ON (u.id = c.userBId AND c.userAId = :userId)
                              OR (u.id = c.userAId AND c.userBId = :userId)
             WHERE c.endedAt IS NOT NULL
-              AND c.durationSec >= :minDurationSec
               AND (c.userAId = :userId OR c.userBId = :userId)
             ORDER BY c.startedAt DESC
             """)
     Slice<CallSummaryProjection> findEndedSummariesByUserId(
             @Param("userId") Long userId,
-            @Param("minDurationSec") long minDurationSec,
             Pageable pageable
     );
 

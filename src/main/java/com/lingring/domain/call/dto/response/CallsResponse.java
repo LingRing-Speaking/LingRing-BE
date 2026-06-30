@@ -4,6 +4,7 @@ import com.lingring.domain.call.dao.dto.CallSummaryProjection;
 import com.lingring.domain.call.domain.port.AnalysisSummaryView;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.data.domain.Slice;
 
 public record CallsResponse(
@@ -13,10 +14,16 @@ public record CallsResponse(
 
     public static CallsResponse from(
             final Slice<CallSummaryProjection> slice,
-            final Map<Long, AnalysisSummaryView> analysisSummaryByCallId
+            final Map<Long, AnalysisSummaryView> analysisSummaryByCallId,
+            final Set<Long> readyCallIds,
+            final Set<Long> expiredCallIds
     ) {
         final List<CallSummaryResponse> items = slice.getContent().stream()
-                .map(p -> CallSummaryResponse.from(p, analysisSummaryByCallId.get(p.getId())))
+                .map(p -> CallSummaryResponse.from(
+                        p,
+                        analysisSummaryByCallId.get(p.getId()),
+                        readyCallIds.contains(p.getId()),
+                        expiredCallIds.contains(p.getId())))
                 .toList();
         return new CallsResponse(items, slice.hasNext());
     }

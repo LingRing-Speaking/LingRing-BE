@@ -89,8 +89,12 @@ public class CallAnalysis extends BaseTimeEntity {
         this.status = CallAnalysisStatus.FAILED;
     }
 
-    public void markRequested() {
+    public boolean markRequestedIfAbsent() {
+        if (this.requested) {
+            return false;
+        }
         this.requested = true;
+        return true;
     }
 
     public boolean isCompleted() {

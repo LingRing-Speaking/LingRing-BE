@@ -14,8 +14,12 @@ import com.lingring.domain.review.domain.transcript.vo.TranscriptSegment;
 import com.lingring.domain.call.exception.CallActiveException;
 import com.lingring.domain.call.exception.CallNotFoundException;
 import com.lingring.domain.call.exception.CallParticipantMismatchException;
+import com.lingring.domain.review.dto.response.CallTranscriptResponse;
 import com.lingring.domain.review.exception.CallRecordingsNotReadyException;
+import com.lingring.domain.review.exception.CallTooShortException;
 import com.lingring.domain.review.exception.CallTranscriptNotFoundException;
+import com.lingring.domain.review.exception.CallTranscriptNotReadyException;
+import com.lingring.domain.review.exception.CallRecordingExpiredException;
 import com.lingring.domain.review.service.CallTranscriptService.StartTranscriptResult;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.time.LocalDateTime;
@@ -28,7 +32,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 class CallTranscriptServiceTest extends ServiceIntegrationHelper {
 
-    private static final LocalDateTime ENDED_AT = LocalDateTime.of(2026, 5, 20, 10, 0);
+    // 실제 시계 기준 상대 시드 — 별도 Spring 컨텍스트(FixedDateTimeProvider override) 생성을 피해
+    // 공유 컨텍스트의 HikariCP/Redis 커넥션 예산을 유지한다.
+    private static final LocalDateTime ENDED_AT = LocalDateTime.now().minusDays(1);
     private static final LocalDateTime STARTED_AT = ENDED_AT.minusMinutes(5);
 
     @Autowired
@@ -137,6 +143,34 @@ class CallTranscriptServiceTest extends ServiceIntegrationHelper {
             assertThatThrownBy(() -> callTranscriptService.startTranscript(call.getId(), 1L))
                     .isInstanceOf(CallRecordingsNotReadyException.class);
         }
+
+        @Test
+        @DisplayName("통화 시간이 1분 미만이면 CallTooShortException")
+        void startTranscript_whenCallTooShort_throws() {
+            // given
+            final Call call = saveCallWithDuration(1L, 2L, 30L);
+
+            // when & then
+            assertThatThrownBy(() -> callTranscriptService.startTranscript(call.getId(), 1L))
+                    .isInstanceOf(CallTooShortException.class);
+        }
+
+        @Test
+        @DisplayName("녹음 보관 기간(30일)이 지난 통화면 CallRecordingExpiredException")
+        void startTranscript_whenExpired_throws() {
+            // given: 31일 전 종료된 통화 + 녹음 2개
+            final LocalDateTime expiredEndedAt = LocalDateTime.now().minusDays(31);
+            final Call call = callRepository.save(
+                    Call.start(1L, 2L, UUID.randomUUID(), expiredEndedAt.minusMinutes(5)));
+            call.end(expiredEndedAt);
+            callRepository.save(call);
+            saveRecording(call.getId(), 1L, "call-recordings/%d/1/abc".formatted(call.getId()));
+            saveRecording(call.getId(), 2L, "call-recordings/%d/2/def".formatted(call.getId()));
+
+            // when & then
+            assertThatThrownBy(() -> callTranscriptService.startTranscript(call.getId(), 1L))
+                    .isInstanceOf(CallRecordingExpiredException.class);
+        }
     }
 
     @Nested
@@ -193,9 +227,88 @@ class CallTranscriptServiceTest extends ServiceIntegrationHelper {
         }
     }
 
+    @Nested
+    @DisplayName("getTranscript: 완료된 transcript 조회")
+    class GetTranscript {
+
+        @Test
+        @DisplayName("완료된 transcript면 callId와 startSec 오름차순으로 정렬된 segments를 반환한다")
+        void getTranscript_whenCompleted_returnsSortedSegments() {
+            // given
+            final Call call = saveEndedCall(1L, 2L);
+            final CallTranscript transcript = CallTranscript.create(call.getId());
+            transcript.complete(new TranscriptContent(List.of(
+                    new TranscriptSegment(2L, 3.5, 6.1, "second"),
+                    new TranscriptSegment(1L, 0.0, 3.2, "first")
+            )));
+            callTranscriptRepository.save(transcript);
+
+            // when
+            final CallTranscriptResponse response = callTranscriptService.getTranscript(call.getId(), 1L);
+
+            // then
+            assertThat(response.callId()).isEqualTo(call.getId());
+            assertThat(response.segments()).extracting("startSec").containsExactly(0.0, 3.5);
+            assertThat(response.segments().get(0).text()).isEqualTo("first");
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 callId면 CallNotFoundException")
+        void getTranscript_whenCallMissing_throws() {
+            // when & then
+            assertThatThrownBy(() -> callTranscriptService.getTranscript(9999L, 1L))
+                    .isInstanceOf(CallNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("통화 참여자가 아니면 CallParticipantMismatchException")
+        void getTranscript_whenNotParticipant_throws() {
+            // given
+            final Call call = saveEndedCall(1L, 2L);
+            final CallTranscript transcript = CallTranscript.create(call.getId());
+            transcript.complete(new TranscriptContent(List.of(
+                    new TranscriptSegment(1L, 0.0, 3.2, "hi")
+            )));
+            callTranscriptRepository.save(transcript);
+
+            // when & then
+            assertThatThrownBy(() -> callTranscriptService.getTranscript(call.getId(), 99L))
+                    .isInstanceOf(CallParticipantMismatchException.class);
+        }
+
+        @Test
+        @DisplayName("transcript record가 없으면 CallTranscriptNotFoundException")
+        void getTranscript_whenTranscriptMissing_throws() {
+            // given
+            final Call call = saveEndedCall(1L, 2L);
+
+            // when & then
+            assertThatThrownBy(() -> callTranscriptService.getTranscript(call.getId(), 1L))
+                    .isInstanceOf(CallTranscriptNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("transcript는 있으나 STT가 아직 완료되지 않았으면 CallTranscriptNotReadyException")
+        void getTranscript_whenNotReady_throws() {
+            // given
+            final Call call = saveEndedCall(1L, 2L);
+            callTranscriptRepository.save(CallTranscript.create(call.getId()));
+
+            // when & then
+            assertThatThrownBy(() -> callTranscriptService.getTranscript(call.getId(), 1L))
+                    .isInstanceOf(CallTranscriptNotReadyException.class);
+        }
+    }
+
     private Call saveEndedCall(final Long userA, final Long userB) {
         final Call call = callRepository.save(Call.start(userA, userB, UUID.randomUUID(), STARTED_AT));
         call.end(ENDED_AT);
+        return callRepository.save(call);
+    }
+
+    private Call saveCallWithDuration(final Long userA, final Long userB, final long durationSec) {
+        final Call call = callRepository.save(Call.start(userA, userB, UUID.randomUUID(), STARTED_AT));
+        call.end(STARTED_AT.plusSeconds(durationSec));
         return callRepository.save(call);
     }
 

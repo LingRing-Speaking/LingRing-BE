@@ -77,8 +77,8 @@ class UserAgreementServiceTest extends ServiceIntegrationHelper {
         }
 
         @Test
-        @DisplayName("VOICE_AI는 임시 비활성화 상태라 생략해도 정상 처리된다")
-        void accept_whenVoiceAiOmitted_marksAgreed() {
+        @DisplayName("VOICE_AI가 빠지면 AGREEMENT_ITEMS_INCOMPLETE 예외 (통화 녹음·분석 필수 동의)")
+        void accept_whenVoiceAiOmitted_throwsBadRequest() {
             // given
             final User user = seedUser();
             final AgreementCreateRequest request = new AgreementCreateRequest(
@@ -86,12 +86,11 @@ class UserAgreementServiceTest extends ServiceIntegrationHelper {
                     Set.of("OVER14", "TERMS", "PRIVACY")
             );
 
-            // when
-            userAgreementService.accept(user.getId(), request);
-
-            // then
-            final User reloaded = userRepository.findById(user.getId()).orElseThrow();
-            assertThat(reloaded.requiresOnboarding()).isFalse();
+            // when & then
+            assertThatThrownBy(() -> userAgreementService.accept(user.getId(), request))
+                    .isInstanceOf(BadRequestException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.AGREEMENT_ITEMS_INCOMPLETE);
         }
 
         @Test

@@ -11,7 +11,9 @@ public record MatchConfirmation(
         boolean userAAccepted,
         boolean userBAccepted,
         @NonNull UUID roomId,
-        @NonNull LocalDateTime deadline
+        @NonNull LocalDateTime deadline,
+        @NonNull LocalDateTime userAEnqueuedAt,
+        @NonNull LocalDateTime userBEnqueuedAt
 ) {
 
     public static String pairKeyOf(final Long firstUserId, final Long secondUserId) {

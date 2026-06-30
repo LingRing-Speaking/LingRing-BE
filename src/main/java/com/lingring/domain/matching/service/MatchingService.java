@@ -4,8 +4,8 @@ import com.lingring.domain.call.dao.CallRepository;
 import com.lingring.domain.call.domain.Call;
 import com.lingring.global.config.MatchingProperties;
 import com.lingring.domain.matching.dao.MatchConfirmationRepository;
-import com.lingring.domain.matching.dao.MatchConfirmationRepository.AcceptOutcome;
-import com.lingring.domain.matching.dao.MatchConfirmationRepository.AcceptResult;
+import com.lingring.domain.matching.dao.dto.AcceptOutcome;
+import com.lingring.domain.matching.dao.dto.AcceptResult;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.dao.PairCooldownRepository;
 import com.lingring.domain.matching.domain.MatchConfirmation;
@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -35,28 +34,39 @@ public class MatchingService {
     public void enterQueue(final Long userId) {
         matchingQueueRepository.clearResult(userId);
         matchingQueueRepository.enqueue(userId, dateTimeProvider.now());
+        matchingQueueRepository.markAlive(userId, matchingProperties.aliveTtl());
     }
 
-    @Transactional(readOnly = true)
     public MatchingStatusResponse getStatus(final Long userId) {
+        matchingQueueRepository.markAlive(userId, matchingProperties.aliveTtl());
         final Optional<MatchingResult> result = matchingQueueRepository.findResult(userId);
         if (result.isPresent()) {
-            final MatchingResult matched = result.get();
-            final Long callId = callRepository.findByRoomId(matched.roomId())
-                    .map(Call::getId)
-                    .orElse(null);
-            return MatchingStatusResponse.matched(matched.partnerId(), matched.roomId(), callId);
+            return matchedResponse(result.get());
         }
         final Optional<MatchConfirmation> confirmation = matchConfirmationRepository.findByUser(userId);
         if (confirmation.isPresent()) {
-            final MatchConfirmation c = confirmation.get();
-            final LocalDateTime now = dateTimeProvider.now();
-            if (c.isExpired(now)) {
-                expireConfirmation(c, now);
-                return MatchingStatusResponse.waiting();
-            }
-            return MatchingStatusResponse.awaitingConfirm(c.partnerOf(userId), c.deadline());
+            return confirmationResponse(userId, confirmation.get());
         }
+        return queuedResponse(userId);
+    }
+
+    private MatchingStatusResponse matchedResponse(final MatchingResult result) {
+        final Long callId = callRepository.findByRoomId(result.roomId())
+                .map(Call::getId)
+                .orElse(null);
+        return MatchingStatusResponse.matched(result.partnerId(), result.roomId(), callId);
+    }
+
+    private MatchingStatusResponse confirmationResponse(final Long userId, final MatchConfirmation confirmation) {
+        final LocalDateTime now = dateTimeProvider.now();
+        if (confirmation.isExpired(now)) {
+            cancelByDeadline(confirmation, now);
+            return MatchingStatusResponse.waiting();
+        }
+        return MatchingStatusResponse.awaitingConfirm(confirmation.partnerOf(userId), confirmation.deadline());
+    }
+
+    private MatchingStatusResponse queuedResponse(final Long userId) {
         if (matchingQueueRepository.contains(userId)) {
             return MatchingStatusResponse.waiting();
         }
@@ -67,25 +77,16 @@ public class MatchingService {
         matchingQueueRepository.remove(userId);
     }
 
-    @Transactional
     public void acceptMatch(final Long userId) {
         final LocalDateTime now = dateTimeProvider.now();
-        final Optional<MatchConfirmation> before = matchConfirmationRepository.findByUser(userId);
-        if (before.isEmpty()) {
-            throw new MatchConfirmationNotFoundException(userId);
-        }
-        if (before.get().isExpired(now)) {
-            expireConfirmation(before.get(), now);
-            return;
-        }
         final AcceptResult result = matchConfirmationRepository.accept(userId, now);
         final AcceptOutcome outcome = result.outcome();
         if (outcome == AcceptOutcome.NOT_FOUND) {
             throw new MatchConfirmationNotFoundException(userId);
         }
         if (outcome == AcceptOutcome.EXPIRED) {
-            final Optional<MatchConfirmation> stale = matchConfirmationRepository.findByUser(userId);
-            stale.ifPresent(c -> expireConfirmation(c, now));
+            matchConfirmationRepository.findByUser(userId)
+                    .ifPresent(confirmation -> cancelByDeadline(confirmation, now));
             return;
         }
         if (outcome == AcceptOutcome.ACCEPTED_WAITING) {
@@ -95,20 +96,17 @@ public class MatchingService {
         persistCallForMatched(userId, now);
     }
 
-    @Transactional
     public void declineMatch(final Long userId) {
-        final LocalDateTime now = dateTimeProvider.now();
         final MatchConfirmation confirmation = matchConfirmationRepository.findByUser(userId)
                 .orElseThrow(() -> new MatchConfirmationNotFoundException(userId));
-        expireConfirmation(confirmation, now);
+        cancelByDecline(confirmation);
     }
 
-    @Transactional
     public void expireOverdueConfirmations() {
         final LocalDateTime now = dateTimeProvider.now();
         final List<MatchConfirmation> expired = matchConfirmationRepository.findAllExpired(now);
         for (final MatchConfirmation c : expired) {
-            expireConfirmation(c, now);
+            cancelByDeadline(c, now);
         }
     }
 
@@ -119,11 +117,31 @@ public class MatchingService {
         callRepository.save(Call.start(userId, promoted.partnerId(), promoted.roomId(), now));
     }
 
-    private void expireConfirmation(final MatchConfirmation confirmation, final LocalDateTime now) {
-        pairCooldownRepository.put(confirmation.pairKey(),
-                Duration.ofMinutes(matchingProperties.cooldownMinutes()));
+    // 마감 만료: 수락한 쪽은 원래 대기순서 보존, 무응답은 now로 강등
+    private void cancelByDeadline(final MatchConfirmation confirmation, final LocalDateTime now) {
+        removeWithCooldown(confirmation);
+        requeueAfterDeadline(confirmation.userAId(), confirmation.userAAccepted(), confirmation.userAEnqueuedAt(), now);
+        requeueAfterDeadline(confirmation.userBId(), confirmation.userBAccepted(), confirmation.userBEnqueuedAt(), now);
+    }
+
+    // 거절: 양쪽 모두 원래 대기순서 보존 (거절자=권리 행사, 상대=마감 전 중단된 피해자)
+    private void cancelByDecline(final MatchConfirmation confirmation) {
+        removeWithCooldown(confirmation);
+        matchingQueueRepository.enqueue(confirmation.userAId(), confirmation.userAEnqueuedAt());
+        matchingQueueRepository.enqueue(confirmation.userBId(), confirmation.userBEnqueuedAt());
+    }
+
+    private void requeueAfterDeadline(final Long userId, final boolean accepted,
+            final LocalDateTime originalEnqueuedAt, final LocalDateTime now) {
+        if (accepted) {
+            matchingQueueRepository.enqueue(userId, originalEnqueuedAt);
+            return;
+        }
+        matchingQueueRepository.enqueue(userId, now);
+    }
+
+    private void removeWithCooldown(final MatchConfirmation confirmation) {
+        pairCooldownRepository.put(confirmation.pairKey(), Duration.ofMinutes(matchingProperties.cooldownMinutes()));
         matchConfirmationRepository.delete(confirmation.pairKey());
-        matchingQueueRepository.enqueue(confirmation.userAId(), now);
-        matchingQueueRepository.enqueue(confirmation.userBId(), now);
     }
 }

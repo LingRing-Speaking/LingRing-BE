@@ -8,6 +8,7 @@ import com.lingring.domain.matching.domain.MatchingQueue;
 import com.lingring.domain.matching.domain.policy.MatchingPolicies;
 import com.lingring.global.util.DateTimeProvider;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -25,21 +26,34 @@ public class MatchingExecutor {
     private final MatchingQueueRepository matchingQueueRepository;
     private final MatchConfirmationRepository matchConfirmationRepository;
     private final MatchingPolicies matchingPolicies;
-    private final RoomIdGenerator roomIdGenerator;
     private final DateTimeProvider dateTimeProvider;
     private final MatchingProperties matchingProperties;
 
     public void executeRound() {
         final List<MatchingCandidate> candidates = matchingQueueRepository.findAllOrderByEnqueuedAt();
-        if (candidates.size() < MATCHING_SIZE) {
+        final List<MatchingCandidate> live = reapDeadCandidates(candidates);
+        if (live.size() < MATCHING_SIZE) {
             return;
         }
-        final MatchingQueue queue = new MatchingQueue(candidates);
+        final MatchingQueue queue = new MatchingQueue(live);
         final Set<Long> consumed = new HashSet<>();
 
-        for (final MatchingCandidate self : candidates) {
+        for (final MatchingCandidate self : live) {
             checkAndExecute(self, consumed, queue);
         }
+    }
+
+    // 이탈(alive 키 만료) 후보는 큐에서 제거하고, 살아있는 후보만 매칭 대상으로 남긴다.
+    private List<MatchingCandidate> reapDeadCandidates(final List<MatchingCandidate> candidates) {
+        final List<MatchingCandidate> live = new ArrayList<>(candidates.size());
+        for (final MatchingCandidate candidate : candidates) {
+            if (matchingQueueRepository.isAlive(candidate.userId())) {
+                live.add(candidate);
+                continue;
+            }
+            matchingQueueRepository.remove(candidate.userId());
+        }
+        return live;
     }
 
     private void checkAndExecute(final MatchingCandidate self, final Set<Long> consumed, final MatchingQueue queue) {
@@ -50,11 +64,13 @@ public class MatchingExecutor {
         if (partner.isEmpty()) {
             return;
         }
-        final Long partnerId = partner.get().userId();
-        final UUID roomId = roomIdGenerator.generate();
+        final MatchingCandidate partnerCandidate = partner.get();
+        final Long partnerId = partnerCandidate.userId();
+        final UUID roomId = UUID.randomUUID();
         final LocalDateTime now = dateTimeProvider.now();
         final LocalDateTime deadline = now.plusSeconds(matchingProperties.confirmDeadlineSeconds());
-        final boolean committed = matchConfirmationRepository.commit(self.userId(), partnerId, roomId, deadline);
+        final boolean committed = matchConfirmationRepository.commit(
+                self.userId(), partnerId, roomId, deadline, self.enqueuedAt(), partnerCandidate.enqueuedAt());
         if (!committed) {
             return;
         }

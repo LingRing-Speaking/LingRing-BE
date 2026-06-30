@@ -69,7 +69,7 @@ class AuthControllerTest {
                     new AuthTokenResponse(
                             "access-jwt",
                             "refresh-jwt",
-                            new UserSummary(42L, "링링이", null, false)
+                            new UserSummary(42L, "링링이", null, false, "2026-06-30")
                     )
             );
 
@@ -191,7 +191,7 @@ class AuthControllerTest {
                     new AuthTokenResponse(
                             "demo-access",
                             "demo-refresh",
-                            new UserSummary(7L, "Reviewer A", null, false)
+                            new UserSummary(7L, "Reviewer A", null, false, "2026-06-30")
                     )
             );
 

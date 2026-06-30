@@ -84,10 +84,15 @@ call-recording:
     - audio/mp4
     - audio/webm
   max-content-length: 52428800
+  retention-days: 30
 
 matching:
   confirm-deadline-seconds: 15
   cooldown-minutes: 10
+  alive-ttl-seconds: 30          # 대기 유저 생존 TTL. 폴링(getStatus)마다 갱신, 미갱신 시 이탈로 간주해 큐에서 청소.
+
+signaling:
+  heartbeat-interval: 25s        # 유휴 시그널링 WS keepalive ping 주기. ALB idle timeout(기본 60s)보다 짧게.
 
 management:
   endpoints:

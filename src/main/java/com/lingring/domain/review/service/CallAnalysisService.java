@@ -1,8 +1,13 @@
 package com.lingring.domain.review.service;
 
+import com.lingring.domain.call.dao.CallRepository;
+import com.lingring.domain.call.domain.Call;
+import com.lingring.domain.call.dto.response.CallAnalysisStatusView;
+import com.lingring.domain.call.exception.CallNotFoundException;
 import com.lingring.domain.review.dao.CallAnalysisRepository;
 import com.lingring.domain.review.dao.dto.CallAnalysisSummaryProjection;
 import com.lingring.domain.review.domain.analysis.CallAnalysis;
+import com.lingring.domain.review.domain.recording.policy.CallRecordingRetentionPolicy;
 import com.lingring.domain.review.domain.analysis.vo.AnalysisResult;
 import com.lingring.domain.review.dto.response.CallAnalysisResponse;
 import com.lingring.domain.review.dto.response.CallAnalysisStatusResponse;
@@ -20,13 +25,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class CallAnalysisService {
 
     private final CallAnalysisRepository callAnalysisRepository;
+    private final CallRepository callRepository;
+    private final CallRecordingRetentionPolicy callRecordingRetentionPolicy;
 
     @Transactional
-    public CallAnalysis requestForUser(final Long callId, final Long userId) {
+    public RequestResult requestForUser(final Long callId, final Long userId) {
         final CallAnalysis analysis = callAnalysisRepository.findByCallIdAndUserId(callId, userId)
                 .orElseGet(() -> callAnalysisRepository.save(CallAnalysis.processing(callId, userId)));
-        analysis.markRequested();
-        return analysis;
+        final boolean freshlyRequested = analysis.markRequestedIfAbsent();
+        return new RequestResult(analysis, freshlyRequested);
     }
 
     @Transactional
@@ -62,7 +69,12 @@ public class CallAnalysisService {
     @Transactional(readOnly = true)
     public CallAnalysisStatusResponse getStatus(final Long analysisId, final Long requesterId) {
         final CallAnalysis analysis = findOwnedAndRequested(analysisId, requesterId);
-        return new CallAnalysisStatusResponse(analysis.getStatus());
+        final Call call = callRepository.findById(analysis.getCallId())
+                .orElseThrow(() -> new CallNotFoundException(analysis.getCallId()));
+        final boolean expired = callRecordingRetentionPolicy.isExpired(call.getEndedAt());
+        return new CallAnalysisStatusResponse(
+                CallAnalysisStatusView.ofRequested(analysis.getStatus().name(), expired)
+        );
     }
 
     @Transactional(readOnly = true)

@@ -81,9 +81,15 @@ public enum ErrorCode {
     CALL_RECORDING_S3_MISSING(BAD_REQUEST, "업로드된 녹음 파일을 찾을 수 없습니다."),
     CALL_TRANSCRIPT_NOT_FOUND(NOT_FOUND, "통화 transcript를 찾을 수 없습니다."),
     CALL_TRANSCRIPT_ALREADY_IN_PROGRESS(CONFLICT, "이미 분석이 진행 중입니다."),
+    CALL_TRANSCRIPT_NOT_READY(CONFLICT, "통화 transcript가 아직 준비되지 않았습니다."),
     CALL_RECORDINGS_NOT_READY(BAD_REQUEST, "분석을 시작하려면 두 화자의 녹음이 모두 업로드되어야 합니다."),
+    CALL_TOO_SHORT(BAD_REQUEST, "1분 미만 통화는 분석할 수 없습니다."),
+    CALL_RECORDING_EXPIRED(BAD_REQUEST, "녹음 보관 기간이 지나 분석할 수 없습니다."),
     CALL_ANALYSIS_NOT_FOUND(NOT_FOUND, "통화 분석 결과를 찾을 수 없습니다."),
     CALL_ANALYSIS_ACCESS_FORBIDDEN(FORBIDDEN, "본인의 통화 분석만 조회할 수 있습니다."),
+
+    // Analysis Quota Error
+    ANALYSIS_QUOTA_EXHAUSTED(FORBIDDEN, "분석 가능 횟수를 모두 사용했습니다."),
 
     // Matching Error
     MATCH_CONFIRMATION_NOT_FOUND(NOT_FOUND, "수락/거절할 매칭이 없습니다. 다시 매칭을 시작해주세요."),

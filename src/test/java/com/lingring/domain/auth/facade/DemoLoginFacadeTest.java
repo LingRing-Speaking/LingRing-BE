@@ -80,7 +80,7 @@ class DemoLoginFacadeTest {
         final AuthTokenResponse expected = new AuthTokenResponse(
                 "demo-access",
                 "demo-refresh",
-                new UserSummary(7L, "Reviewer A", null, false)
+                new UserSummary(7L, "Reviewer A", null, false, "2026-06-30")
         );
         given(authService.issueTokensFor(demoUser)).willReturn(expected);
 

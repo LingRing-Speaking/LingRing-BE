@@ -2,6 +2,8 @@ package com.lingring.infrastructure.redis;
 
 import com.lingring.global.config.MatchingProperties;
 import com.lingring.domain.matching.dao.MatchConfirmationRepository;
+import com.lingring.domain.matching.dao.dto.AcceptOutcome;
+import com.lingring.domain.matching.dao.dto.AcceptResult;
 import com.lingring.domain.matching.domain.MatchConfirmation;
 import com.lingring.global.util.Zones;
 import java.time.Duration;
@@ -54,11 +56,14 @@ public class RedisMatchConfirmationRepository implements MatchConfirmationReposi
     }
 
     @Override
-    public boolean commit(final Long userAId, final Long userBId, final UUID roomId, final LocalDateTime deadline) {
+    public boolean commit(final Long userAId, final Long userBId, final UUID roomId, final LocalDateTime deadline,
+            final LocalDateTime userAEnqueuedAt, final LocalDateTime userBEnqueuedAt) {
         final Long lo = Math.min(userAId, userBId);
         final Long hi = Math.max(userAId, userBId);
         final String pairKey = lo + ":" + hi;
         final long ttlSeconds = matchingProperties.confirmDeadlineSeconds() + EXPIRY_GRACE.toSeconds();
+        final LocalDateTime loEnqueuedAt = enqueuedAtFor(lo, userAId, userAEnqueuedAt, userBEnqueuedAt);
+        final LocalDateTime hiEnqueuedAt = enqueuedAtFor(hi, userAId, userAEnqueuedAt, userBEnqueuedAt);
         final Long result = redisTemplate.execute(
                 COMMIT_SCRIPT,
                 List.of(
@@ -68,9 +73,18 @@ public class RedisMatchConfirmationRepository implements MatchConfirmationReposi
                         CONFIRM_USER_KEY_PREFIX + hi
                 ),
                 lo.toString(), hi.toString(), roomId.toString(),
-                String.valueOf(toEpochMillis(deadline)), pairKey, String.valueOf(ttlSeconds)
+                String.valueOf(toEpochMillis(deadline)), pairKey, String.valueOf(ttlSeconds),
+                String.valueOf(toEpochMillis(loEnqueuedAt)), String.valueOf(toEpochMillis(hiEnqueuedAt))
         );
         return result != null && result == 1L;
+    }
+
+    private LocalDateTime enqueuedAtFor(final Long target, final Long userAId,
+            final LocalDateTime userAEnqueuedAt, final LocalDateTime userBEnqueuedAt) {
+        if (target.equals(userAId)) {
+            return userAEnqueuedAt;
+        }
+        return userBEnqueuedAt;
     }
 
     @Override
@@ -155,8 +169,19 @@ public class RedisMatchConfirmationRepository implements MatchConfirmationReposi
         final boolean aOk = "1".equals(entries.get("userAAccepted").toString());
         final boolean bOk = "1".equals(entries.get("userBAccepted").toString());
         final UUID roomId = UUID.fromString(entries.get("roomId").toString());
-        final long deadlineMillis = Long.parseLong(entries.get("deadline").toString());
-        return new MatchConfirmation(userAId, userBId, aOk, bOk, roomId, fromEpochMillis(deadlineMillis));
+        final LocalDateTime deadline = fromEpochMillis(Long.parseLong(entries.get("deadline").toString()));
+        final LocalDateTime userAEnqueuedAt = readEnqueuedAt(entries, "userAEnqueuedAt", deadline);
+        final LocalDateTime userBEnqueuedAt = readEnqueuedAt(entries, "userBEnqueuedAt", deadline);
+        return new MatchConfirmation(userAId, userBId, aOk, bOk, roomId, deadline, userAEnqueuedAt, userBEnqueuedAt);
+    }
+
+    // 배포 중 옛 confirm(필드 없음)은 deadline으로 폴백해 NPE를 막는다 (TTL ~45s 내 자연 소멸).
+    private LocalDateTime readEnqueuedAt(final Map<Object, Object> entries, final String field, final LocalDateTime fallback) {
+        final Object value = entries.get(field);
+        if (value == null) {
+            return fallback;
+        }
+        return fromEpochMillis(Long.parseLong(value.toString()));
     }
 
     private long toEpochMillis(final LocalDateTime time) {

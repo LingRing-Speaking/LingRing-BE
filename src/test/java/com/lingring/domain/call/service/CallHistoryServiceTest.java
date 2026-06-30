@@ -1,4 +1,4 @@
-package com.lingring.domain.call.facade;
+package com.lingring.domain.call.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -14,6 +14,8 @@ import com.lingring.domain.review.domain.analysis.vo.Mistakes;
 import com.lingring.domain.review.domain.analysis.vo.PositiveItem;
 import com.lingring.domain.review.domain.analysis.vo.Positives;
 import com.lingring.domain.call.dto.response.CallAnalysisStatusView;
+import com.lingring.domain.review.dao.CallRecordingRepository;
+import com.lingring.domain.review.domain.recording.CallRecording;
 import com.lingring.domain.review.service.CallAnalysisService;
 import com.lingring.domain.user.dao.UserRepository;
 import com.lingring.domain.user.domain.Provider;
@@ -30,15 +32,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-class CallHistoryFacadeTest extends ServiceIntegrationHelper {
+class CallHistoryServiceTest extends ServiceIntegrationHelper {
 
-    private static final LocalDateTime FIXED_NOW = LocalDateTime.of(2026, 5, 2, 10, 0);
+    // 실제 시계 기준 상대 시드 — 별도 Spring 컨텍스트(FixedDateTimeProvider override) 생성을 피해
+    // 공유 컨텍스트의 HikariCP/Redis 커넥션 예산을 유지한다.
+    private static final LocalDateTime FIXED_NOW = LocalDateTime.now();
 
     @Autowired
-    private CallHistoryFacade callHistoryFacade;
+    private CallHistoryService callHistoryService;
 
     @Autowired
     private CallAnalysisService callAnalysisService;
+
+    @Autowired
+    private CallRecordingRepository callRecordingRepository;
 
     @Autowired
     private CallRepository callRepository;
@@ -65,7 +72,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             callRepository.save(Call.start(me, partner, UUID.randomUUID(), FIXED_NOW.minusMinutes(2))); // active
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
             assertThat(response.items()).hasSize(1);
@@ -82,7 +89,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             final Call newer = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(30), FIXED_NOW.minusMinutes(25));
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
             assertThat(response.items()).extracting(CallSummaryResponse::id)
@@ -99,7 +106,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             saveEndedCall(u2, u3, FIXED_NOW.minusHours(1), FIXED_NOW.minusMinutes(50));
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
             assertThat(response.items()).isEmpty();
@@ -116,7 +123,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             saveEndedCall(me, noImage, FIXED_NOW.minusHours(1), FIXED_NOW.minusHours(1).plusMinutes(1));
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
             assertThat(response.items()).hasSize(2);
@@ -137,7 +144,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(10).plusSeconds(312));
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
             assertThat(response.items().get(0).durationSec()).isEqualTo(312);
@@ -154,7 +161,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             }
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 2);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 2);
 
             // then
             assertThat(response.items()).hasSize(2);
@@ -172,7 +179,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             }
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 100);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 100);
 
             // then
             assertThat(response.items()).hasSize(50);
@@ -180,20 +187,20 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
         }
 
         @Test
-        @DisplayName("1분 미만 통화는 목록에서 제외된다")
-        void getCallsByUserId_excludesCallsUnderOneMinute() {
+        @DisplayName("1분 미만 통화도 목록에 포함된다")
+        void getCallsByUserId_includesCallsUnderOneMinute() {
             // given
             final Long me = saveUser("유저").getId();
             final Long partner = saveUser("Sophie").getId();
-            saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(10).plusSeconds(30));
-            final Call longEnough = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(5), FIXED_NOW.minusMinutes(5).plusMinutes(2));
+            final Call under = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(10).plusSeconds(30));
+            final Call over = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(5), FIXED_NOW.minusMinutes(5).plusMinutes(2));
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
-            assertThat(response.items()).hasSize(1);
-            assertThat(response.items().get(0).id()).isEqualTo(longEnough.getId());
+            assertThat(response.items()).extracting(CallSummaryResponse::id)
+                    .containsExactly(over.getId(), under.getId());
         }
 
         @Test
@@ -209,7 +216,7 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
                     callRepository.anonymizeUser(partner.getId()));
             userRepository.deleteById(partner.getId());
 
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
             assertThat(response.items()).hasSize(1);
@@ -223,20 +230,77 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
     class AnalysisEnrichment {
 
         @Test
-        @DisplayName("분석 요청 안 한 통화는 analysisId=null, analysisStatus=READY")
-        void enrichment_whenNotRequested_returnsReady() {
+        @DisplayName("분석 요청 안 했고 두 녹음이 모두 올라왔으면 analysisId=null, analysisStatus=READY")
+        void enrichment_whenNotRequestedAndRecordingsReady_returnsReady() {
             // given
             final Long me = saveUser("me").getId();
             final Long partner = saveUser("Sophie").getId();
-            saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(5));
+            final Call call = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(5));
+            saveBothRecordings(call.getId(), me, partner);
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
             assertThat(response.items()).hasSize(1);
             assertThat(response.items().get(0).analysisId()).isNull();
             assertThat(response.items().get(0).analysisStatus()).isEqualTo(CallAnalysisStatusView.READY);
+        }
+
+        @Test
+        @DisplayName("녹음 보관 기간(30일)이 지난 미요청 통화는 analysisStatus=EXPIRED (READY → EXPIRED)")
+        void enrichment_whenReadyButExpired_returnsExpired() {
+            // given: 종료가 30일을 넘긴 통화
+            final Long me = saveUser("me").getId();
+            final Long partner = saveUser("Sophie").getId();
+            final Call call = saveEndedCall(
+                    me, partner, FIXED_NOW.minusDays(31).minusMinutes(5), FIXED_NOW.minusDays(31));
+            saveBothRecordings(call.getId(), me, partner);
+
+            // when
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
+
+            // then
+            assertThat(response.items()).hasSize(1);
+            assertThat(response.items().get(0).analysisStatus()).isEqualTo(CallAnalysisStatusView.EXPIRED);
+        }
+
+        @Test
+        @DisplayName("완료된 분석은 보관 기간이 지나도 COMPLETED 유지")
+        void enrichment_whenCompletedAndExpired_staysCompleted() {
+            // given: 30일 지난 통화 + 본인 분석 완료
+            final Long me = saveUser("me").getId();
+            final Long partner = saveUser("Sophie").getId();
+            final Call call = saveEndedCall(
+                    me, partner, FIXED_NOW.minusDays(31).minusMinutes(5), FIXED_NOW.minusDays(31));
+            callAnalysisService.requestForUser(call.getId(), me);
+            callAnalysisService.complete(call.getId(), me, sampleResult(), MODEL);
+
+            // when
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
+
+            // then
+            assertThat(response.items()).hasSize(1);
+            assertThat(response.items().get(0).analysisStatus()).isEqualTo(CallAnalysisStatusView.COMPLETED);
+        }
+
+        @Test
+        @DisplayName("분석 요청 안 했고 녹음이 아직 다 안 올라온 통화는 analysisStatus=WAITING_RECORDINGS (버튼 비활성)")
+        void enrichment_whenNotRequestedAndRecordingsNotReady_returnsWaitingRecordings() {
+            // given: 한쪽 녹음만 올라온 상태 (아직 준비 안 됨)
+            final Long me = saveUser("me").getId();
+            final Long partner = saveUser("Sophie").getId();
+            final Call call = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(5));
+            saveRecording(call.getId(), me);
+
+            // when
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
+
+            // then
+            assertThat(response.items()).hasSize(1);
+            assertThat(response.items().get(0).analysisId()).isNull();
+            assertThat(response.items().get(0).analysisStatus())
+                    .isEqualTo(CallAnalysisStatusView.WAITING_RECORDINGS);
         }
 
         @Test
@@ -246,10 +310,10 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             final Long me = saveUser("me").getId();
             final Long partner = saveUser("Sophie").getId();
             final Call call = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(5));
-            final CallAnalysis mine = callAnalysisService.requestForUser(call.getId(), me);
+            final CallAnalysis mine = callAnalysisService.requestForUser(call.getId(), me).analysis();
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
             assertThat(response.items()).hasSize(1);
@@ -264,11 +328,11 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             final Long me = saveUser("me").getId();
             final Long partner = saveUser("Sophie").getId();
             final Call call = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(5));
-            final CallAnalysis mine = callAnalysisService.requestForUser(call.getId(), me);
+            final CallAnalysis mine = callAnalysisService.requestForUser(call.getId(), me).analysis();
             callAnalysisService.complete(call.getId(), me, sampleResult(), MODEL);
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then
             assertThat(response.items()).hasSize(1);
@@ -283,15 +347,16 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             final Long me = saveUser("me").getId();
             final Long partner = saveUser("Sophie").getId();
             final Call call = saveEndedCall(me, partner, FIXED_NOW.minusMinutes(10), FIXED_NOW.minusMinutes(5));
+            saveBothRecordings(call.getId(), me, partner);
             callAnalysisService.requestForUser(call.getId(), partner);
             callAnalysisService.ensureExistsForUser(call.getId(), me);
             callAnalysisService.complete(call.getId(), partner, sampleResult(), MODEL);
             callAnalysisService.complete(call.getId(), me, sampleResult(), MODEL);
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
-            // then: 본인이 요청 안 했으므로 READY
+            // then: 본인이 요청 안 했으므로 READY (녹음은 준비된 상태)
             assertThat(response.items().get(0).analysisId()).isNull();
             assertThat(response.items().get(0).analysisStatus()).isEqualTo(CallAnalysisStatusView.READY);
         }
@@ -305,14 +370,17 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
             final Call c1 = saveEndedCall(me, partner, FIXED_NOW.minusHours(3), FIXED_NOW.minusHours(3).plusMinutes(2));
             final Call c2 = saveEndedCall(me, partner, FIXED_NOW.minusHours(2), FIXED_NOW.minusHours(2).plusMinutes(2));
             final Call c3 = saveEndedCall(me, partner, FIXED_NOW.minusHours(1), FIXED_NOW.minusHours(1).plusMinutes(2));
-            final CallAnalysis a1 = callAnalysisService.requestForUser(c1.getId(), me);
+            saveBothRecordings(c1.getId(), me, partner);
+            saveBothRecordings(c2.getId(), me, partner);
+            saveBothRecordings(c3.getId(), me, partner);
+            final CallAnalysis a1 = callAnalysisService.requestForUser(c1.getId(), me).analysis();
             callAnalysisService.complete(c1.getId(), me, sampleResult(), MODEL);
             // c2 — 본인 요청 안 함
             callAnalysisService.ensureExistsForUser(c2.getId(), me);
-            final CallAnalysis a3 = callAnalysisService.requestForUser(c3.getId(), me);
+            final CallAnalysis a3 = callAnalysisService.requestForUser(c3.getId(), me).analysis();
 
             // when
-            final CallsResponse response = callHistoryFacade.getCallsByUserId(me, 0, 20);
+            final CallsResponse response = callHistoryService.getCallsByUserId(me, 0, 20);
 
             // then: 정렬은 startedAt DESC 라 c3, c2, c1 순
             assertThat(response.items()).hasSize(3);
@@ -364,5 +432,15 @@ class CallHistoryFacadeTest extends ServiceIntegrationHelper {
         final Call call = callRepository.save(Call.start(userA, userB, UUID.randomUUID(), startedAt));
         call.end(endedAt);
         return callRepository.save(call);
+    }
+
+    private void saveBothRecordings(final Long callId, final Long userA, final Long userB) {
+        saveRecording(callId, userA);
+        saveRecording(callId, userB);
+    }
+
+    private void saveRecording(final Long callId, final Long userId) {
+        callRecordingRepository.save(CallRecording.upload(
+                callId, userId, "call-recordings/%d/%d/key".formatted(callId, userId), "audio/m4a"));
     }
 }
