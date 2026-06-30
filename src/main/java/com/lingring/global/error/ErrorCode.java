@@ -87,6 +87,9 @@ public enum ErrorCode {
     CALL_ANALYSIS_NOT_FOUND(NOT_FOUND, "통화 분석 결과를 찾을 수 없습니다."),
     CALL_ANALYSIS_ACCESS_FORBIDDEN(FORBIDDEN, "본인의 통화 분석만 조회할 수 있습니다."),
 
+    // Analysis Quota Error
+    ANALYSIS_QUOTA_EXHAUSTED(FORBIDDEN, "분석 가능 횟수를 모두 사용했습니다."),
+
     // Matching Error
     MATCH_CONFIRMATION_NOT_FOUND(NOT_FOUND, "수락/거절할 매칭이 없습니다. 다시 매칭을 시작해주세요."),
 
