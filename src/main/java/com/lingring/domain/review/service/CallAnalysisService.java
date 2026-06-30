@@ -22,11 +22,11 @@ public class CallAnalysisService {
     private final CallAnalysisRepository callAnalysisRepository;
 
     @Transactional
-    public CallAnalysis requestForUser(final Long callId, final Long userId) {
+    public RequestResult requestForUser(final Long callId, final Long userId) {
         final CallAnalysis analysis = callAnalysisRepository.findByCallIdAndUserId(callId, userId)
                 .orElseGet(() -> callAnalysisRepository.save(CallAnalysis.processing(callId, userId)));
-        analysis.markRequested();
-        return analysis;
+        final boolean freshlyRequested = analysis.markRequestedIfAbsent();
+        return new RequestResult(analysis, freshlyRequested);
     }
 
     @Transactional
