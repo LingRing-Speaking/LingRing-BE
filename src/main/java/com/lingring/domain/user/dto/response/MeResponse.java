@@ -7,7 +7,8 @@ public record MeResponse(
         Long id,
         String nickname,
         String profileImage,
-        boolean requiresOnboarding
+        boolean requiresOnboarding,
+        String agreedTermsVersion
 ) {
 
     public static MeResponse from(final User user) {
@@ -15,7 +16,8 @@ public record MeResponse(
                 user.getId(),
                 user.getName().getValue(),
                 extractUrl(user.getProfileImage()),
-                user.requiresOnboarding()
+                user.requiresOnboarding(),
+                user.agreedTermsVersion()
         );
     }
 
