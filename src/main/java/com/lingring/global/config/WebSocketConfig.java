@@ -21,6 +21,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
             "http://localhost:5173",
             "http://localhost:4173",
             "capacitor://*",
+            "https://localhost",
+            "http://localhost",
             "https://lingring.site",
             "https://dev-lingring.site",
             "http://dev-lingring.site"
