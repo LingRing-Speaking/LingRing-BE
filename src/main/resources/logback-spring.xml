@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!--
+      로그 파이프라인 (#175)
+      - prod: JSON 이중 출력
+        · Console(stdout) → docker awslogs 드라이버 → CloudWatch (보존 14일, 조회용)
+        · RollingFile → /app/logs (volume mount) → cron s3 sync → S3 (보존 90일, 장기 보관)
+      - dev: JSON Console(stdout) → awslogs → CloudWatch (보존 7일, 디버깅용. S3/파일 없음)
+      - 그 외(local/테스트): Spring Boot 기본 콘솔 출력 유지
+      로그 레벨은 application-*.yml의 logging.level을 그대로 따른다.
+    -->
+
+    <!-- Spring Boot 기본 설정(패턴·컬러·레벨 브리지) -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <springProfile name="prod">
+        <!-- 로그 디렉터리. 컨테이너 내부 경로 — compose에서 호스트 /opt/lingring/logs로 mount -->
+        <property name="LOG_DIR" value="${LOG_DIR:-/app/logs}"/>
+
+        <!-- CloudWatch행: stdout JSON (1이벤트 1줄 — awslogs 멀티라인 문제 없음) -->
+        <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+        </appender>
+
+        <!-- S3행: 파일 JSON. 일별 롤링 + gzip, 로컬 7일 보관 (장기 보관은 S3가 전담) -->
+        <appender name="FILE_JSON" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>${LOG_DIR}/app.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+                <fileNamePattern>${LOG_DIR}/app.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+                <maxHistory>7</maxHistory>
+                <!-- 디스크 폭주 방지 안전장치 -->
+                <totalSizeCap>2GB</totalSizeCap>
+            </rollingPolicy>
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+        </appender>
+
+        <root>
+            <appender-ref ref="CONSOLE_JSON"/>
+            <appender-ref ref="FILE_JSON"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="dev">
+        <!-- CloudWatch행: stdout JSON. dev는 파일/S3 없이 CloudWatch만 (디버깅 용도) -->
+        <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+        </appender>
+
+        <root>
+            <appender-ref ref="CONSOLE_JSON"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="!prod &amp; !dev">
+        <!-- 기존 동작 그대로: 사람이 읽는 콘솔 출력 -->
+        <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+        <root>
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+</configuration>
