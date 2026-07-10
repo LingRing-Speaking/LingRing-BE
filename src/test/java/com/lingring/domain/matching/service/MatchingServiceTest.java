@@ -166,9 +166,10 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
         }
 
         @Test
-        @DisplayName("매칭 결과는 있지만 Call이 아직 저장되지 않은 경우 callId는 null이다")
-        void getStatus_whenMatchedButCallMissing_returnsNullCallId() {
-            // given: result key는 있지만 Call이 없는 비정상 상태
+        @DisplayName("매칭 결과는 있지만 Call이 아직 커밋되지 않았으면 MATCHED를 보류하고 WAITING을 반환한다 (#179)")
+        void getStatus_whenMatchedButCallMissing_holdsMatchedUntilCallExists() {
+            // given: 두 번째 수락자의 결과 승격은 끝났지만 Call 커밋 전에 폴링이 도착한 race.
+            // callId 없는 MATCHED 를 내보내면 클라이언트가 녹음 없이 통화에 진입한다.
             final UUID roomId = UUID.randomUUID();
             matchingQueueRepository.saveResult(1L, 2L, roomId);
             matchingQueueRepository.saveResult(2L, 1L, roomId);
@@ -176,9 +177,8 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
             // when
             final MatchingStatusResponse response = matchingService.getStatus(1L);
 
-            // then
-            assertThat(response.status()).isEqualTo(MatchingPollStatus.MATCHED);
-            assertThat(response.roomId()).isEqualTo(roomId);
+            // then: 다음 폴링에서 callId 포함 MATCHED 를 받도록 이번엔 대기 상태
+            assertThat(response.status()).isEqualTo(MatchingPollStatus.WAITING);
             assertThat(response.callId()).isNull();
         }
 

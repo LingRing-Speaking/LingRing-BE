@@ -54,6 +54,12 @@ public class MatchingService {
         final Long callId = callRepository.findByRoomId(result.roomId())
                 .map(Call::getId)
                 .orElse(null);
+        if (callId == null) {
+            // #179: 두 번째 수락자의 결과 승격(Redis)과 Call 커밋(DB) 사이에 폴링이 도착한 race.
+            // callId 없는 MATCHED 를 내보내면 클라이언트가 녹음 없이 통화에 진입해 해당 통화의
+            // 녹음이 유실된다. 다음 폴링(<1s)에서 완전한 MATCHED 를 받도록 이번 응답은 보류.
+            return MatchingStatusResponse.waiting();
+        }
         return MatchingStatusResponse.matched(result.partnerId(), result.roomId(), callId);
     }
 
