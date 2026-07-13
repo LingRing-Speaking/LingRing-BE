@@ -26,9 +26,10 @@ public interface UserExpressionApi {
             summary = "표현 찜(북마크) 생성",
             description = """
                     인증된 사용자가 소스(분석 mistake / 오늘의 추천 표현 / 아이스브레이커)를 지정해
-                    표현을 찜한다. body는 source 필드로 갈리는 discriminated union이며, 표현/뜻
-                    텍스트는 서버가 소스에서 채운다. 같은 소스를 다시 찜하면 새 row 없이 기존
-                    표현을 반환한다 (멱등)."""
+                    표현을 찜한다. source 값에 따라 필요한 참조 id가 다르다 — ANALYSIS_MISTAKE:
+                    analysisId+mistakeId, DAILY_EXPRESSION: recommendedExpressionId, ICEBREAKER:
+                    icebreakerId. 표현/뜻 텍스트는 서버가 소스에서 채운다. 같은 소스를 다시 찜하면
+                    새 row 없이 기존 표현을 반환한다 (멱등)."""
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(

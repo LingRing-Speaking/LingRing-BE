@@ -18,6 +18,7 @@ import com.lingring.domain.review.exception.CallAnalysisNotFoundException;
 import com.lingring.domain.user.dao.UserStatsRepository;
 import com.lingring.global.common.pagination.PageSize;
 import com.lingring.global.error.ErrorCode;
+import com.lingring.global.error.exception.BadRequestException;
 import com.lingring.global.error.exception.InvalidValueException;
 import com.lingring.global.error.exception.NotFoundException;
 import java.util.Optional;
@@ -63,22 +64,28 @@ public class UserExpressionService {
     }
 
     private BookmarkTarget resolve(final Long userId, final BookmarkCreateRequest request) {
-        if (request instanceof BookmarkCreateRequest.AnalysisMistake mistake) {
-            return resolveMistake(userId, mistake);
+        if (request.source() == BookmarkSource.ANALYSIS_MISTAKE) {
+            return resolveMistake(userId, request);
         }
-        if (request instanceof BookmarkCreateRequest.DailyExpression daily) {
-            return resolveDaily(daily);
+        if (request.source() == BookmarkSource.DAILY_EXPRESSION) {
+            return resolveDaily(request);
         }
-        if (request instanceof BookmarkCreateRequest.Icebreaker icebreaker) {
-            return resolveIcebreaker(icebreaker);
+        if (request.source() == BookmarkSource.ICEBREAKER) {
+            return resolveIcebreaker(request);
         }
         throw new InvalidValueException(
                 ErrorCode.INVALID_INPUT_VALUE,
-                "지원하지 않는 찜 소스입니다: %s".formatted(request.getClass().getSimpleName())
+                "지원하지 않는 찜 소스입니다: %s".formatted(request.source())
         );
     }
 
-    private BookmarkTarget resolveMistake(final Long userId, final BookmarkCreateRequest.AnalysisMistake request) {
+    private BookmarkTarget resolveMistake(final Long userId, final BookmarkCreateRequest request) {
+        if (request.analysisId() == null || request.mistakeId() == null) {
+            throw new BadRequestException(
+                    ErrorCode.INVALID_INPUT_VALUE,
+                    "ANALYSIS_MISTAKE 찜에는 analysisId와 mistakeId가 필요합니다."
+            );
+        }
         final CallAnalysis analysis = callAnalysisRepository.findById(request.analysisId())
                 .orElseThrow(() -> new CallAnalysisNotFoundException(request.analysisId()));
         if (!analysis.isOwnedBy(userId)) {
@@ -99,7 +106,13 @@ public class UserExpressionService {
         );
     }
 
-    private BookmarkTarget resolveDaily(final BookmarkCreateRequest.DailyExpression request) {
+    private BookmarkTarget resolveDaily(final BookmarkCreateRequest request) {
+        if (request.recommendedExpressionId() == null) {
+            throw new BadRequestException(
+                    ErrorCode.INVALID_INPUT_VALUE,
+                    "DAILY_EXPRESSION 찜에는 recommendedExpressionId가 필요합니다."
+            );
+        }
         final RecommendedExpression daily = recommendedExpressionRepository
                 .findById(request.recommendedExpressionId())
                 .orElseThrow(() -> new NotFoundException(
@@ -116,7 +129,13 @@ public class UserExpressionService {
         );
     }
 
-    private BookmarkTarget resolveIcebreaker(final BookmarkCreateRequest.Icebreaker request) {
+    private BookmarkTarget resolveIcebreaker(final BookmarkCreateRequest request) {
+        if (request.icebreakerId() == null) {
+            throw new BadRequestException(
+                    ErrorCode.INVALID_INPUT_VALUE,
+                    "ICEBREAKER 찜에는 icebreakerId가 필요합니다."
+            );
+        }
         final Icebreaker icebreaker = icebreakerRepository.findById(request.icebreakerId())
                 .orElseThrow(() -> new NotFoundException(
                         ErrorCode.ICEBREAKER_NOT_FOUND,

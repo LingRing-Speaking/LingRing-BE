@@ -25,6 +25,7 @@ import com.lingring.domain.review.exception.CallAnalysisNotFoundException;
 import com.lingring.domain.user.dao.UserStatsRepository;
 import com.lingring.domain.user.domain.UserStats;
 import com.lingring.global.config.ServiceIntegrationHelper;
+import com.lingring.global.error.exception.BadRequestException;
 import com.lingring.global.error.exception.NotFoundException;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -74,6 +75,18 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
         return new MistakeItem(FeedbackTag.GRAMMAR, "wrong text", improved, "이유", koMeaning);
     }
 
+    private static BookmarkCreateRequest mistakeRequest(final Long analysisId, final Integer mistakeId) {
+        return new BookmarkCreateRequest(BookmarkSource.ANALYSIS_MISTAKE, analysisId, mistakeId, null, null);
+    }
+
+    private static BookmarkCreateRequest dailyRequest(final Long recommendedExpressionId) {
+        return new BookmarkCreateRequest(BookmarkSource.DAILY_EXPRESSION, null, null, recommendedExpressionId, null);
+    }
+
+    private static BookmarkCreateRequest icebreakerRequest(final Long icebreakerId) {
+        return new BookmarkCreateRequest(BookmarkSource.ICEBREAKER, null, null, null, icebreakerId);
+    }
+
     @Nested
     @DisplayName("save: 소스 기반 찜(북마크) 생성")
     class Save {
@@ -87,7 +100,7 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
 
             // when
             final UserExpressionResponse response = userExpressionService.save(
-                    userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+                    userId, icebreakerRequest(icebreaker.getId()));
 
             // then
             assertThat(response.userId()).isEqualTo(userId);
@@ -108,7 +121,7 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
 
             // when
             final UserExpressionResponse response = userExpressionService.save(
-                    userId, new BookmarkCreateRequest.DailyExpression(daily.getId()));
+                    userId, dailyRequest(daily.getId()));
 
             // then
             assertThat(response.expression()).isEqualTo("Sounds good to me.");
@@ -130,7 +143,7 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
 
             // when
             final UserExpressionResponse response = userExpressionService.save(
-                    userId, new BookmarkCreateRequest.AnalysisMistake(analysis.getId(), 1));
+                    userId, mistakeRequest(analysis.getId(), 1));
 
             // then
             assertThat(response.expression()).isEqualTo("do my homework");
@@ -148,11 +161,11 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
             final Long userId = 1L;
             final Icebreaker icebreaker = seedIcebreaker();
             final UserExpressionResponse first = userExpressionService.save(
-                    userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+                    userId, icebreakerRequest(icebreaker.getId()));
 
             // when
             final UserExpressionResponse second = userExpressionService.save(
-                    userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+                    userId, icebreakerRequest(icebreaker.getId()));
 
             // then
             assertThat(second.id()).isEqualTo(first.id());
@@ -171,9 +184,9 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
 
             // when
             final UserExpressionResponse first = userExpressionService.save(
-                    userId, new BookmarkCreateRequest.AnalysisMistake(analysis.getId(), 0));
+                    userId, mistakeRequest(analysis.getId(), 0));
             final UserExpressionResponse second = userExpressionService.save(
-                    userId, new BookmarkCreateRequest.AnalysisMistake(analysis.getId(), 1));
+                    userId, mistakeRequest(analysis.getId(), 1));
 
             // then
             assertThat(first.id()).isNotEqualTo(second.id());
@@ -188,9 +201,9 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
 
             // when
             final UserExpressionResponse one = userExpressionService.save(
-                    1L, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+                    1L, icebreakerRequest(icebreaker.getId()));
             final UserExpressionResponse two = userExpressionService.save(
-                    2L, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+                    2L, icebreakerRequest(icebreaker.getId()));
 
             // then
             assertThat(one.id()).isNotEqualTo(two.id());
@@ -205,7 +218,7 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
 
             // when & then
             assertThatThrownBy(() -> userExpressionService.save(
-                    1L, new BookmarkCreateRequest.Icebreaker(missingId)))
+                    1L, icebreakerRequest(missingId)))
                     .isInstanceOf(NotFoundException.class);
         }
 
@@ -217,7 +230,7 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
 
             // when & then
             assertThatThrownBy(() -> userExpressionService.save(
-                    1L, new BookmarkCreateRequest.DailyExpression(missingId)))
+                    1L, dailyRequest(missingId)))
                     .isInstanceOf(NotFoundException.class);
         }
 
@@ -229,7 +242,7 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
 
             // when & then
             assertThatThrownBy(() -> userExpressionService.save(
-                    1L, new BookmarkCreateRequest.AnalysisMistake(missingAnalysisId, 0)))
+                    1L, mistakeRequest(missingAnalysisId, 0)))
                     .isInstanceOf(CallAnalysisNotFoundException.class);
         }
 
@@ -245,7 +258,7 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
 
             // when & then
             assertThatThrownBy(() -> userExpressionService.save(
-                    attackerId, new BookmarkCreateRequest.AnalysisMistake(analysis.getId(), 0)))
+                    attackerId, mistakeRequest(analysis.getId(), 0)))
                     .isInstanceOf(CallAnalysisAccessForbiddenException.class);
         }
 
@@ -260,7 +273,7 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
 
             // when & then
             assertThatThrownBy(() -> userExpressionService.save(
-                    userId, new BookmarkCreateRequest.AnalysisMistake(analysis.getId(), 1)))
+                    userId, mistakeRequest(analysis.getId(), 1)))
                     .isInstanceOf(NotFoundException.class);
         }
 
@@ -274,8 +287,35 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
 
             // when & then
             assertThatThrownBy(() -> userExpressionService.save(
-                    userId, new BookmarkCreateRequest.AnalysisMistake(processing.getId(), 0)))
+                    userId, mistakeRequest(processing.getId(), 0)))
                     .isInstanceOf(NotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("ANALYSIS_MISTAKE인데 analysisId가 없으면 BadRequestException을 던진다")
+        void save_whenMistakeSourceWithoutAnalysisId_throwsBadRequest() {
+            // when & then
+            assertThatThrownBy(() -> userExpressionService.save(
+                    1L, mistakeRequest(null, 0)))
+                    .isInstanceOf(BadRequestException.class);
+        }
+
+        @Test
+        @DisplayName("DAILY_EXPRESSION인데 recommendedExpressionId가 없으면 BadRequestException을 던진다")
+        void save_whenDailySourceWithoutId_throwsBadRequest() {
+            // when & then
+            assertThatThrownBy(() -> userExpressionService.save(
+                    1L, dailyRequest(null)))
+                    .isInstanceOf(BadRequestException.class);
+        }
+
+        @Test
+        @DisplayName("ICEBREAKER인데 icebreakerId가 없으면 BadRequestException을 던진다")
+        void save_whenIcebreakerSourceWithoutId_throwsBadRequest() {
+            // when & then
+            assertThatThrownBy(() -> userExpressionService.save(
+                    1L, icebreakerRequest(null)))
+                    .isInstanceOf(BadRequestException.class);
         }
     }
 
@@ -406,12 +446,12 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
             final Long userId = 1L;
             final Icebreaker icebreaker = seedIcebreaker();
             final UserExpressionResponse first = userExpressionService.save(
-                    userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+                    userId, icebreakerRequest(icebreaker.getId()));
             userExpressionService.delete(userId, first.id());
 
             // when
             final UserExpressionResponse second = userExpressionService.save(
-                    userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+                    userId, icebreakerRequest(icebreaker.getId()));
 
             // then
             assertThat(second.id()).isNotEqualTo(first.id());
@@ -432,7 +472,7 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
             final Icebreaker icebreaker = seedIcebreaker();
 
             // when
-            userExpressionService.save(userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+            userExpressionService.save(userId, icebreakerRequest(icebreaker.getId()));
 
             // then
             final UserStats reloaded = userStatsRepository.findByUserId(userId).orElseThrow();
@@ -449,8 +489,8 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
             final RecommendedExpression daily = seedDaily();
 
             // when
-            userExpressionService.save(userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
-            userExpressionService.save(userId, new BookmarkCreateRequest.DailyExpression(daily.getId()));
+            userExpressionService.save(userId, icebreakerRequest(icebreaker.getId()));
+            userExpressionService.save(userId, dailyRequest(daily.getId()));
 
             // then
             final UserStats reloaded = userStatsRepository.findByUserId(userId).orElseThrow();
@@ -466,8 +506,8 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
             final Icebreaker icebreaker = seedIcebreaker();
 
             // when
-            userExpressionService.save(userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
-            userExpressionService.save(userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+            userExpressionService.save(userId, icebreakerRequest(icebreaker.getId()));
+            userExpressionService.save(userId, icebreakerRequest(icebreaker.getId()));
 
             // then
             final UserStats reloaded = userStatsRepository.findByUserId(userId).orElseThrow();
@@ -482,7 +522,7 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
             userStatsRepository.save(UserStats.create(userId));
             final Icebreaker icebreaker = seedIcebreaker();
             final UserExpressionResponse saved = userExpressionService.save(
-                    userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+                    userId, icebreakerRequest(icebreaker.getId()));
 
             // when
             userExpressionService.delete(userId, saved.id());
@@ -499,7 +539,7 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
             final Long userId = 1L;
             userStatsRepository.save(UserStats.create(userId));
             final Icebreaker icebreaker = seedIcebreaker();
-            userExpressionService.save(userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+            userExpressionService.save(userId, icebreakerRequest(icebreaker.getId()));
             final Long missingId = 9_999_999L;
 
             // when
@@ -520,7 +560,7 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
             userStatsRepository.save(UserStats.create(otherUserId));
             final Icebreaker icebreaker = seedIcebreaker();
             final UserExpressionResponse saved = userExpressionService.save(
-                    ownerId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+                    ownerId, icebreakerRequest(icebreaker.getId()));
 
             // when
             userExpressionService.delete(otherUserId, saved.id());

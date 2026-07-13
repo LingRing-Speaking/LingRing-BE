@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import com.lingring.domain.expression.domain.BookmarkSource;
 import com.lingring.domain.expression.dto.request.BookmarkCreateRequest;
 import com.lingring.domain.expression.dto.response.UserExpressionListResponse;
 import com.lingring.domain.expression.dto.response.UserExpressionResponse;
@@ -83,7 +84,8 @@ class UserExpressionControllerTest {
             assertThat(body.get("data").get("expression").asText()).isEqualTo("do my homework");
             assertThat(body.get("data").get("meaning").asText()).isEqualTo("숙제를 하다");
             then(userExpressionService).should()
-                    .save(userId, new BookmarkCreateRequest.AnalysisMistake(42L, 1));
+                    .save(userId, new BookmarkCreateRequest(
+                            BookmarkSource.ANALYSIS_MISTAKE, 42L, 1, null, null));
         }
 
         @Test
@@ -108,7 +110,8 @@ class UserExpressionControllerTest {
             // then
             assertThat(response.getStatus()).isEqualTo(201);
             then(userExpressionService).should()
-                    .save(userId, new BookmarkCreateRequest.DailyExpression(7L));
+                    .save(userId, new BookmarkCreateRequest(
+                            BookmarkSource.DAILY_EXPRESSION, null, null, 7L, null));
         }
 
         @Test
@@ -133,30 +136,8 @@ class UserExpressionControllerTest {
             // then
             assertThat(response.getStatus()).isEqualTo(201);
             then(userExpressionService).should()
-                    .save(userId, new BookmarkCreateRequest.Icebreaker(5L));
-        }
-
-        @Test
-        @DisplayName("icebreakerId가 null이면 @Valid가 차단하고 service를 호출하지 않는다")
-        void create_whenIcebreakerIdNull_rejectedByValidation() throws Exception {
-            // given
-            final Long userId = 1L;
-            AuthContext.set(userId);
-
-            // when
-            final MockHttpServletResponse response = mockMvc.perform(
-                            post("/api/v1/expressions")
-                                    .contentType(MediaType.APPLICATION_JSON)
-                                    .content("""
-                                            {"source": "ICEBREAKER"}
-                                            """))
-                    .andReturn()
-                    .getResponse();
-
-            // then
-            final JsonNode body = objectMapper.readTree(response.getContentAsString());
-            assertThat(body.get("status").asInt()).isEqualTo(400);
-            then(userExpressionService).should(never()).save(any(), any());
+                    .save(userId, new BookmarkCreateRequest(
+                            BookmarkSource.ICEBREAKER, null, null, null, 5L));
         }
 
         @Test
