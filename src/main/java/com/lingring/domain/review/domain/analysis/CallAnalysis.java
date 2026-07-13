@@ -5,6 +5,7 @@ import static jakarta.persistence.GenerationType.IDENTITY;
 import static lombok.AccessLevel.PROTECTED;
 
 import com.lingring.domain.review.domain.analysis.vo.AnalysisResult;
+import com.lingring.domain.review.domain.analysis.vo.MistakeItem;
 import com.lingring.global.common.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,6 +14,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.util.List;
+import java.util.Optional;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -99,6 +102,17 @@ public class CallAnalysis extends BaseTimeEntity {
 
     public boolean isCompleted() {
         return status == CallAnalysisStatus.COMPLETED;
+    }
+
+    public Optional<MistakeItem> findMistake(final int index) {
+        if (!isCompleted() || result == null) {
+            return Optional.empty();
+        }
+        final List<MistakeItem> items = result.mistakes().items();
+        if (index < 0 || index >= items.size()) {
+            return Optional.empty();
+        }
+        return Optional.of(items.get(index));
     }
 
     public boolean isOwnedBy(@NonNull final Long requesterId) {

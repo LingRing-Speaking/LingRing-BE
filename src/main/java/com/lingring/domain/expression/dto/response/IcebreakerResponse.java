@@ -7,15 +7,17 @@ public record IcebreakerResponse(
         Long id,
         String expression,
         String meaning,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        Long bookmarkId
 ) {
 
-    public static IcebreakerResponse from(final Icebreaker icebreaker) {
+    public static IcebreakerResponse from(final Icebreaker icebreaker, final Long bookmarkId) {
         return new IcebreakerResponse(
                 icebreaker.getId(),
                 icebreaker.getExpression().getValue(),
                 icebreaker.getMeaning().getValue(),
-                icebreaker.getCreatedAt()
+                icebreaker.getCreatedAt(),
+                bookmarkId
         );
     }
 }

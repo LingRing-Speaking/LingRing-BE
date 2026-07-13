@@ -1,6 +1,7 @@
 package com.lingring.domain.expression.api;
 
 import com.lingring.domain.expression.dto.response.IcebreakerListResponse;
+import com.lingring.global.auth.annotation.AuthUser;
 import com.lingring.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -17,7 +18,8 @@ public interface IcebreakerApi {
             summary = "아이스브레이커 무작위 N개 조회",
             description = "대화 상대에게 친숙하게 먼저 말을 걸 때 사용할 문장을 무작위로 N개 반환한다. "
                     + "count 파라미터로 개수를 지정한다 (기본 5, 1~50 범위로 clamp). "
-                    + "호출할 때마다 결과가 달라진다."
+                    + "호출할 때마다 결과가 달라진다. 각 항목의 bookmarkId는 호출자가 찜(저장)한 경우 "
+                    + "해당 저장 표현 id, 아니면 null이다."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -33,6 +35,7 @@ public interface IcebreakerApi {
     @ResponseStatus(HttpStatus.OK)
     @GetMapping("/icebreakers")
     ApiResponse<IcebreakerListResponse> getRandom(
+            @AuthUser final Long userId,
             @RequestParam(name = "count", defaultValue = "5") int count
     );
 }

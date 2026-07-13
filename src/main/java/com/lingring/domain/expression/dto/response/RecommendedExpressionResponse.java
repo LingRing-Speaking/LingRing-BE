@@ -7,17 +7,20 @@ public record RecommendedExpressionResponse(
         Long id,
         String expression,
         String meaning,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        Long bookmarkId
 ) {
 
     public static RecommendedExpressionResponse from(
-            final RecommendedExpression recommendedExpression
+            final RecommendedExpression recommendedExpression,
+            final Long bookmarkId
     ) {
         return new RecommendedExpressionResponse(
                 recommendedExpression.getId(),
                 recommendedExpression.getExpression().getValue(),
                 recommendedExpression.getMeaning().getValue(),
-                recommendedExpression.getCreatedAt()
+                recommendedExpression.getCreatedAt(),
+                bookmarkId
         );
     }
 }

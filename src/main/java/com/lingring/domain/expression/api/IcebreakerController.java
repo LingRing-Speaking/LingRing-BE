@@ -14,7 +14,7 @@ public class IcebreakerController implements IcebreakerApi {
     private final IcebreakerService icebreakerService;
 
     @Override
-    public ApiResponse<IcebreakerListResponse> getRandom(final int count) {
-        return ApiResponse.success(HttpStatus.OK, icebreakerService.getRandom(count));
+    public ApiResponse<IcebreakerListResponse> getRandom(final Long userId, final int count) {
+        return ApiResponse.success(HttpStatus.OK, icebreakerService.getRandom(userId, count));
     }
 }

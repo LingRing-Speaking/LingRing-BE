@@ -14,7 +14,7 @@ public class RecommendedExpressionController implements RecommendedExpressionApi
     private final RecommendedExpressionService recommendedExpressionService;
 
     @Override
-    public ApiResponse<RecommendedExpressionResponse> getDaily() {
-        return ApiResponse.success(HttpStatus.OK, recommendedExpressionService.getDaily());
+    public ApiResponse<RecommendedExpressionResponse> getDaily(final Long userId) {
+        return ApiResponse.success(HttpStatus.OK, recommendedExpressionService.getDaily(userId));
     }
 }

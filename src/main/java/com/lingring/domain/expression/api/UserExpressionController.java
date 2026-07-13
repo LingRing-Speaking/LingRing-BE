@@ -1,6 +1,6 @@
 package com.lingring.domain.expression.api;
 
-import com.lingring.domain.expression.dto.request.UserExpressionCreateRequest;
+import com.lingring.domain.expression.dto.request.BookmarkCreateRequest;
 import com.lingring.domain.expression.dto.response.UserExpressionListResponse;
 import com.lingring.domain.expression.dto.response.UserExpressionResponse;
 import com.lingring.domain.expression.service.UserExpressionService;
@@ -18,7 +18,7 @@ public class UserExpressionController implements UserExpressionApi {
     @Override
     public ApiResponse<UserExpressionResponse> create(
             final Long userId,
-            final UserExpressionCreateRequest request
+            final BookmarkCreateRequest request
     ) {
         return ApiResponse.success(HttpStatus.CREATED, userExpressionService.save(userId, request));
     }
