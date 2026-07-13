@@ -11,7 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
-import com.lingring.domain.expression.dto.request.UserExpressionCreateRequest;
+import com.lingring.domain.expression.dto.request.BookmarkCreateRequest;
 import com.lingring.domain.expression.dto.response.UserExpressionListResponse;
 import com.lingring.domain.expression.dto.response.UserExpressionResponse;
 import com.lingring.domain.expression.service.UserExpressionService;
@@ -52,24 +52,26 @@ class UserExpressionControllerTest {
     @DisplayName("POST /api/v1/expressions")
     class Create {
 
+        private static final UserExpressionResponse SAVED_RESPONSE = new UserExpressionResponse(
+                10L, 1L, "do my homework", "숙제를 하다", LocalDateTime.of(2026, 7, 13, 0, 0)
+        );
+
         @Test
-        @DisplayName("유효한 요청이면 201 응답과 생성된 리소스를 반환한다")
-        void create_whenValid_returns201WithBody() throws Exception {
+        @DisplayName("ANALYSIS_MISTAKE 소스 요청이면 201 응답과 생성된 리소스를 반환한다")
+        void create_whenAnalysisMistakeSource_returns201WithBody() throws Exception {
             // given
             final Long userId = 1L;
             AuthContext.set(userId);
-            final UserExpressionCreateRequest request =
-                    new UserExpressionCreateRequest("Hello", "안녕");
-            given(userExpressionService.save(eq(userId), any(UserExpressionCreateRequest.class)))
-                    .willReturn(new UserExpressionResponse(
-                            10L, userId, "Hello", "안녕", LocalDateTime.now()
-                    ));
+            given(userExpressionService.save(eq(userId), any(BookmarkCreateRequest.class)))
+                    .willReturn(SAVED_RESPONSE);
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
                             post("/api/v1/expressions")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(request)))
+                                    .content("""
+                                            {"source": "ANALYSIS_MISTAKE", "analysisId": 42, "mistakeId": 1}
+                                            """))
                     .andReturn()
                     .getResponse();
 
@@ -78,24 +80,76 @@ class UserExpressionControllerTest {
             final JsonNode body = objectMapper.readTree(response.getContentAsString());
             assertThat(body.get("status").asInt()).isEqualTo(201);
             assertThat(body.get("data").get("id").asLong()).isEqualTo(10L);
-            assertThat(body.get("data").get("expression").asText()).isEqualTo("Hello");
-            assertThat(body.get("data").get("meaning").asText()).isEqualTo("안녕");
+            assertThat(body.get("data").get("expression").asText()).isEqualTo("do my homework");
+            assertThat(body.get("data").get("meaning").asText()).isEqualTo("숙제를 하다");
+            then(userExpressionService).should()
+                    .save(userId, new BookmarkCreateRequest.AnalysisMistake(42L, 1));
         }
 
         @Test
-        @DisplayName("expression이 공백이면 @Valid가 차단하고 service를 호출하지 않는다")
-        void create_whenExpressionBlank_rejectedByValidation() throws Exception {
+        @DisplayName("DAILY_EXPRESSION 소스 요청이면 201 응답을 반환한다")
+        void create_whenDailyExpressionSource_returns201() throws Exception {
             // given
             final Long userId = 1L;
             AuthContext.set(userId);
-            final UserExpressionCreateRequest request =
-                    new UserExpressionCreateRequest("   ", "안녕");
+            given(userExpressionService.save(eq(userId), any(BookmarkCreateRequest.class)))
+                    .willReturn(SAVED_RESPONSE);
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
                             post("/api/v1/expressions")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(request)))
+                                    .content("""
+                                            {"source": "DAILY_EXPRESSION", "recommendedExpressionId": 7}
+                                            """))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            assertThat(response.getStatus()).isEqualTo(201);
+            then(userExpressionService).should()
+                    .save(userId, new BookmarkCreateRequest.DailyExpression(7L));
+        }
+
+        @Test
+        @DisplayName("ICEBREAKER 소스 요청이면 201 응답을 반환한다")
+        void create_whenIcebreakerSource_returns201() throws Exception {
+            // given
+            final Long userId = 1L;
+            AuthContext.set(userId);
+            given(userExpressionService.save(eq(userId), any(BookmarkCreateRequest.class)))
+                    .willReturn(SAVED_RESPONSE);
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(
+                            post("/api/v1/expressions")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content("""
+                                            {"source": "ICEBREAKER", "icebreakerId": 5}
+                                            """))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            assertThat(response.getStatus()).isEqualTo(201);
+            then(userExpressionService).should()
+                    .save(userId, new BookmarkCreateRequest.Icebreaker(5L));
+        }
+
+        @Test
+        @DisplayName("icebreakerId가 null이면 @Valid가 차단하고 service를 호출하지 않는다")
+        void create_whenIcebreakerIdNull_rejectedByValidation() throws Exception {
+            // given
+            final Long userId = 1L;
+            AuthContext.set(userId);
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(
+                            post("/api/v1/expressions")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content("""
+                                            {"source": "ICEBREAKER"}
+                                            """))
                     .andReturn()
                     .getResponse();
 
@@ -106,48 +160,46 @@ class UserExpressionControllerTest {
         }
 
         @Test
-        @DisplayName("meaning이 null이면 @Valid가 차단하고 service를 호출하지 않는다")
-        void create_whenMeaningNull_rejectedByValidation() throws Exception {
+        @DisplayName("알 수 없는 source면 400을 반환하고 service를 호출하지 않는다")
+        void create_whenUnknownSource_returns400() throws Exception {
             // given
             final Long userId = 1L;
             AuthContext.set(userId);
-            final UserExpressionCreateRequest request =
-                    new UserExpressionCreateRequest("Hello", null);
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
                             post("/api/v1/expressions")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(request)))
+                                    .content("""
+                                            {"source": "SOMETHING_ELSE", "id": 1}
+                                            """))
                     .andReturn()
                     .getResponse();
 
             // then
-            final JsonNode body = objectMapper.readTree(response.getContentAsString());
-            assertThat(body.get("status").asInt()).isEqualTo(400);
+            assertThat(response.getStatus()).isEqualTo(400);
             then(userExpressionService).should(never()).save(any(), any());
         }
 
         @Test
-        @DisplayName("expression이 501자면 @Valid가 차단하고 service를 호출하지 않는다")
-        void create_whenExpressionTooLong_rejectedByValidation() throws Exception {
+        @DisplayName("source 필드가 없으면 400을 반환하고 service를 호출하지 않는다")
+        void create_whenSourceMissing_returns400() throws Exception {
             // given
             final Long userId = 1L;
             AuthContext.set(userId);
-            final UserExpressionCreateRequest request =
-                    new UserExpressionCreateRequest("a".repeat(501), "안녕");
 
             // when
             final MockHttpServletResponse response = mockMvc.perform(
                             post("/api/v1/expressions")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(request)))
+                                    .content("""
+                                            {"icebreakerId": 5}
+                                            """))
                     .andReturn()
                     .getResponse();
 
             // then
-            final JsonNode body = objectMapper.readTree(response.getContentAsString());
-            assertThat(body.get("status").asInt()).isEqualTo(400);
+            assertThat(response.getStatus()).isEqualTo(400);
             then(userExpressionService).should(never()).save(any(), any());
         }
     }

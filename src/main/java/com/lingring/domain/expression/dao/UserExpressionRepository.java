@@ -1,5 +1,6 @@
 package com.lingring.domain.expression.dao;
 
+import com.lingring.domain.expression.domain.BookmarkSource;
 import com.lingring.domain.expression.domain.UserExpression;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +17,13 @@ public interface UserExpressionRepository extends JpaRepository<UserExpression, 
     Slice<UserExpression> findAllByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
     Optional<UserExpression> findByIdAndUserId(Long id, Long userId);
+
+    Optional<UserExpression> findByUserIdAndSourceAndSourceRefIdAndSourceSubIndex(
+            Long userId,
+            BookmarkSource source,
+            Long sourceRefId,
+            Integer sourceSubIndex
+    );
 
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM UserExpression ue WHERE ue.userId = :userId")

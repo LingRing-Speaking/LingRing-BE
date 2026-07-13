@@ -1,6 +1,6 @@
 package com.lingring.domain.expression.api;
 
-import com.lingring.domain.expression.dto.request.UserExpressionCreateRequest;
+import com.lingring.domain.expression.dto.request.BookmarkCreateRequest;
 import com.lingring.domain.expression.dto.response.UserExpressionListResponse;
 import com.lingring.domain.expression.dto.response.UserExpressionResponse;
 import com.lingring.global.auth.annotation.AuthUser;
@@ -23,25 +23,37 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 public interface UserExpressionApi {
 
     @Operation(
-            summary = "저장한 표현 생성",
-            description = "인증된 사용자가 새로운 표현과 뜻을 저장한다."
+            summary = "표현 찜(북마크) 생성",
+            description = """
+                    인증된 사용자가 소스(분석 mistake / 오늘의 추천 표현 / 아이스브레이커)를 지정해
+                    표현을 찜한다. body는 source 필드로 갈리는 discriminated union이며, 표현/뜻
+                    텍스트는 서버가 소스에서 채운다. 같은 소스를 다시 찜하면 새 row 없이 기존
+                    표현을 반환한다 (멱등)."""
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "201",
-                    description = "생성 성공",
+                    description = "생성 성공 (이미 찜한 소스면 기존 표현 반환)",
                     useReturnTypeSchema = true
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "400",
                     ref = "#/components/responses/BadRequest"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    description = "남의 분석의 mistake를 찜하려는 경우"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "지정한 소스(분석/mistake/추천 표현/아이스브레이커)가 없는 경우"
             )
     })
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/expressions")
     ApiResponse<UserExpressionResponse> create(
             @AuthUser final Long userId,
-            @Valid @RequestBody final UserExpressionCreateRequest request
+            @Valid @RequestBody final BookmarkCreateRequest request
     );
 
     @Operation(

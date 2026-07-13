@@ -1,15 +1,32 @@
 package com.lingring.domain.expression.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.lingring.domain.expression.dao.IcebreakerRepository;
+import com.lingring.domain.expression.dao.RecommendedExpressionRepository;
 import com.lingring.domain.expression.dao.UserExpressionRepository;
+import com.lingring.domain.expression.domain.BookmarkSource;
+import com.lingring.domain.expression.domain.Icebreaker;
+import com.lingring.domain.expression.domain.RecommendedExpression;
 import com.lingring.domain.expression.domain.UserExpression;
-import com.lingring.domain.expression.dto.request.UserExpressionCreateRequest;
+import com.lingring.domain.expression.dto.request.BookmarkCreateRequest;
 import com.lingring.domain.expression.dto.response.UserExpressionListResponse;
 import com.lingring.domain.expression.dto.response.UserExpressionResponse;
+import com.lingring.domain.review.dao.CallAnalysisRepository;
+import com.lingring.domain.review.domain.analysis.CallAnalysis;
+import com.lingring.domain.review.domain.analysis.vo.AnalysisResult;
+import com.lingring.domain.review.domain.analysis.vo.FeedbackTag;
+import com.lingring.domain.review.domain.analysis.vo.MistakeItem;
+import com.lingring.domain.review.domain.analysis.vo.Mistakes;
+import com.lingring.domain.review.domain.analysis.vo.Positives;
+import com.lingring.domain.review.exception.CallAnalysisAccessForbiddenException;
+import com.lingring.domain.review.exception.CallAnalysisNotFoundException;
 import com.lingring.domain.user.dao.UserStatsRepository;
 import com.lingring.domain.user.domain.UserStats;
 import com.lingring.global.config.ServiceIntegrationHelper;
+import com.lingring.global.error.exception.NotFoundException;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -26,27 +43,239 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
     @Autowired
     private UserStatsRepository userStatsRepository;
 
+    @Autowired
+    private IcebreakerRepository icebreakerRepository;
+
+    @Autowired
+    private RecommendedExpressionRepository recommendedExpressionRepository;
+
+    @Autowired
+    private CallAnalysisRepository callAnalysisRepository;
+
+    private Icebreaker seedIcebreaker() {
+        return icebreakerRepository.save(Icebreaker.create("How's it going?", "요즘 어때?"));
+    }
+
+    private RecommendedExpression seedDaily() {
+        return recommendedExpressionRepository.save(
+                RecommendedExpression.create("Sounds good to me.", "좋아요, 동의해요"));
+    }
+
+    private CallAnalysis seedCompletedAnalysis(final Long userId, final List<MistakeItem> mistakes) {
+        final CallAnalysis analysis = CallAnalysis.processing(1L, userId);
+        analysis.complete(
+                new AnalysisResult(new Mistakes(mistakes), Positives.empty()),
+                "test-model"
+        );
+        return callAnalysisRepository.save(analysis);
+    }
+
+    private static MistakeItem mistake(final String improved, final String koMeaning) {
+        return new MistakeItem(FeedbackTag.GRAMMAR, "wrong text", improved, "이유", koMeaning);
+    }
+
     @Nested
-    @DisplayName("save: 저장한 표현 생성")
+    @DisplayName("save: 소스 기반 찜(북마크) 생성")
     class Save {
 
         @Test
-        @DisplayName("유효한 요청이면 저장 후 응답을 반환한다")
-        void save_whenValidRequest_returnsResponse() {
+        @DisplayName("ICEBREAKER 찜이면 아이스브레이커의 표현/뜻으로 저장한다")
+        void save_whenIcebreakerSource_derivesTextFromIcebreaker() {
             // given
             final Long userId = 1L;
-            final UserExpressionCreateRequest request =
-                    new UserExpressionCreateRequest("How are you?", "어떻게 지내세요?");
+            final Icebreaker icebreaker = seedIcebreaker();
 
             // when
-            final UserExpressionResponse response = userExpressionService.save(userId, request);
+            final UserExpressionResponse response = userExpressionService.save(
+                    userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
 
             // then
-            assertThat(response.id()).isNotNull();
             assertThat(response.userId()).isEqualTo(userId);
-            assertThat(response.expression()).isEqualTo("How are you?");
-            assertThat(response.meaning()).isEqualTo("어떻게 지내세요?");
-            assertThat(userExpressionRepository.findById(response.id())).isPresent();
+            assertThat(response.expression()).isEqualTo("How's it going?");
+            assertThat(response.meaning()).isEqualTo("요즘 어때?");
+            final UserExpression saved = userExpressionRepository.findById(response.id()).orElseThrow();
+            assertThat(saved.getSource()).isEqualTo(BookmarkSource.ICEBREAKER);
+            assertThat(saved.getSourceRefId()).isEqualTo(icebreaker.getId());
+            assertThat(saved.getSourceSubIndex()).isEqualTo(UserExpression.SHARED_SOURCE_SUB_INDEX);
+        }
+
+        @Test
+        @DisplayName("DAILY_EXPRESSION 찜이면 추천 표현의 표현/뜻으로 저장한다")
+        void save_whenDailySource_derivesTextFromRecommendedExpression() {
+            // given
+            final Long userId = 1L;
+            final RecommendedExpression daily = seedDaily();
+
+            // when
+            final UserExpressionResponse response = userExpressionService.save(
+                    userId, new BookmarkCreateRequest.DailyExpression(daily.getId()));
+
+            // then
+            assertThat(response.expression()).isEqualTo("Sounds good to me.");
+            assertThat(response.meaning()).isEqualTo("좋아요, 동의해요");
+            final UserExpression saved = userExpressionRepository.findById(response.id()).orElseThrow();
+            assertThat(saved.getSource()).isEqualTo(BookmarkSource.DAILY_EXPRESSION);
+            assertThat(saved.getSourceRefId()).isEqualTo(daily.getId());
+        }
+
+        @Test
+        @DisplayName("ANALYSIS_MISTAKE 찜이면 mistake의 improved/koMeaning으로 저장한다")
+        void save_whenMistakeSource_derivesTextFromMistake() {
+            // given
+            final Long userId = 1L;
+            final CallAnalysis analysis = seedCompletedAnalysis(userId, List.of(
+                    mistake("I went to school yesterday.", "나는 어제 학교에 갔다"),
+                    mistake("do my homework", "숙제를 하다")
+            ));
+
+            // when
+            final UserExpressionResponse response = userExpressionService.save(
+                    userId, new BookmarkCreateRequest.AnalysisMistake(analysis.getId(), 1));
+
+            // then
+            assertThat(response.expression()).isEqualTo("do my homework");
+            assertThat(response.meaning()).isEqualTo("숙제를 하다");
+            final UserExpression saved = userExpressionRepository.findById(response.id()).orElseThrow();
+            assertThat(saved.getSource()).isEqualTo(BookmarkSource.ANALYSIS_MISTAKE);
+            assertThat(saved.getSourceRefId()).isEqualTo(analysis.getId());
+            assertThat(saved.getSourceSubIndex()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("같은 소스를 다시 찜하면 새 row 없이 기존 응답을 반환한다 (멱등)")
+        void save_whenDuplicateSource_returnsExistingWithoutNewRow() {
+            // given
+            final Long userId = 1L;
+            final Icebreaker icebreaker = seedIcebreaker();
+            final UserExpressionResponse first = userExpressionService.save(
+                    userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+
+            // when
+            final UserExpressionResponse second = userExpressionService.save(
+                    userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+
+            // then
+            assertThat(second.id()).isEqualTo(first.id());
+            assertThat(userExpressionRepository.count()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("같은 분석의 다른 mistake는 별도 row로 저장된다")
+        void save_whenDifferentMistakeIndex_savesSeparateRows() {
+            // given
+            final Long userId = 1L;
+            final CallAnalysis analysis = seedCompletedAnalysis(userId, List.of(
+                    mistake("first improved", "첫번째"),
+                    mistake("second improved", "두번째")
+            ));
+
+            // when
+            final UserExpressionResponse first = userExpressionService.save(
+                    userId, new BookmarkCreateRequest.AnalysisMistake(analysis.getId(), 0));
+            final UserExpressionResponse second = userExpressionService.save(
+                    userId, new BookmarkCreateRequest.AnalysisMistake(analysis.getId(), 1));
+
+            // then
+            assertThat(first.id()).isNotEqualTo(second.id());
+            assertThat(userExpressionRepository.count()).isEqualTo(2);
+        }
+
+        @Test
+        @DisplayName("같은 소스를 서로 다른 사용자가 찜하면 각각 저장된다")
+        void save_whenSameSourceDifferentUsers_savesPerUser() {
+            // given
+            final Icebreaker icebreaker = seedIcebreaker();
+
+            // when
+            final UserExpressionResponse one = userExpressionService.save(
+                    1L, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+            final UserExpressionResponse two = userExpressionService.save(
+                    2L, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+
+            // then
+            assertThat(one.id()).isNotEqualTo(two.id());
+            assertThat(userExpressionRepository.count()).isEqualTo(2);
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 icebreakerId면 NotFoundException을 던진다")
+        void save_whenIcebreakerMissing_throwsNotFound() {
+            // given
+            final Long missingId = 9_999_999L;
+
+            // when & then
+            assertThatThrownBy(() -> userExpressionService.save(
+                    1L, new BookmarkCreateRequest.Icebreaker(missingId)))
+                    .isInstanceOf(NotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 recommendedExpressionId면 NotFoundException을 던진다")
+        void save_whenDailyMissing_throwsNotFound() {
+            // given
+            final Long missingId = 9_999_999L;
+
+            // when & then
+            assertThatThrownBy(() -> userExpressionService.save(
+                    1L, new BookmarkCreateRequest.DailyExpression(missingId)))
+                    .isInstanceOf(NotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 analysisId면 CallAnalysisNotFoundException을 던진다")
+        void save_whenAnalysisMissing_throwsAnalysisNotFound() {
+            // given
+            final Long missingAnalysisId = 9_999_999L;
+
+            // when & then
+            assertThatThrownBy(() -> userExpressionService.save(
+                    1L, new BookmarkCreateRequest.AnalysisMistake(missingAnalysisId, 0)))
+                    .isInstanceOf(CallAnalysisNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("남의 분석의 mistake를 찜하면 CallAnalysisAccessForbiddenException을 던진다")
+        void save_whenAnalysisNotOwned_throwsForbidden() {
+            // given
+            final Long ownerId = 1L;
+            final Long attackerId = 2L;
+            final CallAnalysis analysis = seedCompletedAnalysis(ownerId, List.of(
+                    mistake("improved", "뜻")
+            ));
+
+            // when & then
+            assertThatThrownBy(() -> userExpressionService.save(
+                    attackerId, new BookmarkCreateRequest.AnalysisMistake(analysis.getId(), 0)))
+                    .isInstanceOf(CallAnalysisAccessForbiddenException.class);
+        }
+
+        @Test
+        @DisplayName("mistakeId가 mistakes 범위를 벗어나면 NotFoundException을 던진다")
+        void save_whenMistakeIndexOutOfRange_throwsNotFound() {
+            // given
+            final Long userId = 1L;
+            final CallAnalysis analysis = seedCompletedAnalysis(userId, List.of(
+                    mistake("improved", "뜻")
+            ));
+
+            // when & then
+            assertThatThrownBy(() -> userExpressionService.save(
+                    userId, new BookmarkCreateRequest.AnalysisMistake(analysis.getId(), 1)))
+                    .isInstanceOf(NotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("아직 완료되지 않은(PROCESSING) 분석의 mistake를 찜하면 NotFoundException을 던진다")
+        void save_whenAnalysisNotCompleted_throwsNotFound() {
+            // given
+            final Long userId = 1L;
+            final CallAnalysis processing = callAnalysisRepository.save(
+                    CallAnalysis.processing(1L, userId));
+
+            // when & then
+            assertThatThrownBy(() -> userExpressionService.save(
+                    userId, new BookmarkCreateRequest.AnalysisMistake(processing.getId(), 0)))
+                    .isInstanceOf(NotFoundException.class);
         }
     }
 
@@ -169,6 +398,25 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
             // when & then
             userExpressionService.delete(userId, missingId);
         }
+
+        @Test
+        @DisplayName("찜을 삭제한 뒤 같은 소스를 다시 찜하면 새 row로 저장된다")
+        void delete_thenRebookmark_savesNewRow() {
+            // given
+            final Long userId = 1L;
+            final Icebreaker icebreaker = seedIcebreaker();
+            final UserExpressionResponse first = userExpressionService.save(
+                    userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+            userExpressionService.delete(userId, first.id());
+
+            // when
+            final UserExpressionResponse second = userExpressionService.save(
+                    userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+
+            // then
+            assertThat(second.id()).isNotEqualTo(first.id());
+            assertThat(userExpressionRepository.count()).isEqualTo(1);
+        }
     }
 
     @Nested
@@ -176,16 +424,15 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
     class CountSync {
 
         @Test
-        @DisplayName("save 1회 호출 시 해당 유저의 expressionCount가 1 증가한다")
+        @DisplayName("찜 1회 성공 시 해당 유저의 expressionCount가 1 증가한다")
         void save_incrementsUserStatsCountByOne() {
             // given
             final Long userId = 1L;
             userStatsRepository.save(UserStats.create(userId));
-            final UserExpressionCreateRequest request =
-                    new UserExpressionCreateRequest("How are you?", "어떻게 지내세요?");
+            final Icebreaker icebreaker = seedIcebreaker();
 
             // when
-            userExpressionService.save(userId, request);
+            userExpressionService.save(userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
 
             // then
             final UserStats reloaded = userStatsRepository.findByUserId(userId).orElseThrow();
@@ -193,19 +440,38 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
         }
 
         @Test
-        @DisplayName("save 2회 호출 시 expressionCount가 누적되어 2가 된다")
-        void save_twice_accumulatesCountToTwo() {
+        @DisplayName("서로 다른 소스 2건 찜 시 expressionCount가 누적되어 2가 된다")
+        void save_twoDifferentSources_accumulatesCountToTwo() {
             // given
             final Long userId = 1L;
             userStatsRepository.save(UserStats.create(userId));
+            final Icebreaker icebreaker = seedIcebreaker();
+            final RecommendedExpression daily = seedDaily();
 
             // when
-            userExpressionService.save(userId, new UserExpressionCreateRequest("hello", "안녕"));
-            userExpressionService.save(userId, new UserExpressionCreateRequest("thanks", "고마워"));
+            userExpressionService.save(userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+            userExpressionService.save(userId, new BookmarkCreateRequest.DailyExpression(daily.getId()));
 
             // then
             final UserStats reloaded = userStatsRepository.findByUserId(userId).orElseThrow();
             assertThat(reloaded.getExpressionCount()).isEqualTo(2);
+        }
+
+        @Test
+        @DisplayName("같은 소스를 중복 찜하면 expressionCount는 1에서 변하지 않는다 (멱등)")
+        void save_whenDuplicate_doesNotIncrementCount() {
+            // given
+            final Long userId = 1L;
+            userStatsRepository.save(UserStats.create(userId));
+            final Icebreaker icebreaker = seedIcebreaker();
+
+            // when
+            userExpressionService.save(userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+            userExpressionService.save(userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
+
+            // then
+            final UserStats reloaded = userStatsRepository.findByUserId(userId).orElseThrow();
+            assertThat(reloaded.getExpressionCount()).isEqualTo(1);
         }
 
         @Test
@@ -214,8 +480,9 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
             // given
             final Long userId = 1L;
             userStatsRepository.save(UserStats.create(userId));
+            final Icebreaker icebreaker = seedIcebreaker();
             final UserExpressionResponse saved = userExpressionService.save(
-                    userId, new UserExpressionCreateRequest("hello", "안녕"));
+                    userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
 
             // when
             userExpressionService.delete(userId, saved.id());
@@ -231,7 +498,8 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
             // given
             final Long userId = 1L;
             userStatsRepository.save(UserStats.create(userId));
-            userExpressionService.save(userId, new UserExpressionCreateRequest("hello", "안녕"));
+            final Icebreaker icebreaker = seedIcebreaker();
+            userExpressionService.save(userId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
             final Long missingId = 9_999_999L;
 
             // when
@@ -250,8 +518,9 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
             final Long otherUserId = 2L;
             userStatsRepository.save(UserStats.create(ownerId));
             userStatsRepository.save(UserStats.create(otherUserId));
+            final Icebreaker icebreaker = seedIcebreaker();
             final UserExpressionResponse saved = userExpressionService.save(
-                    ownerId, new UserExpressionCreateRequest("hello", "안녕"));
+                    ownerId, new BookmarkCreateRequest.Icebreaker(icebreaker.getId()));
 
             // when
             userExpressionService.delete(otherUserId, saved.id());
