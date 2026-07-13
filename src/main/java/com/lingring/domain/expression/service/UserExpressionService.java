@@ -7,6 +7,7 @@ import com.lingring.domain.expression.domain.BookmarkSource;
 import com.lingring.domain.expression.domain.Icebreaker;
 import com.lingring.domain.expression.domain.RecommendedExpression;
 import com.lingring.domain.expression.domain.UserExpression;
+import com.lingring.domain.expression.domain.vo.SourceSubIndex;
 import com.lingring.domain.expression.dto.request.BookmarkCreateRequest;
 import com.lingring.domain.expression.dto.response.UserExpressionListResponse;
 import com.lingring.domain.expression.dto.response.UserExpressionResponse;
@@ -41,7 +42,7 @@ public class UserExpressionService {
     private record BookmarkTarget(
             BookmarkSource source,
             Long sourceRefId,
-            int sourceSubIndex,
+            SourceSubIndex sourceSubIndex,
             String expression,
             String meaning
     ) {
@@ -100,7 +101,7 @@ public class UserExpressionService {
         return new BookmarkTarget(
                 BookmarkSource.ANALYSIS_MISTAKE,
                 request.analysisId(),
-                request.mistakeId(),
+                SourceSubIndex.mistakeIndex(request.mistakeId()),
                 mistake.improved(),
                 mistake.koMeaning()
         );
@@ -123,7 +124,7 @@ public class UserExpressionService {
         return new BookmarkTarget(
                 BookmarkSource.DAILY_EXPRESSION,
                 daily.getId(),
-                UserExpression.SHARED_SOURCE_SUB_INDEX,
+                SourceSubIndex.shared(),
                 daily.getExpression().getValue(),
                 daily.getMeaning().getValue()
         );
@@ -145,7 +146,7 @@ public class UserExpressionService {
         return new BookmarkTarget(
                 BookmarkSource.ICEBREAKER,
                 icebreaker.getId(),
-                UserExpression.SHARED_SOURCE_SUB_INDEX,
+                SourceSubIndex.shared(),
                 icebreaker.getExpression().getValue(),
                 icebreaker.getMeaning().getValue()
         );

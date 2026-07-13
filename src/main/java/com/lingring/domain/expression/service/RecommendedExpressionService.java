@@ -7,6 +7,7 @@ import com.lingring.domain.expression.dao.UserExpressionRepository;
 import com.lingring.domain.expression.domain.BookmarkSource;
 import com.lingring.domain.expression.domain.RecommendedExpression;
 import com.lingring.domain.expression.domain.UserExpression;
+import com.lingring.domain.expression.domain.vo.SourceSubIndex;
 import com.lingring.domain.expression.dto.response.RecommendedExpressionResponse;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.NotFoundException;
@@ -46,7 +47,7 @@ public class RecommendedExpressionService {
                         userId,
                         BookmarkSource.DAILY_EXPRESSION,
                         today.getId(),
-                        UserExpression.SHARED_SOURCE_SUB_INDEX)
+                        SourceSubIndex.shared())
                 .map(UserExpression::getId)
                 .orElse(null);
         return RecommendedExpressionResponse.from(today, bookmarkId);

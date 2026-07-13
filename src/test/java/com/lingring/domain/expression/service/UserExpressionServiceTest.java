@@ -10,6 +10,7 @@ import com.lingring.domain.expression.domain.BookmarkSource;
 import com.lingring.domain.expression.domain.Icebreaker;
 import com.lingring.domain.expression.domain.RecommendedExpression;
 import com.lingring.domain.expression.domain.UserExpression;
+import com.lingring.domain.expression.domain.vo.SourceSubIndex;
 import com.lingring.domain.expression.dto.request.BookmarkCreateRequest;
 import com.lingring.domain.expression.dto.response.UserExpressionListResponse;
 import com.lingring.domain.expression.dto.response.UserExpressionResponse;
@@ -109,7 +110,7 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
             final UserExpression saved = userExpressionRepository.findById(response.id()).orElseThrow();
             assertThat(saved.getSource()).isEqualTo(BookmarkSource.ICEBREAKER);
             assertThat(saved.getSourceRefId()).isEqualTo(icebreaker.getId());
-            assertThat(saved.getSourceSubIndex()).isEqualTo(UserExpression.SHARED_SOURCE_SUB_INDEX);
+            assertThat(saved.getSourceSubIndex()).isEqualTo(SourceSubIndex.shared());
         }
 
         @Test
@@ -151,7 +152,7 @@ class UserExpressionServiceTest extends ServiceIntegrationHelper {
             final UserExpression saved = userExpressionRepository.findById(response.id()).orElseThrow();
             assertThat(saved.getSource()).isEqualTo(BookmarkSource.ANALYSIS_MISTAKE);
             assertThat(saved.getSourceRefId()).isEqualTo(analysis.getId());
-            assertThat(saved.getSourceSubIndex()).isEqualTo(1);
+            assertThat(saved.getSourceSubIndex()).isEqualTo(SourceSubIndex.mistakeIndex(1));
         }
 
         @Test

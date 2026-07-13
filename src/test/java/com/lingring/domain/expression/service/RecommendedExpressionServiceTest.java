@@ -8,6 +8,7 @@ import com.lingring.domain.expression.dao.UserExpressionRepository;
 import com.lingring.domain.expression.domain.BookmarkSource;
 import com.lingring.domain.expression.domain.RecommendedExpression;
 import com.lingring.domain.expression.domain.UserExpression;
+import com.lingring.domain.expression.domain.vo.SourceSubIndex;
 import com.lingring.domain.expression.dto.response.RecommendedExpressionResponse;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.error.ErrorCode;
@@ -148,7 +149,7 @@ class RecommendedExpressionServiceTest extends ServiceIntegrationHelper {
             final UserExpression bookmark = userExpressionRepository.save(UserExpression.bookmark(
                     USER_ID, "only", "유일",
                     BookmarkSource.DAILY_EXPRESSION, only.getId(),
-                    UserExpression.SHARED_SOURCE_SUB_INDEX
+                    SourceSubIndex.shared()
             ));
 
             // when
@@ -169,7 +170,7 @@ class RecommendedExpressionServiceTest extends ServiceIntegrationHelper {
             userExpressionRepository.save(UserExpression.bookmark(
                     otherUserId, "only", "유일",
                     BookmarkSource.DAILY_EXPRESSION, only.getId(),
-                    UserExpression.SHARED_SOURCE_SUB_INDEX
+                    SourceSubIndex.shared()
             ));
 
             // when

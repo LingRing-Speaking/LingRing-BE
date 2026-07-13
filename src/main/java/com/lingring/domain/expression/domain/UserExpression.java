@@ -6,6 +6,7 @@ import static lombok.AccessLevel.PROTECTED;
 
 import com.lingring.domain.expression.domain.vo.Expression;
 import com.lingring.domain.expression.domain.vo.Meaning;
+import com.lingring.domain.expression.domain.vo.SourceSubIndex;
 import com.lingring.global.common.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
@@ -33,9 +34,6 @@ import lombok.NonNull;
 @NoArgsConstructor(access = PROTECTED)
 public class UserExpression extends BaseTimeEntity {
 
-    // MySQL 유니크 제약은 NULL을 중복으로 보지 않으므로 공유 소스는 -1을 채워 dedupe한다
-    public static final int SHARED_SOURCE_SUB_INDEX = -1;
-
     @Id
     @GeneratedValue(strategy = IDENTITY)
     @Column(name = "id", nullable = false)
@@ -57,8 +55,8 @@ public class UserExpression extends BaseTimeEntity {
     @Column(name = "source_ref_id")
     private Long sourceRefId;
 
-    @Column(name = "source_sub_index")
-    private Integer sourceSubIndex;
+    @Embedded
+    private SourceSubIndex sourceSubIndex;
 
     private UserExpression(
             @NonNull final Long userId,
@@ -76,7 +74,7 @@ public class UserExpression extends BaseTimeEntity {
             @NonNull final Meaning meaning,
             @NonNull final BookmarkSource source,
             @NonNull final Long sourceRefId,
-            final int sourceSubIndex
+            @NonNull final SourceSubIndex sourceSubIndex
     ) {
         this(userId, expression, meaning);
         this.source = source;
@@ -98,7 +96,7 @@ public class UserExpression extends BaseTimeEntity {
             @NonNull final String meaning,
             @NonNull final BookmarkSource source,
             @NonNull final Long sourceRefId,
-            final int sourceSubIndex
+            @NonNull final SourceSubIndex sourceSubIndex
     ) {
         return new UserExpression(
                 userId, new Expression(expression), new Meaning(meaning),

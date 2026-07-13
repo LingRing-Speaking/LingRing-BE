@@ -8,6 +8,7 @@ import com.lingring.domain.expression.dao.UserExpressionRepository;
 import com.lingring.domain.expression.domain.BookmarkSource;
 import com.lingring.domain.expression.domain.Icebreaker;
 import com.lingring.domain.expression.domain.UserExpression;
+import com.lingring.domain.expression.domain.vo.SourceSubIndex;
 import com.lingring.domain.expression.dto.response.IcebreakerListResponse;
 import com.lingring.domain.expression.dto.response.IcebreakerResponse;
 import com.lingring.global.config.ServiceIntegrationHelper;
@@ -44,7 +45,7 @@ class IcebreakerServiceTest extends ServiceIntegrationHelper {
                 icebreaker.getMeaning().getValue(),
                 BookmarkSource.ICEBREAKER,
                 icebreaker.getId(),
-                UserExpression.SHARED_SOURCE_SUB_INDEX
+                SourceSubIndex.shared()
         ));
     }
 

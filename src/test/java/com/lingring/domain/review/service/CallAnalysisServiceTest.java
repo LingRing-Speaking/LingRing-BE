@@ -9,6 +9,7 @@ import com.lingring.domain.call.dto.response.CallAnalysisStatusView;
 import com.lingring.domain.expression.dao.UserExpressionRepository;
 import com.lingring.domain.expression.domain.BookmarkSource;
 import com.lingring.domain.expression.domain.UserExpression;
+import com.lingring.domain.expression.domain.vo.SourceSubIndex;
 import com.lingring.domain.review.dao.CallAnalysisRepository;
 import com.lingring.domain.review.domain.analysis.CallAnalysis;
 import com.lingring.domain.review.domain.analysis.CallAnalysisStatus;
@@ -311,7 +312,7 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
             callAnalysisService.complete(CALL_ID, USER_ID, twoMistakesResult(), MODEL);
             final UserExpression bookmark = userExpressionRepository.save(UserExpression.bookmark(
                     USER_ID, "I go", "나는 간다",
-                    BookmarkSource.ANALYSIS_MISTAKE, saved.getId(), 1
+                    BookmarkSource.ANALYSIS_MISTAKE, saved.getId(), SourceSubIndex.mistakeIndex(1)
             ));
 
             // when
@@ -330,7 +331,7 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
             callAnalysisService.complete(CALL_ID, USER_ID, twoMistakesResult(), MODEL);
             userExpressionRepository.save(UserExpression.bookmark(
                     OTHER_USER_ID, "I go", "나는 간다",
-                    BookmarkSource.ANALYSIS_MISTAKE, mine.getId(), 1
+                    BookmarkSource.ANALYSIS_MISTAKE, mine.getId(), SourceSubIndex.mistakeIndex(1)
             ));
 
             // when

@@ -75,7 +75,10 @@ public class CallAnalysisService {
                 .findAllByUserIdAndSourceAndSourceRefId(
                         requesterId, BookmarkSource.ANALYSIS_MISTAKE, analysisId)
                 .stream()
-                .collect(Collectors.toMap(UserExpression::getSourceSubIndex, UserExpression::getId));
+                .collect(Collectors.toMap(
+                        bookmark -> bookmark.getSourceSubIndex().getValue(),
+                        UserExpression::getId
+                ));
     }
 
     @Transactional(readOnly = true)

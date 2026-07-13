@@ -2,6 +2,7 @@ package com.lingring.domain.expression.dao;
 
 import com.lingring.domain.expression.domain.BookmarkSource;
 import com.lingring.domain.expression.domain.UserExpression;
+import com.lingring.domain.expression.domain.vo.SourceSubIndex;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -24,7 +25,7 @@ public interface UserExpressionRepository extends JpaRepository<UserExpression, 
             Long userId,
             BookmarkSource source,
             Long sourceRefId,
-            Integer sourceSubIndex
+            SourceSubIndex sourceSubIndex
     );
 
     List<UserExpression> findAllByUserIdAndSourceAndSourceRefIdIn(

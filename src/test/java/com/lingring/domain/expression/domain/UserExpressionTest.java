@@ -2,6 +2,7 @@ package com.lingring.domain.expression.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.lingring.domain.expression.domain.vo.SourceSubIndex;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -36,7 +37,7 @@ class UserExpressionTest {
         // when
         final UserExpression bookmarked = UserExpression.bookmark(
                 userId, "do my homework", "숙제를 하다",
-                BookmarkSource.ANALYSIS_MISTAKE, 42L, 1
+                BookmarkSource.ANALYSIS_MISTAKE, 42L, SourceSubIndex.mistakeIndex(1)
         );
 
         // then
@@ -45,7 +46,7 @@ class UserExpressionTest {
         assertThat(bookmarked.getMeaning().getValue()).isEqualTo("숙제를 하다");
         assertThat(bookmarked.getSource()).isEqualTo(BookmarkSource.ANALYSIS_MISTAKE);
         assertThat(bookmarked.getSourceRefId()).isEqualTo(42L);
-        assertThat(bookmarked.getSourceSubIndex()).isEqualTo(1);
+        assertThat(bookmarked.getSourceSubIndex()).isEqualTo(SourceSubIndex.mistakeIndex(1));
     }
 
     @Test
@@ -54,10 +55,10 @@ class UserExpressionTest {
         // when
         final UserExpression bookmarked = UserExpression.bookmark(
                 1L, "How's it going?", "요즘 어때?",
-                BookmarkSource.ICEBREAKER, 5L, UserExpression.SHARED_SOURCE_SUB_INDEX
+                BookmarkSource.ICEBREAKER, 5L, SourceSubIndex.shared()
         );
 
         // then
-        assertThat(bookmarked.getSourceSubIndex()).isEqualTo(-1);
+        assertThat(bookmarked.getSourceSubIndex().getValue()).isEqualTo(-1);
     }
 }
