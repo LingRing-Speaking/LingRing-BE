@@ -4,7 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.lingring.domain.expression.dao.RecommendedExpressionRepository;
+import com.lingring.domain.expression.dao.UserExpressionRepository;
+import com.lingring.domain.expression.domain.BookmarkSource;
 import com.lingring.domain.expression.domain.RecommendedExpression;
+import com.lingring.domain.expression.domain.UserExpression;
 import com.lingring.domain.expression.dto.response.RecommendedExpressionResponse;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.error.ErrorCode;
@@ -25,11 +28,16 @@ import org.springframework.context.annotation.Primary;
 @Import(RecommendedExpressionServiceTest.FixedDateTimeProviderConfig.class)
 class RecommendedExpressionServiceTest extends ServiceIntegrationHelper {
 
+    private static final Long USER_ID = 1L;
+
     @Autowired
     private RecommendedExpressionService recommendedExpressionService;
 
     @Autowired
     private RecommendedExpressionRepository recommendedExpressionRepository;
+
+    @Autowired
+    private UserExpressionRepository userExpressionRepository;
 
     @Autowired
     private FixedDateTimeProvider fixedDateTimeProvider;
@@ -59,7 +67,7 @@ class RecommendedExpressionServiceTest extends ServiceIntegrationHelper {
             setDate(LocalDate.of(2026, 4, 25));
 
             // when & then
-            assertThatThrownBy(() -> recommendedExpressionService.getDaily())
+            assertThatThrownBy(() -> recommendedExpressionService.getDaily(USER_ID))
                     .isInstanceOf(NotFoundException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.RECOMMENDED_EXPRESSION_NOT_FOUND);
@@ -75,8 +83,8 @@ class RecommendedExpressionServiceTest extends ServiceIntegrationHelper {
             setDate(LocalDate.of(2026, 4, 25));
 
             // when
-            final RecommendedExpressionResponse first = recommendedExpressionService.getDaily();
-            final RecommendedExpressionResponse second = recommendedExpressionService.getDaily();
+            final RecommendedExpressionResponse first = recommendedExpressionService.getDaily(USER_ID);
+            final RecommendedExpressionResponse second = recommendedExpressionService.getDaily(USER_ID);
 
             // then
             assertThat(first.id()).isEqualTo(second.id());
@@ -96,13 +104,13 @@ class RecommendedExpressionServiceTest extends ServiceIntegrationHelper {
             final LocalDate dateA = LocalDate.of(2026, 4, 25);
             setDate(dateA);
             final int offsetA = (int) Math.floorMod(dateA.toEpochDay(), 3L);
-            assertThat(recommendedExpressionService.getDaily().id())
+            assertThat(recommendedExpressionService.getDaily(USER_ID).id())
                     .isEqualTo(saved.get(offsetA).getId());
 
             final LocalDate dateB = dateA.plusDays(1);
             setDate(dateB);
             final int offsetB = (int) Math.floorMod(dateB.toEpochDay(), 3L);
-            assertThat(recommendedExpressionService.getDaily().id())
+            assertThat(recommendedExpressionService.getDaily(USER_ID).id())
                     .isEqualTo(saved.get(offsetB).getId());
         }
 
@@ -115,12 +123,60 @@ class RecommendedExpressionServiceTest extends ServiceIntegrationHelper {
             setDate(LocalDate.of(2030, 1, 1));
 
             // when
-            final RecommendedExpressionResponse response = recommendedExpressionService.getDaily();
+            final RecommendedExpressionResponse response = recommendedExpressionService.getDaily(USER_ID);
 
             // then
             assertThat(response.id()).isEqualTo(only.getId());
             assertThat(response.expression()).isEqualTo("only");
             assertThat(response.meaning()).isEqualTo("유일");
+        }
+    }
+
+    @Nested
+    @DisplayName("getDaily: 찜 상태(bookmarkId) 노출")
+    class GetDailyBookmarkId {
+
+        @Test
+        @DisplayName("찜했으면 bookmarkId가 채워지고, 안 찜했으면 null이다")
+        void getDaily_reflectsCallerBookmark() {
+            // given
+            final RecommendedExpression only = recommendedExpressionRepository.save(
+                    RecommendedExpression.create("only", "유일"));
+            setDate(LocalDate.of(2026, 4, 25));
+            assertThat(recommendedExpressionService.getDaily(USER_ID).bookmarkId()).isNull();
+
+            final UserExpression bookmark = userExpressionRepository.save(UserExpression.bookmark(
+                    USER_ID, "only", "유일",
+                    BookmarkSource.DAILY_EXPRESSION, only.getId(),
+                    UserExpression.SHARED_SOURCE_SUB_INDEX
+            ));
+
+            // when
+            final RecommendedExpressionResponse response = recommendedExpressionService.getDaily(USER_ID);
+
+            // then
+            assertThat(response.bookmarkId()).isEqualTo(bookmark.getId());
+        }
+
+        @Test
+        @DisplayName("다른 사용자의 찜은 내 bookmarkId에 반영되지 않는다")
+        void getDaily_doesNotLeakOtherUsersBookmark() {
+            // given
+            final Long otherUserId = 2L;
+            final RecommendedExpression only = recommendedExpressionRepository.save(
+                    RecommendedExpression.create("only", "유일"));
+            setDate(LocalDate.of(2026, 4, 25));
+            userExpressionRepository.save(UserExpression.bookmark(
+                    otherUserId, "only", "유일",
+                    BookmarkSource.DAILY_EXPRESSION, only.getId(),
+                    UserExpression.SHARED_SOURCE_SUB_INDEX
+            ));
+
+            // when
+            final RecommendedExpressionResponse response = recommendedExpressionService.getDaily(USER_ID);
+
+            // then
+            assertThat(response.bookmarkId()).isNull();
         }
     }
 }

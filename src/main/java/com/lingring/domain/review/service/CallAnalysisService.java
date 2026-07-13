@@ -4,6 +4,9 @@ import com.lingring.domain.call.dao.CallRepository;
 import com.lingring.domain.call.domain.Call;
 import com.lingring.domain.call.dto.response.CallAnalysisStatusView;
 import com.lingring.domain.call.exception.CallNotFoundException;
+import com.lingring.domain.expression.dao.UserExpressionRepository;
+import com.lingring.domain.expression.domain.BookmarkSource;
+import com.lingring.domain.expression.domain.UserExpression;
 import com.lingring.domain.review.dao.CallAnalysisRepository;
 import com.lingring.domain.review.dao.dto.CallAnalysisSummaryProjection;
 import com.lingring.domain.review.domain.analysis.CallAnalysis;
@@ -27,6 +30,7 @@ public class CallAnalysisService {
     private final CallAnalysisRepository callAnalysisRepository;
     private final CallRepository callRepository;
     private final CallRecordingRetentionPolicy callRecordingRetentionPolicy;
+    private final UserExpressionRepository userExpressionRepository;
 
     @Transactional
     public RequestResult requestForUser(final Long callId, final Long userId) {
@@ -63,7 +67,16 @@ public class CallAnalysisService {
     @Transactional(readOnly = true)
     public CallAnalysisResponse get(final Long analysisId, final Long requesterId) {
         final CallAnalysis analysis = findOwnedAndRequested(analysisId, requesterId);
-        return CallAnalysisResponse.from(analysis);
+        return CallAnalysisResponse.from(analysis, findMistakeBookmarkIds(analysisId, requesterId));
+    }
+
+    /** 호출자가 이 분석에서 찜한 mistake의 (결과 내 인덱스 → 저장 표현 row id) 매핑. */
+    private Map<Integer, Long> findMistakeBookmarkIds(final Long analysisId, final Long requesterId) {
+        return userExpressionRepository
+                .findAllByUserIdAndSourceAndSourceRefId(
+                        requesterId, BookmarkSource.ANALYSIS_MISTAKE, analysisId)
+                .stream()
+                .collect(Collectors.toMap(UserExpression::getSourceSubIndex, UserExpression::getId));
     }
 
     @Transactional(readOnly = true)

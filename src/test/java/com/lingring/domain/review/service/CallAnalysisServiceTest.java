@@ -6,6 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.lingring.domain.call.dao.CallRepository;
 import com.lingring.domain.call.domain.Call;
 import com.lingring.domain.call.dto.response.CallAnalysisStatusView;
+import com.lingring.domain.expression.dao.UserExpressionRepository;
+import com.lingring.domain.expression.domain.BookmarkSource;
+import com.lingring.domain.expression.domain.UserExpression;
 import com.lingring.domain.review.dao.CallAnalysisRepository;
 import com.lingring.domain.review.domain.analysis.CallAnalysis;
 import com.lingring.domain.review.domain.analysis.CallAnalysisStatus;
@@ -44,6 +47,9 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
 
     @Autowired
     private CallRepository callRepository;
+
+    @Autowired
+    private UserExpressionRepository userExpressionRepository;
 
     @Nested
     @DisplayName("requestForUser: 호출자 본인 행 생성 + requested 마킹 + 최초 전환 여부 반환")
@@ -282,6 +288,59 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
         }
 
         @Test
+        @DisplayName("mistakes 항목에는 결과 내 인덱스가 id로 부여된다")
+        void get_assignsIndexAsMistakeId() {
+            // given
+            final CallAnalysis saved = callAnalysisService.requestForUser(CALL_ID, USER_ID).analysis();
+            callAnalysisService.complete(CALL_ID, USER_ID, twoMistakesResult(), MODEL);
+
+            // when
+            final CallAnalysisResponse response = callAnalysisService.get(saved.getId(), USER_ID);
+
+            // then
+            assertThat(response.mistakes()).hasSize(2);
+            assertThat(response.mistakes().get(0).id()).isEqualTo(0);
+            assertThat(response.mistakes().get(1).id()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("찜한 mistake는 bookmarkId가 채워지고, 안 찜한 것은 null이다")
+        void get_marksBookmarkedMistakesOnly() {
+            // given
+            final CallAnalysis saved = callAnalysisService.requestForUser(CALL_ID, USER_ID).analysis();
+            callAnalysisService.complete(CALL_ID, USER_ID, twoMistakesResult(), MODEL);
+            final UserExpression bookmark = userExpressionRepository.save(UserExpression.bookmark(
+                    USER_ID, "I go", "나는 간다",
+                    BookmarkSource.ANALYSIS_MISTAKE, saved.getId(), 1
+            ));
+
+            // when
+            final CallAnalysisResponse response = callAnalysisService.get(saved.getId(), USER_ID);
+
+            // then
+            assertThat(response.mistakes().get(0).bookmarkId()).isNull();
+            assertThat(response.mistakes().get(1).bookmarkId()).isEqualTo(bookmark.getId());
+        }
+
+        @Test
+        @DisplayName("다른 사용자의 찜은 내 응답의 bookmarkId에 반영되지 않는다")
+        void get_doesNotLeakOtherUsersBookmarks() {
+            // given: 같은 통화의 상대방(OTHER_USER_ID)이 자기 분석의 mistake를 찜한 상황
+            final CallAnalysis mine = callAnalysisService.requestForUser(CALL_ID, USER_ID).analysis();
+            callAnalysisService.complete(CALL_ID, USER_ID, twoMistakesResult(), MODEL);
+            userExpressionRepository.save(UserExpression.bookmark(
+                    OTHER_USER_ID, "I go", "나는 간다",
+                    BookmarkSource.ANALYSIS_MISTAKE, mine.getId(), 1
+            ));
+
+            // when
+            final CallAnalysisResponse response = callAnalysisService.get(mine.getId(), USER_ID);
+
+            // then
+            assertThat(response.mistakes().get(1).bookmarkId()).isNull();
+        }
+
+        @Test
         @DisplayName("본인 소유여도 requested=false 면 NotFound (숨김)")
         void get_whenOwnedButNotRequested_throwsNotFound() {
             // given
@@ -370,6 +429,16 @@ class CallAnalysisServiceTest extends ServiceIntegrationHelper {
                 Call.start(userA, userB, UUID.randomUUID(), endedAt.minusMinutes(5)));
         call.end(endedAt);
         return callRepository.save(call).getId();
+    }
+
+    private AnalysisResult twoMistakesResult() {
+        return new AnalysisResult(
+                new Mistakes(List.of(
+                        new MistakeItem(FeedbackTag.GRAMMAR, "I goes", "I go", "1인칭 주어", "나는 간다"),
+                        new MistakeItem(FeedbackTag.COLLOCATION, "make homework", "do homework", "결합", "숙제하다")
+                )),
+                Positives.empty()
+        );
     }
 
     private AnalysisResult sampleResult() {
