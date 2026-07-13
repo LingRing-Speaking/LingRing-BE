@@ -99,6 +99,13 @@ public enum ErrorCode {
     // Signaling Error
     SIGNALING_INVALID_USER(BAD_REQUEST, "시그널링 연결에 유효하지 않은 사용자입니다."),
     SIGNALING_INVALID_PAYLOAD(BAD_REQUEST, "유효하지 않은 시그널링 메시지입니다."),
+
+    // Friend Error
+    SELF_FRIEND_REQUEST_NOT_ALLOWED(BAD_REQUEST, "자기 자신에게 친구 요청을 보낼 수 없습니다."),
+    DUPLICATE_FRIEND_REQUEST(CONFLICT, "이미 보낸 친구 요청이 있습니다."),
+    ALREADY_FRIENDS(CONFLICT, "이미 친구인 사용자입니다."),
+    FRIENDSHIP_NOT_FOUND(NOT_FOUND, "친구 관계를 찾을 수 없습니다."),
+    FRIENDSHIP_ACCESS_DENIED(FORBIDDEN, "해당 친구 관계에 대한 권한이 없습니다."),
     ;
 
     private final HttpStatus httpStatus;

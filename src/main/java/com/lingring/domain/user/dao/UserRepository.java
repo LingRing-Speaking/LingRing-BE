@@ -1,6 +1,7 @@
 package com.lingring.domain.user.dao;
 
 import com.lingring.domain.user.dao.dto.UserProfileProjection;
+import com.lingring.domain.user.dao.dto.UserSearchProjection;
 import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.vo.Name;
@@ -27,4 +28,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
             WHERE u.id = :userId AND s.userId = u.id
             """)
     Optional<UserProfileProjection> findProfileById(@Param("userId") Long userId);
+
+    @Query("""
+            SELECT u.id AS id,
+                   u.name.value AS nickname,
+                   u.profileImage.value AS profileImage
+            FROM User u
+            WHERE u.name.value = :nickname
+            """)
+    Optional<UserSearchProjection> findSearchProfileByNickname(@Param("nickname") String nickname);
 }
