@@ -32,8 +32,6 @@ public class GlobalExceptionHandler {
         return errorResponse(ErrorCode.INVALID_INPUT_VALUE);
     }
 
-    // 깨진 JSON, 알 수 없는 다형 타입 판별값(예: 찜 요청의 source) 등 역직렬화
-    // 불가능한 body는 서버 오류가 아니라 클라이언트 입력 오류이므로 400으로 응답한다.
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(final HttpMessageNotReadableException e) {
         log.info("Unreadable request body: {}", e.getMessage());

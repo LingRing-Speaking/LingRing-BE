@@ -33,11 +33,7 @@ import lombok.NonNull;
 @NoArgsConstructor(access = PROTECTED)
 public class UserExpression extends BaseTimeEntity {
 
-    /**
-     * 공유 소스(오늘의 추천·아이스브레이커)의 sourceSubIndex sentinel.
-     * MySQL 유니크 제약은 NULL을 중복으로 보지 않으므로, dedupe가 작동하려면
-     * null 대신 실존 인덱스가 될 수 없는 -1을 채운다 (0은 유효한 mistake 인덱스).
-     */
+    // MySQL 유니크 제약은 NULL을 중복으로 보지 않으므로 공유 소스는 -1을 채워 dedupe한다
     public static final int SHARED_SOURCE_SUB_INDEX = -1;
 
     @Id
@@ -54,19 +50,13 @@ public class UserExpression extends BaseTimeEntity {
     @Embedded
     private Meaning meaning;
 
-    /**
-     * 찜(북마크) 출처. 소스 기반 찜 도입(#182) 이전에 free-text로 저장된
-     * 레거시 row는 세 컬럼 모두 null이다.
-     */
     @Enumerated(STRING)
     @Column(name = "source", length = 32)
     private BookmarkSource source;
 
-    /** 출처 참조 id. mistake는 analysisId, 공유 소스는 해당 엔티티의 id. */
     @Column(name = "source_ref_id")
     private Long sourceRefId;
 
-    /** mistake의 결과 내 인덱스. 공유 소스는 {@link #SHARED_SOURCE_SUB_INDEX}. */
     @Column(name = "source_sub_index")
     private Integer sourceSubIndex;
 
@@ -80,10 +70,20 @@ public class UserExpression extends BaseTimeEntity {
         this.meaning = meaning;
     }
 
-    /**
-     * 출처 없는 표현 생성. 프로덕션 쓰기 경로는 {@link #bookmark}로 대체되었고,
-     * 레거시(출처 없는) row 형태의 표현·테스트 시딩에만 쓰인다.
-     */
+    private UserExpression(
+            @NonNull final Long userId,
+            @NonNull final Expression expression,
+            @NonNull final Meaning meaning,
+            @NonNull final BookmarkSource source,
+            @NonNull final Long sourceRefId,
+            final int sourceSubIndex
+    ) {
+        this(userId, expression, meaning);
+        this.source = source;
+        this.sourceRefId = sourceRefId;
+        this.sourceSubIndex = sourceSubIndex;
+    }
+
     public static UserExpression create(
             @NonNull final Long userId,
             @NonNull final String expression,
@@ -92,7 +92,6 @@ public class UserExpression extends BaseTimeEntity {
         return new UserExpression(userId, new Expression(expression), new Meaning(meaning));
     }
 
-    /** 소스 기반 찜(북마크) 생성. 텍스트는 서버가 소스에서 도출해 전달한다. */
     public static UserExpression bookmark(
             @NonNull final Long userId,
             @NonNull final String expression,
@@ -101,11 +100,9 @@ public class UserExpression extends BaseTimeEntity {
             @NonNull final Long sourceRefId,
             final int sourceSubIndex
     ) {
-        final UserExpression bookmarked =
-                new UserExpression(userId, new Expression(expression), new Meaning(meaning));
-        bookmarked.source = source;
-        bookmarked.sourceRefId = sourceRefId;
-        bookmarked.sourceSubIndex = sourceSubIndex;
-        return bookmarked;
+        return new UserExpression(
+                userId, new Expression(expression), new Meaning(meaning),
+                source, sourceRefId, sourceSubIndex
+        );
     }
 }

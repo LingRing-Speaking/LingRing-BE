@@ -17,7 +17,6 @@ public record CallAnalysisResponse(
         List<PositiveItemResponse> positives
 ) {
 
-    /** bookmarkIdByMistakeIndex — 호출자가 찜한 mistake 인덱스 → 저장 표현 row id. */
     public static CallAnalysisResponse from(
             final CallAnalysis analysis,
             final Map<Integer, Long> bookmarkIdByMistakeIndex

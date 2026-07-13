@@ -70,7 +70,6 @@ public class CallAnalysisService {
         return CallAnalysisResponse.from(analysis, findMistakeBookmarkIds(analysisId, requesterId));
     }
 
-    /** 호출자가 이 분석에서 찜한 mistake의 (결과 내 인덱스 → 저장 표현 row id) 매핑. */
     private Map<Integer, Long> findMistakeBookmarkIds(final Long analysisId, final Long requesterId) {
         return userExpressionRepository
                 .findAllByUserIdAndSourceAndSourceRefId(

@@ -104,10 +104,6 @@ public class CallAnalysis extends BaseTimeEntity {
         return status == CallAnalysisStatus.COMPLETED;
     }
 
-    /**
-     * 결과 내 인덱스로 mistake를 조회한다. COMPLETED 결과는 {@link #complete}의
-     * 가드로 불변이므로 인덱스가 안정 식별자 역할을 한다 (표현 찜에서 사용).
-     */
     public Optional<MistakeItem> findMistake(final int index) {
         if (!isCompleted() || result == null) {
             return Optional.empty();

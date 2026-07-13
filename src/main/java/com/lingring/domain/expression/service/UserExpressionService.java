@@ -18,7 +18,9 @@ import com.lingring.domain.review.exception.CallAnalysisNotFoundException;
 import com.lingring.domain.user.dao.UserStatsRepository;
 import com.lingring.global.common.pagination.PageSize;
 import com.lingring.global.error.ErrorCode;
+import com.lingring.global.error.exception.InvalidValueException;
 import com.lingring.global.error.exception.NotFoundException;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
@@ -35,10 +37,6 @@ public class UserExpressionService {
     private final RecommendedExpressionRepository recommendedExpressionRepository;
     private final CallAnalysisRepository callAnalysisRepository;
 
-    /**
-     * 소스에서 도출된 찜 대상. expression/meaning은 서버가 채우고, 클라이언트가 보낸
-     * 텍스트는 신뢰하지 않는다.
-     */
     private record BookmarkTarget(
             BookmarkSource source,
             Long sourceRefId,
@@ -48,32 +46,36 @@ public class UserExpressionService {
     ) {
     }
 
-    /**
-     * 소스 기반 찜(북마크) 생성. 같은 (user, source, refId, subIndex)가 이미 있으면
-     * 새 row 없이 기존 표현을 반환한다(멱등) — expressionCount도 증가하지 않는다.
-     */
     @Transactional
     public UserExpressionResponse save(final Long userId, final BookmarkCreateRequest request) {
         final BookmarkTarget target = resolve(userId, request);
-        return userExpressionRepository
+        final Optional<UserExpression> existing = userExpressionRepository
                 .findByUserIdAndSourceAndSourceRefIdAndSourceSubIndex(
-                        userId, target.source(), target.sourceRefId(), target.sourceSubIndex())
-                .map(UserExpressionResponse::from)
-                .orElseGet(() -> {
-                    final UserExpression saved = userExpressionRepository.save(UserExpression.bookmark(
-                            userId, target.expression(), target.meaning(),
-                            target.source(), target.sourceRefId(), target.sourceSubIndex()));
-                    userStatsRepository.incrementExpressionCount(userId);
-                    return UserExpressionResponse.from(saved);
-                });
+                        userId, target.source(), target.sourceRefId(), target.sourceSubIndex());
+        if (existing.isPresent()) {
+            return UserExpressionResponse.from(existing.get());
+        }
+        final UserExpression saved = userExpressionRepository.save(UserExpression.bookmark(
+                userId, target.expression(), target.meaning(),
+                target.source(), target.sourceRefId(), target.sourceSubIndex()));
+        userStatsRepository.incrementExpressionCount(userId);
+        return UserExpressionResponse.from(saved);
     }
 
     private BookmarkTarget resolve(final Long userId, final BookmarkCreateRequest request) {
-        return switch (request) {
-            case BookmarkCreateRequest.AnalysisMistake r -> resolveMistake(userId, r);
-            case BookmarkCreateRequest.DailyExpression r -> resolveDaily(r);
-            case BookmarkCreateRequest.Icebreaker r -> resolveIcebreaker(r);
-        };
+        if (request instanceof BookmarkCreateRequest.AnalysisMistake mistake) {
+            return resolveMistake(userId, mistake);
+        }
+        if (request instanceof BookmarkCreateRequest.DailyExpression daily) {
+            return resolveDaily(daily);
+        }
+        if (request instanceof BookmarkCreateRequest.Icebreaker icebreaker) {
+            return resolveIcebreaker(icebreaker);
+        }
+        throw new InvalidValueException(
+                ErrorCode.INVALID_INPUT_VALUE,
+                "지원하지 않는 찜 소스입니다: %s".formatted(request.getClass().getSimpleName())
+        );
     }
 
     private BookmarkTarget resolveMistake(final Long userId, final BookmarkCreateRequest.AnalysisMistake request) {

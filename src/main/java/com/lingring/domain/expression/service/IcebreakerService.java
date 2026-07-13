@@ -36,7 +36,6 @@ public class IcebreakerService {
         return IcebreakerListResponse.from(icebreakers, findBookmarkIds(userId, icebreakers));
     }
 
-    /** 호출자가 찜한 아이스브레이커의 (icebreakerId → 저장 표현 row id) 매핑. */
     private Map<Long, Long> findBookmarkIds(final Long userId, final List<Icebreaker> icebreakers) {
         final List<Long> icebreakerIds = icebreakers.stream().map(Icebreaker::getId).toList();
         return userExpressionRepository
