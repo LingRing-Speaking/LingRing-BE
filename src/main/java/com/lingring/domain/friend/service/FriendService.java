@@ -15,11 +15,14 @@ import com.lingring.domain.friend.dto.response.ReceivedCountResponse;
 import com.lingring.domain.friend.exception.AlreadyFriendsException;
 import com.lingring.domain.friend.exception.DuplicateFriendRequestException;
 import com.lingring.domain.friend.exception.FriendshipNotFoundException;
+import com.lingring.domain.presence.dao.PresenceRepository;
 import com.lingring.domain.user.dao.UserRepository;
 import com.lingring.global.common.pagination.PageSize;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
@@ -32,6 +35,7 @@ public class FriendService {
 
     private final FriendshipRepository friendshipRepository;
     private final UserRepository userRepository;
+    private final PresenceRepository presenceRepository;
 
     @Transactional
     public FriendshipResponse sendRequest(final Long userId, final FriendRequestCreateRequest request) {
@@ -76,7 +80,11 @@ public class FriendService {
         final PageSize pageSize = PageSize.clamp(size);
         final Slice<FriendItemProjection> slice = friendshipRepository.findItemsByUserIdAndStatus(
                 userId, status, includeSent, includeReceived, PageRequest.of(page, pageSize.value()));
-        return FriendsResponse.from(slice);
+        final List<Long> friendUserIds = slice.getContent().stream()
+                .map(FriendItemProjection::getUserId)
+                .toList();
+        final Set<Long> onlineUserIds = presenceRepository.findOnlineUserIds(friendUserIds);
+        return FriendsResponse.of(slice, onlineUserIds);
     }
 
     @Transactional(readOnly = true)

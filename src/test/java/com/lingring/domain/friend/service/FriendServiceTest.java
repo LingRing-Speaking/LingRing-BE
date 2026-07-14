@@ -2,6 +2,7 @@ package com.lingring.domain.friend.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 import com.lingring.domain.friend.dao.FriendshipRepository;
 import com.lingring.domain.friend.domain.FriendRelation;
@@ -19,6 +20,7 @@ import com.lingring.domain.friend.exception.DuplicateFriendRequestException;
 import com.lingring.domain.friend.exception.FriendshipAccessDeniedException;
 import com.lingring.domain.friend.exception.FriendshipNotFoundException;
 import com.lingring.domain.friend.exception.SelfFriendshipException;
+import com.lingring.domain.presence.dao.PresenceRepository;
 import com.lingring.domain.user.dao.UserRepository;
 import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
@@ -26,6 +28,7 @@ import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
+import java.time.Duration;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -42,6 +45,9 @@ class FriendServiceTest extends ServiceIntegrationHelper {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PresenceRepository presenceRepository;
 
     @Nested
     @DisplayName("sendRequest: 친구 요청 보내기")
@@ -271,6 +277,30 @@ class FriendServiceTest extends ServiceIntegrationHelper {
         }
 
         @Test
+        @DisplayName("온라인 친구는 online=true, 오프라인 친구는 online=false로 반환된다")
+        void getFriends_marksOnlineStateOfFriends() {
+            // given
+            final User me = saveUser("미나", null);
+            final User onlineFriend = saveUser("온라인친구", null);
+            final User offlineFriend = saveUser("오프라인친구", null);
+            saveAcceptedFriendship(me.getId(), onlineFriend.getId());
+            saveAcceptedFriendship(me.getId(), offlineFriend.getId());
+            presenceRepository.markOnline(onlineFriend.getId(), Duration.ofSeconds(10));
+
+            // when
+            final FriendsResponse response =
+                    friendService.getFriends(me.getId(), FriendshipStatus.ACCEPTED, null, 0, 20);
+
+            // then
+            assertThat(response.items())
+                    .extracting(FriendItemResponse::userId, FriendItemResponse::online)
+                    .containsExactlyInAnyOrder(
+                            tuple(onlineFriend.getId(), true),
+                            tuple(offlineFriend.getId(), false)
+                    );
+        }
+
+        @Test
         @DisplayName("direction=SENT면 내가 보낸 대기 요청만 반환한다")
         void getFriends_pending_directionSent_returnsOnlySent() {
             // given
@@ -402,6 +432,12 @@ class FriendServiceTest extends ServiceIntegrationHelper {
             // then
             assertThat(count).isEqualTo(2);
         }
+    }
+
+    private void saveAcceptedFriendship(final Long requesterId, final Long addresseeId) {
+        final Friendship friendship = Friendship.request(requesterId, addresseeId);
+        friendship.accept(addresseeId);
+        friendshipRepository.save(friendship);
     }
 
     private User saveUser(final String name, final String profileImageUrl) {
