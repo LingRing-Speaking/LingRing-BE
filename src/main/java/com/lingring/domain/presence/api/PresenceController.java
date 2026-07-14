@@ -1,5 +1,7 @@
 package com.lingring.domain.presence.api;
 
+import com.lingring.domain.presence.dto.response.HeartbeatResponse;
+import com.lingring.domain.presence.facade.PresenceFacade;
 import com.lingring.domain.presence.service.PresenceService;
 import com.lingring.global.common.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -10,12 +12,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class PresenceController implements PresenceApi {
 
+    private final PresenceFacade presenceFacade;
     private final PresenceService presenceService;
 
     @Override
-    public ApiResponse<Void> heartbeat(final Long userId) {
-        presenceService.heartbeat(userId);
-        return ApiResponse.success(HttpStatus.NO_CONTENT);
+    public ApiResponse<HeartbeatResponse> heartbeat(final Long userId) {
+        return ApiResponse.success(HttpStatus.OK, presenceFacade.heartbeat(userId));
     }
 
     @Override
