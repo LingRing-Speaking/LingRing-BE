@@ -7,6 +7,7 @@ import com.lingring.domain.user.dto.response.MeResponse;
 import com.lingring.domain.user.dto.response.PresignedUrlResponse;
 import com.lingring.domain.user.dto.response.UpdateProfileResponse;
 import com.lingring.domain.user.dto.response.UserProfileResponse;
+import com.lingring.domain.user.facade.UserProfileFacade;
 import com.lingring.domain.user.service.UserService;
 import com.lingring.domain.user.service.UserWithdrawalService;
 import com.lingring.global.common.response.ApiResponse;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController implements UserApi {
 
     private final UserService userService;
+    private final UserProfileFacade userProfileFacade;
     private final UserWithdrawalService userWithdrawalService;
 
     @Override
@@ -27,8 +29,8 @@ public class UserController implements UserApi {
     }
 
     @Override
-    public ApiResponse<UserProfileResponse> getUserProfile(final Long userId) {
-        return ApiResponse.success(HttpStatus.OK, userService.getUserProfile(userId));
+    public ApiResponse<UserProfileResponse> getUserProfile(final Long userId, final Long targetUserId) {
+        return ApiResponse.success(HttpStatus.OK, userProfileFacade.getUserProfile(userId, targetUserId));
     }
 
     @Override
