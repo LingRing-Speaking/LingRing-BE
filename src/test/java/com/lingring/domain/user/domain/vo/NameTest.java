@@ -39,9 +39,9 @@ class NameTest {
     }
 
     @Test
-    @DisplayName("trim 후 길이가 30자를 초과하면 예외가 발생한다")
+    @DisplayName("trim 후 길이가 12자를 초과하면 예외가 발생한다")
     void rejectTooLong() {
-        final String tooLong = "a".repeat(31);
+        final String tooLong = "a".repeat(13);
 
         assertThatThrownBy(() -> new Name(tooLong))
             .isInstanceOf(InvalidValueException.class)
@@ -50,21 +50,42 @@ class NameTest {
     }
 
     @Test
-    @DisplayName("최대 길이(30자) 이름은 생성된다")
+    @DisplayName("최대 길이(12자) 이름은 생성된다")
     void acceptMaxLength() {
-        final String thirtyChars = "a".repeat(30);
+        final String twelveChars = "a".repeat(12);
 
-        final Name name = new Name(thirtyChars);
+        final Name name = new Name(twelveChars);
 
-        assertThat(name.getValue()).isEqualTo(thirtyChars);
+        assertThat(name.getValue()).isEqualTo(twelveChars);
     }
 
-    @Test
-    @DisplayName("FE 랜덤 닉네임 형식(예: funny-otter-7891, 16자)이 허용된다")
-    void acceptFeNicknameFormat() {
-        final Name name = new Name("funny-otter-7891");
+    @ParameterizedTest
+    @ValueSource(strings = {"링링", "LingRing", "링링2", "한글English123"})
+    @DisplayName("한글·영문·숫자 조합 이름은 생성된다")
+    void acceptAllowedCharacters(final String value) {
+        final Name name = new Name(value);
 
-        assertThat(name.getValue()).isEqualTo("funny-otter-7891");
+        assertThat(name.getValue()).isEqualTo(value);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"링 링", "funny otter"})
+    @DisplayName("내부 공백이 포함되면 예외가 발생한다")
+    void rejectInternalWhitespace(final String value) {
+        assertThatThrownBy(() -> new Name(value))
+            .isInstanceOf(InvalidValueException.class)
+            .extracting("errorCode")
+            .isEqualTo(ErrorCode.INVALID_USER_NAME);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ling-ring", "링링!", "ling_ring", "링링@1", "링링."})
+    @DisplayName("특수문자(하이픈 포함)가 포함되면 예외가 발생한다")
+    void rejectSpecialCharacters(final String value) {
+        assertThatThrownBy(() -> new Name(value))
+            .isInstanceOf(InvalidValueException.class)
+            .extracting("errorCode")
+            .isEqualTo(ErrorCode.INVALID_USER_NAME);
     }
 
     @Test
