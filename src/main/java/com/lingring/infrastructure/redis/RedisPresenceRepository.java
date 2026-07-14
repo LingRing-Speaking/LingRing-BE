@@ -3,9 +3,10 @@ package com.lingring.infrastructure.redis;
 import com.lingring.domain.presence.dao.PresenceRepository;
 import java.time.Duration;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Repository;
@@ -38,12 +39,9 @@ public class RedisPresenceRepository implements PresenceRepository {
                 .map(userId -> KEY_PREFIX + userId)
                 .toList();
         final List<String> values = redisTemplate.opsForValue().multiGet(keys);
-        final Set<Long> onlineUserIds = new HashSet<>();
-        for (int i = 0; i < orderedUserIds.size(); i++) {
-            if (values.get(i) != null) {
-                onlineUserIds.add(orderedUserIds.get(i));
-            }
-        }
-        return onlineUserIds;
+        return IntStream.range(0, orderedUserIds.size())
+                .filter(index -> values.get(index) != null)
+                .mapToObj(orderedUserIds::get)
+                .collect(Collectors.toSet());
     }
 }
