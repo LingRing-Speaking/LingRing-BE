@@ -207,7 +207,7 @@ class FriendControllerTest {
                     .willReturn(new FriendsResponse(
                             List.of(new FriendItemResponse(
                                     2L, "보낸사람", null, FriendshipStatus.PENDING,
-                                    FriendRequestDirection.RECEIVED, LocalDateTime.now())),
+                                    FriendRequestDirection.RECEIVED, LocalDateTime.now(), false)),
                             false));
 
             // when

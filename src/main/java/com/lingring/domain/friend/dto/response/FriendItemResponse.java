@@ -11,17 +11,19 @@ public record FriendItemResponse(
         String profileImage,
         FriendshipStatus status,
         FriendRequestDirection direction,
-        LocalDateTime requestedAt
+        LocalDateTime requestedAt,
+        boolean online
 ) {
 
-    public static FriendItemResponse from(final FriendItemProjection projection) {
+    public static FriendItemResponse of(final FriendItemProjection projection, final boolean online) {
         return new FriendItemResponse(
                 projection.getUserId(),
                 projection.getNickname(),
                 projection.getProfileImage(),
                 projection.getStatus(),
                 FriendRequestDirection.valueOf(projection.getDirection()),
-                projection.getRequestedAt()
+                projection.getRequestedAt(),
+                online
         );
     }
 }
