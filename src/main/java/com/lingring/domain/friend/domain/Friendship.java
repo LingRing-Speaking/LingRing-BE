@@ -73,4 +73,8 @@ public class Friendship extends BaseTimeEntity {
     public boolean isPending() {
         return status == FriendshipStatus.PENDING;
     }
+
+    public boolean isAccepted() {
+        return status == FriendshipStatus.ACCEPTED;
+    }
 }

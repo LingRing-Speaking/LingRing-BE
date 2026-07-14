@@ -14,6 +14,10 @@ matching:
   cooldown-minutes: 1
   alive-ttl-seconds: 30
 
+call-invitation:
+  invite-ttl-seconds: 30
+  result-ttl-seconds: 60
+
 presence:
   ttl-seconds: 10
 

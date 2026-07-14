@@ -1,5 +1,6 @@
 package com.lingring.domain.presence.api;
 
+import com.lingring.domain.presence.dto.response.HeartbeatResponse;
 import com.lingring.global.auth.annotation.AuthUser;
 import com.lingring.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,17 +17,20 @@ public interface PresenceApi {
     @Operation(
             summary = "접속 상태 하트비트",
             description = "인증된 사용자를 온라인 상태로 갱신한다. 클라이언트는 포그라운드 동안 5초 주기로 호출한다. "
-                    + "10초(TTL) 안에 다음 하트비트가 없으면 자동으로 오프라인 처리된다."
+                    + "10초(TTL) 안에 다음 하트비트가 없으면 자동으로 오프라인 처리된다. "
+                    + "응답의 incomingInvitation에 수신 중인 통화 초대가 실려 온다 (없으면 null). "
+                    + "초대를 발견하면 수신 화면을 띄우고, 이후 응답에서 사라지면 발신자 취소·만료로 간주해 벨을 멈춘다."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "204",
-                    description = "온라인 상태 갱신 성공"
+                    responseCode = "200",
+                    description = "온라인 상태 갱신 성공",
+                    useReturnTypeSchema = true
             )
     })
-    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @ResponseStatus(HttpStatus.OK)
     @PostMapping("/me/presence")
-    ApiResponse<Void> heartbeat(
+    ApiResponse<HeartbeatResponse> heartbeat(
             @AuthUser final Long userId
     );
 
