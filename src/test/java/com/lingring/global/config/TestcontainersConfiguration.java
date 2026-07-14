@@ -33,7 +33,8 @@ public class TestcontainersConfiguration {
     @ServiceConnection
     static RedisContainer redisContainer(final RedisContainerProperties redisProperties) {
         if (redisInstance == null) {
-            redisInstance = new RedisContainer(DockerImageName.parse(redisProperties.image()));
+            redisInstance = new RedisContainer(DockerImageName.parse(redisProperties.image()))
+                    .withReuse(true);
             redisInstance.start();
         }
         return redisInstance;
