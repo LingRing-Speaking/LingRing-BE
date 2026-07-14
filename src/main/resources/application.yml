@@ -91,6 +91,10 @@ matching:
   cooldown-minutes: 10
   alive-ttl-seconds: 30          # 대기 유저 생존 TTL. 폴링(getStatus)마다 갱신, 미갱신 시 이탈로 간주해 큐에서 청소.
 
+call-invitation:
+  invite-ttl-seconds: 30         # 통화 초대 벨 울림 시간. TTL 만료 = 무응답, 발신자는 폴링 NONE으로 인지.
+  result-ttl-seconds: 60         # 수락/거절 결과가 발신자 폴링에 전달될 때까지의 보관 시간.
+
 presence:
   ttl-seconds: 10                # 접속 상태 TTL. 클라이언트 하트비트 주기(5초)의 2배 — 하트비트 1회 유실까지 온라인 유지.
 
