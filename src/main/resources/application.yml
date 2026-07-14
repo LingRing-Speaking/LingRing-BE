@@ -91,6 +91,9 @@ matching:
   cooldown-minutes: 10
   alive-ttl-seconds: 30          # 대기 유저 생존 TTL. 폴링(getStatus)마다 갱신, 미갱신 시 이탈로 간주해 큐에서 청소.
 
+presence:
+  ttl-seconds: 10                # 접속 상태 TTL. 클라이언트 하트비트 주기(5초)의 2배 — 하트비트 1회 유실까지 온라인 유지.
+
 signaling:
   heartbeat-interval: 25s        # 유휴 시그널링 WS keepalive ping 주기. ALB idle timeout(기본 60s)보다 짧게.
 
