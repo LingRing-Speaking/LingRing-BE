@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.lingring.domain.user.dao.UserRepository;
 import com.lingring.domain.user.dao.UserStatsRepository;
+import com.lingring.domain.user.dao.dto.UserProfileProjection;
 import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.UserStats;
@@ -14,7 +15,6 @@ import com.lingring.domain.user.dto.request.UpdateProfileRequest;
 import com.lingring.domain.user.dto.response.MeResponse;
 import com.lingring.domain.user.dto.response.PresignedUrlResponse;
 import com.lingring.domain.user.dto.response.UpdateProfileResponse;
-import com.lingring.domain.user.dto.response.UserProfileResponse;
 import com.lingring.domain.user.exception.NicknameConflictException;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.error.ErrorCode;
@@ -116,7 +116,7 @@ class UserServiceTest extends ServiceIntegrationHelper {
 
         @Test
         @DisplayName("user와 stats가 모두 존재하면 id, nickname, profileImage, level, mannerTemperature를 반환한다")
-        void getUserProfile_whenUserAndStatsExist_returnsResponse() {
+        void getUserProfile_whenUserAndStatsExist_returnsProjection() {
             // given
             final String profileImageUrl = "https://lingring-dev.s3.ap-northeast-2.amazonaws.com/profile-images/1/abc.jpg";
             final User saved = userRepository.save(
@@ -125,14 +125,14 @@ class UserServiceTest extends ServiceIntegrationHelper {
             userStatsRepository.save(UserStats.create(saved.getId()));
 
             // when
-            final UserProfileResponse response = userService.getUserProfile(saved.getId());
+            final UserProfileProjection profile = userService.getUserProfile(saved.getId());
 
             // then
-            assertThat(response.id()).isEqualTo(saved.getId());
-            assertThat(response.nickname()).isEqualTo("Sophie");
-            assertThat(response.profileImage()).isEqualTo(profileImageUrl);
-            assertThat(response.level()).isNotNull();
-            assertThat(response.mannerTemperature()).isNotNull();
+            assertThat(profile.getId()).isEqualTo(saved.getId());
+            assertThat(profile.getNickname()).isEqualTo("Sophie");
+            assertThat(profile.getProfileImage()).isEqualTo(profileImageUrl);
+            assertThat(profile.getLevel()).isNotNull();
+            assertThat(profile.getMannerTemperature()).isNotNull();
         }
 
         @Test
@@ -145,10 +145,10 @@ class UserServiceTest extends ServiceIntegrationHelper {
             userStatsRepository.save(UserStats.create(saved.getId()));
 
             // when
-            final UserProfileResponse response = userService.getUserProfile(saved.getId());
+            final UserProfileProjection profile = userService.getUserProfile(saved.getId());
 
             // then
-            assertThat(response.profileImage()).isNull();
+            assertThat(profile.getProfileImage()).isNull();
         }
 
         @Test

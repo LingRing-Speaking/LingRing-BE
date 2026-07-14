@@ -94,6 +94,11 @@ public class FriendService {
     }
 
     @Transactional(readOnly = true)
+    public FriendRelation getRelation(final Long userId, final Long targetUserId) {
+        return resolveRelation(userId, targetUserId);
+    }
+
+    @Transactional(readOnly = true)
     public ReceivedCountResponse receivedRequestCount(final Long userId) {
         final long count = friendshipRepository.countByAddresseeIdAndStatus(userId, FriendshipStatus.PENDING);
         return new ReceivedCountResponse(count);

@@ -2,6 +2,7 @@ package com.lingring.domain.user.service;
 
 import com.lingring.domain.user.dao.UserRepository;
 import com.lingring.domain.user.dao.UserStatsRepository;
+import com.lingring.domain.user.dao.dto.UserProfileProjection;
 import com.lingring.domain.user.domain.port.ProfileImageStorage;
 import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
@@ -15,7 +16,6 @@ import com.lingring.domain.user.dto.request.UpdateProfileRequest;
 import com.lingring.domain.user.dto.response.MeResponse;
 import com.lingring.domain.user.dto.response.PresignedUrlResponse;
 import com.lingring.domain.user.dto.response.UpdateProfileResponse;
-import com.lingring.domain.user.dto.response.UserProfileResponse;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
 import com.lingring.global.error.exception.NotFoundException;
@@ -47,9 +47,8 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public UserProfileResponse getUserProfile(final Long userId) {
+    public UserProfileProjection getUserProfile(final Long userId) {
         return userRepository.findProfileById(userId)
-                .map(UserProfileResponse::from)
                 .orElseThrow(() -> new NotFoundException(
                         ErrorCode.USER_NOT_FOUND,
                         "ID가 %d인 사용자를 찾을 수 없습니다.".formatted(userId)

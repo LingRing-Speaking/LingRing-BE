@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import com.lingring.domain.friend.domain.FriendRelation;
 import com.lingring.domain.user.domain.Level;
 import com.lingring.domain.user.domain.WithdrawReason;
 import com.lingring.domain.user.dto.request.PresignedUrlRequest;
@@ -19,6 +20,7 @@ import com.lingring.domain.user.dto.response.MeResponse;
 import com.lingring.domain.user.dto.response.PresignedUrlResponse;
 import com.lingring.domain.user.dto.response.UpdateProfileResponse;
 import com.lingring.domain.user.dto.response.UserProfileResponse;
+import com.lingring.domain.user.facade.UserProfileFacade;
 import com.lingring.domain.user.service.UserService;
 import com.lingring.domain.user.service.UserWithdrawalService;
 import com.lingring.global.auth.context.AuthContext;
@@ -52,6 +54,9 @@ class UserControllerTest {
 
     @MockitoBean
     private UserService userService;
+
+    @MockitoBean
+    private UserProfileFacade userProfileFacade;
 
     @MockitoBean
     private UserWithdrawalService userWithdrawalService;
@@ -115,23 +120,23 @@ class UserControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /api/v1/users/{userId}")
+    @DisplayName("GET /api/v1/users/{targetUserId}")
     class GetUserProfile {
 
         @Test
-        @DisplayName("사용자가 존재하면 200 응답과 id, nickname, level, mannerTemperature를 반환한다")
+        @DisplayName("사용자가 존재하면 200 응답과 id, nickname, level, mannerTemperature, relation을 반환한다")
         void getUserProfile_whenUserExists_returns200WithBody() throws Exception {
             // given
             final Long callerId = 1L;
             final Long targetId = 7L;
             final String profileImageUrl = "https://lingring-dev.s3.ap-northeast-2.amazonaws.com/profile-images/7/abc.jpg";
             AuthContext.set(callerId);
-            given(userService.getUserProfile(targetId)).willReturn(new UserProfileResponse(
-                    targetId, "Sophie", profileImageUrl, Level.ADVANCED, new BigDecimal("38.5")
+            given(userProfileFacade.getUserProfile(callerId, targetId)).willReturn(new UserProfileResponse(
+                    targetId, "Sophie", profileImageUrl, Level.ADVANCED, new BigDecimal("38.5"), FriendRelation.NONE
             ));
 
             // when
-            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/users/{userId}", targetId)
+            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/users/{targetUserId}", targetId)
                             .accept(MediaType.APPLICATION_JSON))
                     .andReturn()
                     .getResponse();
@@ -146,6 +151,7 @@ class UserControllerTest {
             assertThat(body.get("data").get("level").asText()).isEqualTo("ADVANCED");
             assertThat(body.get("data").get("mannerTemperature").decimalValue())
                     .isEqualByComparingTo(new BigDecimal("38.5"));
+            assertThat(body.get("data").get("relation").asText()).isEqualTo("NONE");
         }
 
         @Test
@@ -158,10 +164,10 @@ class UserControllerTest {
             willThrow(new NotFoundException(
                     ErrorCode.USER_NOT_FOUND,
                     "ID가 %d인 사용자를 찾을 수 없습니다.".formatted(targetId)
-            )).given(userService).getUserProfile(targetId);
+            )).given(userProfileFacade).getUserProfile(callerId, targetId);
 
             // when
-            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/users/{userId}", targetId)
+            final MockHttpServletResponse response = mockMvc.perform(get("/api/v1/users/{targetUserId}", targetId)
                             .accept(MediaType.APPLICATION_JSON))
                     .andReturn()
                     .getResponse();
