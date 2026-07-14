@@ -96,6 +96,13 @@ public enum ErrorCode {
     // Matching Error
     MATCH_CONFIRMATION_NOT_FOUND(NOT_FOUND, "수락/거절할 매칭이 없습니다. 다시 매칭을 시작해주세요."),
 
+    // Call Invitation Error
+    SELF_CALL_INVITATION_NOT_ALLOWED(BAD_REQUEST, "자기 자신에게 통화 초대를 보낼 수 없습니다."),
+    CALL_INVITEE_OFFLINE(CONFLICT, "상대방이 오프라인이어서 통화 초대를 보낼 수 없습니다."),
+    CALL_INVITATION_ALREADY_SENT(CONFLICT, "이미 진행 중인 통화 초대가 있습니다."),
+    CALL_INVITEE_BUSY(CONFLICT, "상대방이 다른 통화 초대를 받는 중입니다."),
+    CALL_INVITATION_NOT_FOUND(NOT_FOUND, "수락하거나 거절할 통화 초대가 없습니다."),
+
     // Signaling Error
     SIGNALING_INVALID_USER(BAD_REQUEST, "시그널링 연결에 유효하지 않은 사용자입니다."),
     SIGNALING_INVALID_PAYLOAD(BAD_REQUEST, "유효하지 않은 시그널링 메시지입니다."),
