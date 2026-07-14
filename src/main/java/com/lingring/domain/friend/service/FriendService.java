@@ -71,8 +71,8 @@ public class FriendService {
             final int page,
             final int size
     ) {
-        final boolean includeSent = direction == null || direction == FriendRequestDirection.SENT;
-        final boolean includeReceived = direction == null || direction == FriendRequestDirection.RECEIVED;
+        final boolean includeSent = includesSent(direction);
+        final boolean includeReceived = includesReceived(direction);
         final PageSize pageSize = PageSize.clamp(size);
         final Slice<FriendItemProjection> slice = friendshipRepository.findItemsByUserIdAndStatus(
                 userId, status, includeSent, includeReceived, PageRequest.of(page, pageSize.value()));
@@ -89,6 +89,15 @@ public class FriendService {
     public ReceivedCountResponse receivedRequestCount(final Long userId) {
         final long count = friendshipRepository.countByAddresseeIdAndStatus(userId, FriendshipStatus.PENDING);
         return new ReceivedCountResponse(count);
+    }
+
+    // direction 미지정(null)이면 양방향을 포함한다.
+    private boolean includesSent(final FriendRequestDirection direction) {
+        return direction != FriendRequestDirection.RECEIVED;
+    }
+
+    private boolean includesReceived(final FriendRequestDirection direction) {
+        return direction != FriendRequestDirection.SENT;
     }
 
     private FriendRelation resolveRelation(final Long userId, final Long targetUserId) {
