@@ -73,9 +73,16 @@ class SocialLoginFacadeTest extends ServiceIntegrationHelper {
                 }
                 return "apple-sub-of:" + idToken;
             };
+            final IdTokenVerifier google = idToken -> {
+                if (INVALID_ID_TOKEN.equals(idToken)) {
+                    throw new UnauthorizedException(ErrorCode.INVALID_ID_TOKEN, "test stub: invalid");
+                }
+                return "google-sub-of:" + idToken;
+            };
             return new IdTokenVerifiers(Map.of(
                     Provider.KAKAO, kakao,
-                    Provider.APPLE, apple
+                    Provider.APPLE, apple,
+                    Provider.GOOGLE, google
             ));
         }
 
@@ -261,6 +268,67 @@ class SocialLoginFacadeTest extends ServiceIntegrationHelper {
             assertThat(userRepository.findByProviderAndProviderUserId(
                     Provider.APPLE, "apple-sub-of:" + VALID_ID_TOKEN
             )).isPresent();
+        }
+    }
+
+    @Nested
+    @DisplayName("socialLogin: Google provider")
+    class Google {
+
+        @Test
+        @DisplayName("GOOGLE 신규 사용자는 가입되고 requiresOnboarding 등 기존과 동일한 응답 필드를 받는다")
+        void socialLogin_whenGoogleNewUserWithNickname_createsUserAndIssuesTokens() {
+            // given
+            final SocialLoginRequest request = new SocialLoginRequest(
+                    "google", VALID_ID_TOKEN, null, "구글유저", null
+            );
+
+            // when
+            final AuthTokenResponse response = socialLoginFacade.socialLogin(request);
+
+            // then
+            assertThat(response.accessToken()).isNotBlank();
+            assertThat(response.refreshToken()).isNotBlank();
+            assertThat(response.user().nickname()).isEqualTo("구글유저");
+            assertThat(response.user().requiresOnboarding()).isTrue();
+            assertThat(response.user().agreedTermsVersion()).isNull();
+            assertThat(userRepository.findByProviderAndProviderUserId(
+                    Provider.GOOGLE, "google-sub-of:" + VALID_ID_TOKEN
+            )).isPresent();
+            assertThat(refreshTokenRepository.exists(response.user().id())).isTrue();
+        }
+
+        @Test
+        @DisplayName("GOOGLE 기존 사용자는 nickname 없이도 토큰을 받는다")
+        void socialLogin_whenGoogleExistingUser_returnsTokensWithoutNickname() {
+            // given — 사전 가입
+            socialLoginFacade.socialLogin(
+                    new SocialLoginRequest("google", VALID_ID_TOKEN, null, "구글유저", null)
+            );
+
+            // when
+            final AuthTokenResponse response = socialLoginFacade.socialLogin(
+                    new SocialLoginRequest("google", VALID_ID_TOKEN, null, null, null)
+            );
+
+            // then
+            assertThat(response.user().nickname()).isEqualTo("구글유저");
+            assertThat(refreshTokenRepository.exists(response.user().id())).isTrue();
+        }
+
+        @Test
+        @DisplayName("GOOGLE id_token이 invalid면 UnauthorizedException이 전파된다")
+        void socialLogin_whenGoogleIdTokenInvalid_propagatesUnauthorized() {
+            // given
+            final SocialLoginRequest request = new SocialLoginRequest(
+                    "google", INVALID_ID_TOKEN, null, "구글유저", null
+            );
+
+            // when & then
+            assertThatThrownBy(() -> socialLoginFacade.socialLogin(request))
+                    .isInstanceOf(UnauthorizedException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.INVALID_ID_TOKEN);
         }
     }
 

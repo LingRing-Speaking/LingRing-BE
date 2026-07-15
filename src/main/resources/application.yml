@@ -45,6 +45,10 @@ auth:
     private-key: ${APPLE_PRIVATE_KEY}
     token-encrypt-password: ${APPLE_TOKEN_ENCRYPT_PASSWORD}
     token-encrypt-salt: ${APPLE_TOKEN_ENCRYPT_SALT}
+  google:
+    iss: https://accounts.google.com,accounts.google.com   # 구글은 두 형태 모두 발급 가능
+    aud: 393487987098-d2aupcoa08popjt19u6p65jd5m1fsld7.apps.googleusercontent.com,393487987098-fmb01i23fhup8sh6otp3h03cqf1fse6v.apps.googleusercontent.com   # web(Android 발급)·iOS client ID (공개 식별자)
+    jwks-uri: https://www.googleapis.com/oauth2/v3/certs
   demo:
     enabled: false               # 안전 기본값. profile에서 명시적으로 enable.
     tokens: {}                   # 안전 기본값.
