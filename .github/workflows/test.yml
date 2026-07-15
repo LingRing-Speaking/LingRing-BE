@@ -34,5 +34,9 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
+      # reuse 컨테이너는 Ryuk 관리 밖 — JVM 스톨 시 테스트 도중 컨테이너가 회수되는 문제 방지
+      - name: Enable Testcontainers reuse
+        run: echo "testcontainers.reuse.enable=true" >> ~/.testcontainers.properties
+
       - name: Run tests
         run: ./gradlew test --no-daemon

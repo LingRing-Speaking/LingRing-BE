@@ -1,0 +1,29 @@
+package com.lingring.domain.friend.dto.response;
+
+import com.lingring.domain.friend.dao.dto.FriendItemProjection;
+import com.lingring.domain.friend.domain.FriendRequestDirection;
+import com.lingring.domain.friend.domain.FriendshipStatus;
+import java.time.LocalDateTime;
+
+public record FriendItemResponse(
+        Long userId,
+        String nickname,
+        String profileImage,
+        FriendshipStatus status,
+        FriendRequestDirection direction,
+        LocalDateTime requestedAt,
+        boolean online
+) {
+
+    public static FriendItemResponse of(final FriendItemProjection projection, final boolean online) {
+        return new FriendItemResponse(
+                projection.getUserId(),
+                projection.getNickname(),
+                projection.getProfileImage(),
+                projection.getStatus(),
+                FriendRequestDirection.valueOf(projection.getDirection()),
+                projection.getRequestedAt(),
+                online
+        );
+    }
+}

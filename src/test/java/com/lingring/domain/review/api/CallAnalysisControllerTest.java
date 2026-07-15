@@ -94,11 +94,13 @@ class CallAnalysisControllerTest {
                             CallAnalysisStatus.COMPLETED,
                             "gemini-2.5-flash",
                             List.of(new MistakeItemResponse(
+                                    0,
                                     "GRAMMAR",
                                     "I goes to school.",
                                     "I go to school.",
                                     "주어가 1인칭일 때는 go를 씁니다.",
-                                    "나는 학교에 갑니다."
+                                    "나는 학교에 갑니다.",
+                                    900L
                             )),
                             List.of(new PositiveItemResponse(
                                     "Sounds good.",
@@ -120,6 +122,8 @@ class CallAnalysisControllerTest {
             assertThat(data.get("modelIdentifier").asText()).isEqualTo("gemini-2.5-flash");
             assertThat(data.get("mistakes").size()).isEqualTo(1);
             assertThat(data.get("mistakes").get(0).get("tag").asText()).isEqualTo("GRAMMAR");
+            assertThat(data.get("mistakes").get(0).get("id").asInt()).isEqualTo(0);
+            assertThat(data.get("mistakes").get(0).get("bookmarkId").asLong()).isEqualTo(900L);
             assertThat(data.get("positives").size()).isEqualTo(1);
             assertThat(data.get("positives").get(0).get("sentence").asText()).isEqualTo("Sounds good.");
         }

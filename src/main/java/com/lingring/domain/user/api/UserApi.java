@@ -48,7 +48,8 @@ public interface UserApi {
 
     @Operation(
             summary = "타인 프로필 조회",
-            description = "userId에 해당하는 사용자의 공개 프로필(id, nickname, level, mannerTemperature)을 반환한다."
+            description = "targetUserId에 해당하는 사용자의 프로필(id, nickname, level, mannerTemperature)과 "
+                    + "조회자와 대상 간의 관계(relation: NONE/REQUEST_SENT/REQUEST_RECEIVED/FRIEND/SELF)를 반환한다."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -66,10 +67,11 @@ public interface UserApi {
             )
     })
     @ResponseStatus(HttpStatus.OK)
-    @GetMapping("/users/{userId}")
+    @GetMapping("/users/{targetUserId}")
     ApiResponse<UserProfileResponse> getUserProfile(
+            @AuthUser final Long userId,
             @Parameter(description = "조회 대상 user PK", example = "7")
-            @PathVariable final Long userId
+            @PathVariable final Long targetUserId
     );
 
     @Operation(

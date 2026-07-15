@@ -74,13 +74,13 @@ class DemoLoginFacadeTest {
     void demoLogin_whenValid_returnsAuthTokenResponse() {
         // given
         final DemoLoginFacade facade = newFacade(true, Map.of("REVIEWER_A", "review-token-a"));
-        final User demoUser = User.createFromOAuth(Provider.KAKAO, "REVIEWER_A", new Name("Reviewer A"), null);
+        final User demoUser = User.createFromOAuth(Provider.KAKAO, "REVIEWER_A", new Name("ReviewerA"), null);
         given(userService.findByProvider(eq(Provider.KAKAO), eq("REVIEWER_A")))
                 .willReturn(Optional.of(demoUser));
         final AuthTokenResponse expected = new AuthTokenResponse(
                 "demo-access",
                 "demo-refresh",
-                new UserSummary(7L, "Reviewer A", null, false, "2026-06-30")
+                new UserSummary(7L, "ReviewerA", null, false, "2026-06-30")
         );
         given(authService.issueTokensFor(demoUser)).willReturn(expected);
 

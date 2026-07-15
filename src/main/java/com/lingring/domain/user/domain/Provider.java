@@ -7,7 +7,8 @@ import java.util.Arrays;
 public enum Provider {
 
     KAKAO,
-    APPLE;
+    APPLE,
+    GOOGLE;
 
     public static Provider from(final String raw) {
         if (raw == null || raw.isBlank()) {

@@ -54,8 +54,10 @@ public enum ErrorCode {
     // Expression Error
     INVALID_EXPRESSION(BAD_REQUEST, "유효하지 않은 표현입니다."),
     INVALID_MEANING(BAD_REQUEST, "유효하지 않은 뜻입니다."),
+    INVALID_SOURCE_SUB_INDEX(BAD_REQUEST, "유효하지 않은 표현 출처입니다."),
     RECOMMENDED_EXPRESSION_NOT_FOUND(NOT_FOUND, "오늘의 추천 표현을 찾을 수 없습니다."),
     ICEBREAKER_NOT_FOUND(NOT_FOUND, "아이스브레이커를 찾을 수 없습니다."),
+    ANALYSIS_MISTAKE_NOT_FOUND(NOT_FOUND, "분석 결과에서 해당 표현을 찾을 수 없습니다."),
 
     // UserBlock Error
     SELF_BLOCK_NOT_ALLOWED(BAD_REQUEST, "자기 자신을 차단할 수 없습니다."),
@@ -94,9 +96,23 @@ public enum ErrorCode {
     // Matching Error
     MATCH_CONFIRMATION_NOT_FOUND(NOT_FOUND, "수락/거절할 매칭이 없습니다. 다시 매칭을 시작해주세요."),
 
+    // Call Invitation Error
+    SELF_CALL_INVITATION_NOT_ALLOWED(BAD_REQUEST, "자기 자신에게 통화 초대를 보낼 수 없습니다."),
+    CALL_INVITEE_OFFLINE(CONFLICT, "상대방이 오프라인이어서 통화 초대를 보낼 수 없습니다."),
+    CALL_INVITATION_ALREADY_SENT(CONFLICT, "이미 진행 중인 통화 초대가 있습니다."),
+    CALL_INVITEE_BUSY(CONFLICT, "상대방이 다른 통화 초대를 받는 중입니다."),
+    CALL_INVITATION_NOT_FOUND(NOT_FOUND, "수락하거나 거절할 통화 초대가 없습니다."),
+
     // Signaling Error
     SIGNALING_INVALID_USER(BAD_REQUEST, "시그널링 연결에 유효하지 않은 사용자입니다."),
     SIGNALING_INVALID_PAYLOAD(BAD_REQUEST, "유효하지 않은 시그널링 메시지입니다."),
+
+    // Friend Error
+    SELF_FRIEND_REQUEST_NOT_ALLOWED(BAD_REQUEST, "자기 자신에게 친구 요청을 보낼 수 없습니다."),
+    DUPLICATE_FRIEND_REQUEST(CONFLICT, "이미 보낸 친구 요청이 있습니다."),
+    ALREADY_FRIENDS(CONFLICT, "이미 친구인 사용자입니다."),
+    FRIENDSHIP_NOT_FOUND(NOT_FOUND, "친구 관계를 찾을 수 없습니다."),
+    FRIENDSHIP_ACCESS_DENIED(FORBIDDEN, "해당 친구 관계에 대한 권한이 없습니다."),
     ;
 
     private final HttpStatus httpStatus;

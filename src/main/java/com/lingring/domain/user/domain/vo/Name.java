@@ -6,6 +6,7 @@ import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.InvalidValueException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
+import java.util.regex.Pattern;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,7 +19,9 @@ import lombok.NonNull;
 public class Name {
 
     private static final int MIN_LENGTH = 2;
-    private static final int MAX_LENGTH = 30;
+    private static final int MAX_LENGTH = 12;
+
+    private static final Pattern ALLOWED_CHARACTERS = Pattern.compile("^[가-힣a-zA-Z0-9]+$");
 
     @Column(name = "name", nullable = false, length = MAX_LENGTH)
     private final String value;
@@ -34,6 +37,12 @@ public class Name {
             throw new InvalidValueException(
                 ErrorCode.INVALID_USER_NAME,
                 "이름은 %d자 이상 %d자 이하여야 합니다.".formatted(MIN_LENGTH, MAX_LENGTH)
+            );
+        }
+        if (!ALLOWED_CHARACTERS.matcher(value).matches()) {
+            throw new InvalidValueException(
+                ErrorCode.INVALID_USER_NAME,
+                "이름은 한글·영문·숫자만 사용할 수 있습니다: %s".formatted(value)
             );
         }
     }
