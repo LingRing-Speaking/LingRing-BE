@@ -10,6 +10,7 @@ import com.nimbusds.jose.proc.SecurityContext;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -33,12 +34,19 @@ public class IdTokenVerifierConfig {
     }
 
     @Bean
+    public JWKSource<SecurityContext> googleJwkSource(
+            @Value("${auth.google.jwks-uri}") final String jwksUri
+    ) throws MalformedURLException {
+        return JWKSourceBuilder.create(URI.create(jwksUri).toURL()).build();
+    }
+
+    @Bean
     public IdTokenVerifier kakaoIdTokenVerifier(
             @Value("${auth.kakao.iss}") final String iss,
             @Value("${auth.kakao.aud}") final String aud,
             @Qualifier("kakaoJwkSource") final JWKSource<SecurityContext> kakaoJwkSource
     ) {
-        return new JwksIdTokenVerifier(Provider.KAKAO, iss, aud, kakaoJwkSource);
+        return new JwksIdTokenVerifier(Provider.KAKAO, Set.of(iss), Set.of(aud), kakaoJwkSource);
     }
 
     @Bean
@@ -47,17 +55,28 @@ public class IdTokenVerifierConfig {
             @Value("${auth.apple.aud}") final String aud,
             @Qualifier("appleJwkSource") final JWKSource<SecurityContext> appleJwkSource
     ) {
-        return new JwksIdTokenVerifier(Provider.APPLE, iss, aud, appleJwkSource);
+        return new JwksIdTokenVerifier(Provider.APPLE, Set.of(iss), Set.of(aud), appleJwkSource);
+    }
+
+    @Bean
+    public IdTokenVerifier googleIdTokenVerifier(
+            @Value("${auth.google.iss}") final Set<String> iss,
+            @Value("${auth.google.aud}") final Set<String> aud,
+            @Qualifier("googleJwkSource") final JWKSource<SecurityContext> googleJwkSource
+    ) {
+        return new JwksIdTokenVerifier(Provider.GOOGLE, iss, aud, googleJwkSource);
     }
 
     @Bean
     public IdTokenVerifiers idTokenVerifiers(
             @Qualifier("kakaoIdTokenVerifier") final IdTokenVerifier kakaoIdTokenVerifier,
-            @Qualifier("appleIdTokenVerifier") final IdTokenVerifier appleIdTokenVerifier
+            @Qualifier("appleIdTokenVerifier") final IdTokenVerifier appleIdTokenVerifier,
+            @Qualifier("googleIdTokenVerifier") final IdTokenVerifier googleIdTokenVerifier
     ) {
         return new IdTokenVerifiers(Map.of(
                 Provider.KAKAO, kakaoIdTokenVerifier,
-                Provider.APPLE, appleIdTokenVerifier
+                Provider.APPLE, appleIdTokenVerifier,
+                Provider.GOOGLE, googleIdTokenVerifier
         ));
     }
 }

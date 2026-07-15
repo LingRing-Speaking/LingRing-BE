@@ -43,6 +43,10 @@ auth:
     private-key: TEST_PRIVATE_KEY_PEM
     token-encrypt-password: test-encrypt-password
     token-encrypt-salt: deadbeefcafebabe
+  google:
+    iss: https://accounts.google.com,accounts.google.com
+    aud: test-google-web-client-id,test-google-ios-client-id
+    jwks-uri: https://www.googleapis.com/oauth2/v3/certs
 
 test-datasource:
   version: "8.4"

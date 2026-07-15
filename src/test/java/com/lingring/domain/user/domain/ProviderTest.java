@@ -38,6 +38,17 @@ class ProviderTest {
             // then
             assertThat(provider).isEqualTo(Provider.APPLE);
         }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"google", "GOOGLE", "Google"})
+        @DisplayName("대소문자 구분 없이 GOOGLE을 반환한다")
+        void from_whenGoogleVariants_returnsGoogle(final String raw) {
+            // when
+            final Provider provider = Provider.from(raw);
+
+            // then
+            assertThat(provider).isEqualTo(Provider.GOOGLE);
+        }
     }
 
     @Nested
@@ -66,7 +77,7 @@ class ProviderTest {
         }
 
         @ParameterizedTest
-        @ValueSource(strings = {"facebook", "google", "naver", "unknown"})
+        @ValueSource(strings = {"facebook", "naver", "unknown"})
         @DisplayName("미지원 provider면 NOT_SUPPORTED 예외를 던진다")
         void from_whenUnsupported_throwsNotSupported(final String raw) {
             // when & then
