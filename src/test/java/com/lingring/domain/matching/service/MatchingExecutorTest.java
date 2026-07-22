@@ -8,15 +8,21 @@ import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.domain.MatchConfirmation;
 import com.lingring.domain.moderation.dao.UserBlockRepository;
 import com.lingring.domain.moderation.domain.UserBlock;
+import com.lingring.domain.userevent.domain.EventName;
+import com.lingring.domain.userevent.event.UserActionEvent;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 
+@RecordApplicationEvents
 class MatchingExecutorTest extends ServiceIntegrationHelper {
 
     private static final LocalDateTime BASE = LocalDateTime.of(2026, 4, 27, 10, 0);
@@ -36,6 +42,9 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
 
     @Autowired
     private UserBlockRepository userBlockRepository;
+
+    @Autowired
+    private ApplicationEvents events;
 
     // 큐 적재 + 생존 표시 (정상적으로 폴링 중인 대기 유저를 시뮬레이션)
     private void enqueueAlive(final Long userId, final LocalDateTime enqueuedAt) {
@@ -231,6 +240,26 @@ class MatchingExecutorTest extends ServiceIntegrationHelper {
 
             // then
             assertThat(matchingQueueRepository.contains(1L)).isFalse();
+        }
+
+        @Test
+        @DisplayName("이탈로 청소된 후보에 requeued=false로 MATCHING_FAILED(CONNECTION_LOST)를 발행한다")
+        void executeRound_reapsDeadCandidate_publishesConnectionLost() {
+            // given: alive 키 없는 유령 (이탈 후 큐에만 잔류)
+            matchingQueueRepository.enqueue(1L, BASE);
+
+            // when
+            matchingExecutor.executeRound();
+
+            // then
+            final List<UserActionEvent> published = events.stream(UserActionEvent.class)
+                    .filter(event -> event.eventName() == EventName.MATCHING_FAILED)
+                    .toList();
+            assertThat(published).hasSize(1);
+            assertThat(published.get(0).userId()).isEqualTo(1L);
+            assertThat(published.get(0).properties())
+                    .containsEntry("reason", "CONNECTION_LOST")
+                    .containsEntry("requeued", false);
         }
     }
 }
