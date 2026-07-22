@@ -56,6 +56,12 @@ public class RedisMatchingQueueRepository implements MatchingQueueRepository {
     }
 
     @Override
+    public Optional<LocalDateTime> findEnqueuedAt(final Long userId) {
+        final Double score = redisTemplate.opsForZSet().score(QUEUE_KEY, userId.toString());
+        return Optional.ofNullable(score).map(this::fromScore);
+    }
+
+    @Override
     public void markAlive(final Long userId, final Duration ttl) {
         redisTemplate.opsForValue().set(aliveKey(userId), ALIVE_VALUE, ttl);
     }

@@ -4,9 +4,12 @@ import com.lingring.global.config.MatchingProperties;
 import com.lingring.domain.matching.dao.MatchConfirmationRepository;
 import com.lingring.domain.matching.dao.MatchingQueueRepository;
 import com.lingring.domain.matching.domain.MatchingCandidate;
+import com.lingring.domain.matching.domain.MatchingFailReason;
 import com.lingring.domain.matching.domain.MatchingQueue;
 import com.lingring.domain.matching.domain.policy.MatchingPolicies;
+import com.lingring.domain.userevent.event.UserActionEvent;
 import com.lingring.global.util.DateTimeProvider;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -15,6 +18,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -28,6 +32,7 @@ public class MatchingExecutor {
     private final MatchingPolicies matchingPolicies;
     private final DateTimeProvider dateTimeProvider;
     private final MatchingProperties matchingProperties;
+    private final ApplicationEventPublisher eventPublisher;
 
     public void executeRound() {
         final List<MatchingCandidate> candidates = matchingQueueRepository.findAllOrderByEnqueuedAt();
@@ -52,8 +57,20 @@ public class MatchingExecutor {
                 continue;
             }
             matchingQueueRepository.remove(candidate.userId());
+            publishConnectionLost(candidate);
         }
         return live;
+    }
+
+    private void publishConnectionLost(final MatchingCandidate candidate) {
+        final LocalDateTime now = dateTimeProvider.now();
+        eventPublisher.publishEvent(UserActionEvent.matchingFailed(
+                candidate.userId(),
+                MatchingFailReason.CONNECTION_LOST.name(),
+                Duration.between(candidate.enqueuedAt(), now).toMillis(),
+                false,
+                now
+        ));
     }
 
     private void checkAndExecute(final MatchingCandidate self, final Set<Long> consumed, final MatchingQueue queue) {

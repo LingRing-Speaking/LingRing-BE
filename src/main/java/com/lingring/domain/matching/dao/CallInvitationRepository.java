@@ -18,8 +18,8 @@ public interface CallInvitationRepository {
 
     boolean existsByInviter(Long inviterId);
 
-    // 자신이 만든 초대만 제거 (같은 수신자에게 도착한 제3자의 초대 보호), 멱등
-    void cancelByInviter(Long inviterId);
+    // 자신이 만든 초대만 제거 (같은 수신자에게 도착한 제3자의 초대 보호), 멱등. 발신 초대가 실제 존재했으면 true
+    boolean cancelByInviter(Long inviterId);
 
     void saveResult(Long inviterId, CallInvitationResult result, Duration ttl);
 

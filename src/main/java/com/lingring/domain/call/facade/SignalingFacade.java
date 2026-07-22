@@ -1,6 +1,7 @@
 package com.lingring.domain.call.facade;
 
 import com.lingring.domain.call.domain.Call;
+import com.lingring.domain.call.domain.CallEndReason;
 import com.lingring.domain.call.service.CallService;
 import com.lingring.domain.call.domain.SignalingMessage;
 import com.lingring.domain.call.domain.SignalingMessageType;
@@ -35,7 +36,7 @@ public class SignalingFacade {
         }
         if (type == SignalingMessageType.HANGUP) {
             messageRouter.forwardToCounterpart(call, senderId, message);
-            callService.endCall(roomId);
+            callService.endCall(roomId, CallEndReason.HANGUP);
             readyCoordinator.cleanupRoom(roomId);
             return;
         }
@@ -59,7 +60,7 @@ public class SignalingFacade {
             return;
         }
         messageRouter.publishHangup(call, userId);
-        callService.endCall(roomId);
+        callService.endCall(roomId, CallEndReason.DISCONNECTED);
         readyCoordinator.cleanupRoom(roomId);
     }
 
