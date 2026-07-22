@@ -13,9 +13,12 @@ import com.lingring.domain.matching.domain.MatchingCandidate;
 import com.lingring.domain.matching.domain.MatchingPollStatus;
 import com.lingring.domain.matching.dto.response.MatchingStatusResponse;
 import com.lingring.domain.matching.exception.MatchConfirmationNotFoundException;
+import com.lingring.domain.userevent.domain.EventName;
+import com.lingring.domain.userevent.event.UserActionEvent;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.util.FixedDateTimeProvider;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -23,7 +26,10 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 
+@RecordApplicationEvents
 @Import(MatchingServiceTestConfig.class)
 class MatchingServiceTest extends ServiceIntegrationHelper {
 
@@ -46,6 +52,9 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
 
     @Autowired
     private CallRepository callRepository;
+
+    @Autowired
+    private ApplicationEvents events;
 
     @BeforeEach
     void stubDefaultTime() {
@@ -456,6 +465,128 @@ class MatchingServiceTest extends ServiceIntegrationHelper {
             // then
             assertThat(enqueuedAtOf(1L)).isEqualTo(original);
             assertThat(enqueuedAtOf(2L)).isEqualTo(original);
+        }
+    }
+
+    @Nested
+    @DisplayName("행동 이벤트(UserActionEvent) 발행")
+    class PublishesUserActionEvents {
+
+        private List<UserActionEvent> eventsOf(final EventName eventName) {
+            return events.stream(UserActionEvent.class)
+                    .filter(event -> event.eventName() == eventName)
+                    .toList();
+        }
+
+        private UserActionEvent eventOfUser(final List<UserActionEvent> published, final Long userId) {
+            return published.stream()
+                    .filter(event -> event.userId().equals(userId))
+                    .findFirst()
+                    .orElseThrow();
+        }
+
+        @Test
+        @DisplayName("enterQueue는 MATCHING_REQUESTED를 발행한다")
+        void enterQueue_publishesMatchingRequested() {
+            // when
+            matchingService.enterQueue(1L);
+
+            // then
+            final List<UserActionEvent> published = eventsOf(EventName.MATCHING_REQUESTED);
+            assertThat(published).hasSize(1);
+            assertThat(published.get(0).userId()).isEqualTo(1L);
+            assertThat(published.get(0).occurredAt()).isEqualTo(FIXED_NOW);
+            assertThat(published.get(0).properties()).isNull();
+        }
+
+        @Test
+        @DisplayName("leaveQueue는 대기시간(wait_ms)을 담아 MATCHING_CANCELLED를 발행한다")
+        void leaveQueue_publishesMatchingCancelledWithWaitMs() {
+            // given
+            matchingService.enterQueue(1L);
+            dateTimeProvider.setFixedTime(FIXED_NOW.plusSeconds(30));
+
+            // when
+            matchingService.leaveQueue(1L);
+
+            // then
+            final List<UserActionEvent> published = eventsOf(EventName.MATCHING_CANCELLED);
+            assertThat(published).hasSize(1);
+            assertThat(published.get(0).userId()).isEqualTo(1L);
+            assertThat(published.get(0).properties()).containsEntry("wait_ms", 30_000L);
+        }
+
+        @Test
+        @DisplayName("대기열에 없는 사용자의 leaveQueue는 이벤트를 발행하지 않는다")
+        void leaveQueue_whenNotInQueue_publishesNothing() {
+            // when
+            matchingService.leaveQueue(1L);
+
+            // then
+            assertThat(eventsOf(EventName.MATCHING_CANCELLED)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("양쪽 수락으로 매칭 성사 시 참여자 각각에 MATCHING_MATCHED를 발행한다 (각자의 wait_ms, room_id)")
+        void acceptMatch_whenMatched_publishesMatchedForBothUsers() {
+            // given
+            final UUID roomId = seedConfirmation(1L, 2L, FIXED_NOW.plusSeconds(10),
+                    FIXED_NOW.minusSeconds(20), FIXED_NOW.minusSeconds(10));
+
+            // when
+            matchingService.acceptMatch(1L);
+            matchingService.acceptMatch(2L);
+
+            // then
+            final List<UserActionEvent> published = eventsOf(EventName.MATCHING_MATCHED);
+            assertThat(published).hasSize(2);
+            assertThat(eventOfUser(published, 1L).properties())
+                    .containsEntry("wait_ms", 20_000L)
+                    .containsEntry("room_id", roomId.toString());
+            assertThat(eventOfUser(published, 2L).properties())
+                    .containsEntry("wait_ms", 10_000L)
+                    .containsEntry("room_id", roomId.toString());
+        }
+
+        @Test
+        @DisplayName("declineMatch는 거절자에 SELF_DECLINED, 상대에 PEER_DECLINED로 MATCHING_FAILED를 발행한다")
+        void declineMatch_publishesFailedWithDeclineReasons() {
+            // given
+            seedConfirmation(1L, 2L, FIXED_NOW.plusSeconds(10),
+                    FIXED_NOW.minusSeconds(20), FIXED_NOW.minusSeconds(10));
+
+            // when
+            matchingService.declineMatch(1L);
+
+            // then
+            final List<UserActionEvent> published = eventsOf(EventName.MATCHING_FAILED);
+            assertThat(published).hasSize(2);
+            assertThat(eventOfUser(published, 1L).properties())
+                    .containsEntry("reason", "SELF_DECLINED")
+                    .containsEntry("wait_ms", 20_000L)
+                    .containsEntry("requeued", true);
+            assertThat(eventOfUser(published, 2L).properties())
+                    .containsEntry("reason", "PEER_DECLINED")
+                    .containsEntry("wait_ms", 10_000L)
+                    .containsEntry("requeued", true);
+        }
+
+        @Test
+        @DisplayName("수락 마감 초과 시 양쪽에 CONFIRM_TIMEOUT으로 MATCHING_FAILED를 발행한다")
+        void expireOverdueConfirmations_publishesConfirmTimeoutForBothUsers() {
+            // given
+            seedConfirmation(1L, 2L, FIXED_NOW.minusSeconds(1));
+
+            // when
+            matchingService.expireOverdueConfirmations();
+
+            // then
+            final List<UserActionEvent> published = eventsOf(EventName.MATCHING_FAILED);
+            assertThat(published).hasSize(2);
+            assertThat(published).extracting(UserActionEvent::userId).containsExactlyInAnyOrder(1L, 2L);
+            assertThat(published).allSatisfy(event -> assertThat(event.properties())
+                    .containsEntry("reason", "CONFIRM_TIMEOUT")
+                    .containsEntry("requeued", true));
         }
     }
 }

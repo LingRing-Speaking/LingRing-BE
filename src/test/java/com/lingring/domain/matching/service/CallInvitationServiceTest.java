@@ -19,10 +19,13 @@ import com.lingring.domain.matching.exception.InviteeBusyException;
 import com.lingring.domain.matching.exception.InviteeOfflineException;
 import com.lingring.domain.matching.exception.SelfCallInvitationException;
 import com.lingring.domain.presence.dao.PresenceRepository;
+import com.lingring.domain.userevent.domain.EventName;
+import com.lingring.domain.userevent.event.UserActionEvent;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.util.FixedDateTimeProvider;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -30,7 +33,10 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 
+@RecordApplicationEvents
 @Import(MatchingServiceTestConfig.class)
 class CallInvitationServiceTest extends ServiceIntegrationHelper {
 
@@ -55,6 +61,9 @@ class CallInvitationServiceTest extends ServiceIntegrationHelper {
 
     @Autowired
     private CallRepository callRepository;
+
+    @Autowired
+    private ApplicationEvents events;
 
     @BeforeEach
     void stubDefaultTime() {
@@ -353,6 +362,96 @@ class CallInvitationServiceTest extends ServiceIntegrationHelper {
         void findIncoming_whenNone_returnsEmpty() {
             // when & then
             assertThat(callInvitationService.findIncoming(INVITEE)).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("행동 이벤트(UserActionEvent) 발행")
+    class PublishesUserActionEvents {
+
+        private List<UserActionEvent> eventsOf(final EventName eventName) {
+            return events.stream(UserActionEvent.class)
+                    .filter(event -> event.eventName() == eventName)
+                    .toList();
+        }
+
+        @Test
+        @DisplayName("invite는 발신자에 invitee_id를 담아 INVITATION_SENT를 발행한다")
+        void invite_publishesInvitationSent() {
+            // given
+            seedInvitableFriend(INVITER, INVITEE);
+
+            // when
+            callInvitationService.invite(INVITER, INVITEE);
+
+            // then
+            final List<UserActionEvent> published = eventsOf(EventName.INVITATION_SENT);
+            assertThat(published).hasSize(1);
+            assertThat(published.get(0).userId()).isEqualTo(INVITER);
+            assertThat(published.get(0).occurredAt()).isEqualTo(FIXED_NOW);
+            assertThat(published.get(0).properties()).containsEntry("invitee_id", INVITEE);
+        }
+
+        @Test
+        @DisplayName("accept는 수신자에 inviter_id·room_id를 담아 INVITATION_ACCEPTED를 발행한다")
+        void accept_publishesInvitationAccepted() {
+            // given
+            seedInvitableFriend(INVITER, INVITEE);
+            callInvitationService.invite(INVITER, INVITEE);
+
+            // when
+            final CallInvitationAcceptResponse response = callInvitationService.accept(INVITEE);
+
+            // then
+            final List<UserActionEvent> published = eventsOf(EventName.INVITATION_ACCEPTED);
+            assertThat(published).hasSize(1);
+            assertThat(published.get(0).userId()).isEqualTo(INVITEE);
+            assertThat(published.get(0).properties())
+                    .containsEntry("inviter_id", INVITER)
+                    .containsEntry("room_id", response.roomId().toString());
+        }
+
+        @Test
+        @DisplayName("decline은 수신자에 inviter_id를 담아 INVITATION_DECLINED를 발행한다")
+        void decline_publishesInvitationDeclined() {
+            // given
+            seedInvitableFriend(INVITER, INVITEE);
+            callInvitationService.invite(INVITER, INVITEE);
+
+            // when
+            callInvitationService.decline(INVITEE);
+
+            // then
+            final List<UserActionEvent> published = eventsOf(EventName.INVITATION_DECLINED);
+            assertThat(published).hasSize(1);
+            assertThat(published.get(0).userId()).isEqualTo(INVITEE);
+            assertThat(published.get(0).properties()).containsEntry("inviter_id", INVITER);
+        }
+
+        @Test
+        @DisplayName("cancel은 실제 발신 초대가 있었으면 발신자에 INVITATION_CANCELLED를 발행한다")
+        void cancel_whenInvitationExisted_publishesInvitationCancelled() {
+            // given
+            seedInvitableFriend(INVITER, INVITEE);
+            callInvitationService.invite(INVITER, INVITEE);
+
+            // when
+            callInvitationService.cancel(INVITER);
+
+            // then
+            final List<UserActionEvent> published = eventsOf(EventName.INVITATION_CANCELLED);
+            assertThat(published).hasSize(1);
+            assertThat(published.get(0).userId()).isEqualTo(INVITER);
+        }
+
+        @Test
+        @DisplayName("발신 초대가 없는 cancel은 이벤트를 발행하지 않는다 (없던 사실을 만들지 않음)")
+        void cancel_whenNoInvitation_publishesNothing() {
+            // when
+            callInvitationService.cancel(INVITER);
+
+            // then
+            assertThat(eventsOf(EventName.INVITATION_CANCELLED)).isEmpty();
         }
     }
 }
