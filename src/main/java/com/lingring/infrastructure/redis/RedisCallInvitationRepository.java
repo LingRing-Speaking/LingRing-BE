@@ -79,13 +79,14 @@ public class RedisCallInvitationRepository implements CallInvitationRepository {
     }
 
     @Override
-    public void cancelByInviter(final Long inviterId) {
-        redisTemplate.execute(
+    public boolean cancelByInviter(final Long inviterId) {
+        final Long result = redisTemplate.execute(
                 CANCEL_SCRIPT,
                 List.of(OUT_KEY_PREFIX + inviterId),
                 IN_KEY_PREFIX,
                 inviterId.toString()
         );
+        return result != null && result == 1L;
     }
 
     @Override

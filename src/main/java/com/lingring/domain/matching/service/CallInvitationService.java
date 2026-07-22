@@ -17,12 +17,15 @@ import com.lingring.domain.matching.exception.InviteeBusyException;
 import com.lingring.domain.matching.exception.InviteeOfflineException;
 import com.lingring.domain.matching.exception.SelfCallInvitationException;
 import com.lingring.domain.presence.dao.PresenceRepository;
+import com.lingring.domain.userevent.event.UserActionEvent;
 import com.lingring.global.config.CallInvitationProperties;
 import com.lingring.global.util.DateTimeProvider;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -35,6 +38,7 @@ public class CallInvitationService {
     private final CallRepository callRepository;
     private final DateTimeProvider dateTimeProvider;
     private final CallInvitationProperties callInvitationProperties;
+    private final ApplicationEventPublisher eventPublisher;
 
     public void invite(final Long userId, final Long inviteeUserId) {
         if (userId.equals(inviteeUserId)) {
@@ -43,11 +47,12 @@ public class CallInvitationService {
         validateAcceptedFriendship(userId, inviteeUserId);
         validateInviteeOnline(inviteeUserId);
 
+        final LocalDateTime now = dateTimeProvider.now();
         final CallInvitation invitation = new CallInvitation(
                 userId,
                 inviteeUserId,
                 UUID.randomUUID(),
-                dateTimeProvider.now().plus(callInvitationProperties.inviteTtl())
+                now.plus(callInvitationProperties.inviteTtl())
         );
         final InvitationCreateOutcome outcome =
                 callInvitationRepository.create(invitation, callInvitationProperties.inviteTtl());
@@ -57,6 +62,7 @@ public class CallInvitationService {
         if (outcome == InvitationCreateOutcome.INVITEE_BUSY) {
             throw new InviteeBusyException(inviteeUserId);
         }
+        eventPublisher.publishEvent(UserActionEvent.invitationSent(userId, inviteeUserId, now));
     }
 
     public CallInvitationStatusResponse getOutgoingStatus(final Long userId) {
@@ -71,20 +77,27 @@ public class CallInvitationService {
     }
 
     public void cancel(final Long userId) {
-        callInvitationRepository.cancelByInviter(userId);
+        final boolean cancelled = callInvitationRepository.cancelByInviter(userId);
+        if (!cancelled) {
+            return;
+        }
+        eventPublisher.publishEvent(UserActionEvent.invitationCancelled(userId, dateTimeProvider.now()));
     }
 
     public CallInvitationAcceptResponse accept(final Long userId) {
         final CallInvitation invitation = callInvitationRepository.claim(userId)
                 .orElseThrow(() -> new CallInvitationNotFoundException(userId));
+        final LocalDateTime now = dateTimeProvider.now();
         final Call call = callRepository.save(
-                Call.start(invitation.inviterId(), userId, invitation.roomId(), dateTimeProvider.now()));
+                Call.start(invitation.inviterId(), userId, invitation.roomId(), now));
         // Call 커밋 후에 결과를 기록해야 발신자가 callId 없는 ACCEPTED를 관측하지 않는다 (#179와 동일 원칙)
         callInvitationRepository.saveResult(
                 invitation.inviterId(),
                 CallInvitationResult.accepted(invitation.roomId(), call.getId()),
                 callInvitationProperties.resultTtl()
         );
+        eventPublisher.publishEvent(
+                UserActionEvent.invitationAccepted(userId, invitation.inviterId(), invitation.roomId(), now));
         return new CallInvitationAcceptResponse(invitation.roomId(), call.getId());
     }
 
@@ -96,6 +109,8 @@ public class CallInvitationService {
                 CallInvitationResult.declined(),
                 callInvitationProperties.resultTtl()
         );
+        eventPublisher.publishEvent(
+                UserActionEvent.invitationDeclined(userId, invitation.inviterId(), dateTimeProvider.now()));
     }
 
     public Optional<CallInvitation> findIncoming(final Long userId) {
