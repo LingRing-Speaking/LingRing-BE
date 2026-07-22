@@ -24,7 +24,7 @@ public class UserActionEventListener {
         try {
             userEventRepository.save(event.toEntity());
         } catch (final Exception e) {
-            log.warn("user_event 저장 실패: {}", event, e);
+            log.error("user_event 저장 실패: {}", event, e);
         }
     }
 }

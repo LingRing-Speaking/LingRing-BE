@@ -25,7 +25,7 @@ public class AsyncConfig {
         executor.setQueueCapacity(QUEUE_CAPACITY);
         executor.setThreadNamePrefix("user-event-");
         // 수집은 best-effort — 큐 포화 시 유저 경로를 막지 않고 이벤트를 버린다
-        executor.setRejectedExecutionHandler((task, pool) -> log.warn("user_event 수집 큐 포화 — 이벤트 1건 폐기"));
+        executor.setRejectedExecutionHandler((task, pool) -> log.error("user_event 수집 큐 포화 — 이벤트 1건 폐기"));
         return executor;
     }
 }
