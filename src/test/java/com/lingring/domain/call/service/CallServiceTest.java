@@ -5,10 +5,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.lingring.domain.call.dao.CallRepository;
 import com.lingring.domain.call.domain.Call;
+import com.lingring.domain.call.domain.CallEndReason;
 import com.lingring.domain.call.event.CallEndedEvent;
 import com.lingring.domain.call.exception.CallNotFoundException;
 import com.lingring.domain.user.dao.UserStatsRepository;
 import com.lingring.domain.user.domain.UserStats;
+import com.lingring.domain.userevent.domain.EventName;
+import com.lingring.domain.userevent.event.UserActionEvent;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.util.FixedDateTimeProvider;
 import java.time.LocalDate;
@@ -134,7 +137,7 @@ class CallServiceTest extends ServiceIntegrationHelper {
             callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
 
             // when
-            callService.endCall(roomId);
+            callService.endCall(roomId, CallEndReason.HANGUP);
 
             // then
             final Optional<Call> ended = callRepository.findByRoomId(roomId);
@@ -150,7 +153,7 @@ class CallServiceTest extends ServiceIntegrationHelper {
             final UUID unknownRoomId = UUID.randomUUID();
 
             // when & then
-            assertThatThrownBy(() -> callService.endCall(unknownRoomId))
+            assertThatThrownBy(() -> callService.endCall(unknownRoomId, CallEndReason.HANGUP))
                     .isInstanceOf(CallNotFoundException.class);
         }
 
@@ -160,13 +163,13 @@ class CallServiceTest extends ServiceIntegrationHelper {
             // given
             final UUID roomId = UUID.randomUUID();
             callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
-            callService.endCall(roomId);
+            callService.endCall(roomId, CallEndReason.HANGUP);
             final LocalDateTime firstEndedAt = callRepository.findByRoomId(roomId)
                     .orElseThrow().getEndedAt();
             fixedDateTimeProvider.setFixedTime(FIXED_NOW.plusHours(1));
 
             // when
-            callService.endCall(roomId);
+            callService.endCall(roomId, CallEndReason.HANGUP);
 
             // then
             final Call ended = callRepository.findByRoomId(roomId).orElseThrow();
@@ -188,7 +191,7 @@ class CallServiceTest extends ServiceIntegrationHelper {
             callRepository.save(Call.start(1L, 2L, roomId, startedAt));
 
             // when
-            callService.endCall(roomId);
+            callService.endCall(roomId, CallEndReason.HANGUP);
 
             // then
             final List<CallEndedEvent> published = events.stream(CallEndedEvent.class).toList();
@@ -205,14 +208,74 @@ class CallServiceTest extends ServiceIntegrationHelper {
             // given
             final UUID roomId = UUID.randomUUID();
             callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
-            callService.endCall(roomId);
+            callService.endCall(roomId, CallEndReason.HANGUP);
 
             // when
-            callService.endCall(roomId);
+            callService.endCall(roomId, CallEndReason.HANGUP);
 
             // then
             final List<CallEndedEvent> published = events.stream(CallEndedEvent.class).toList();
             assertThat(published).hasSize(1);
+        }
+    }
+
+    @Nested
+    @DisplayName("endCall: CALL_ENDED 행동 이벤트 발행")
+    class EndCallPublishesUserActionEvent {
+
+        private List<UserActionEvent> callEndedOf(final Long userId) {
+            return events.stream(UserActionEvent.class)
+                    .filter(event -> event.eventName() == EventName.CALL_ENDED)
+                    .filter(event -> event.userId().equals(userId))
+                    .toList();
+        }
+
+        @Test
+        @DisplayName("통화 종료 시 참여자 2명에게 각각 CALL_ENDED를 발행한다 (reason, duration_sec, room_id)")
+        void endCall_publishesCallEndedForBothParticipants() {
+            // given
+            final UUID roomId = UUID.randomUUID();
+            callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
+
+            // when
+            callService.endCall(roomId, CallEndReason.HANGUP);
+
+            // then
+            assertThat(callEndedOf(1L)).hasSize(1);
+            assertThat(callEndedOf(2L)).hasSize(1);
+            assertThat(callEndedOf(1L).get(0).properties())
+                    .containsEntry("reason", "HANGUP")
+                    .containsEntry("duration_sec", 300L)
+                    .containsEntry("room_id", roomId.toString());
+        }
+
+        @Test
+        @DisplayName("종료 사유가 이벤트에 그대로 담긴다 (DISCONNECTED)")
+        void endCall_carriesEndReason() {
+            // given
+            final UUID roomId = UUID.randomUUID();
+            callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
+
+            // when
+            callService.endCall(roomId, CallEndReason.DISCONNECTED);
+
+            // then
+            assertThat(callEndedOf(1L).get(0).properties()).containsEntry("reason", "DISCONNECTED");
+        }
+
+        @Test
+        @DisplayName("이미 종료된 통화에 다시 호출하면 CALL_ENDED가 추가로 발행되지 않는다")
+        void endCall_whenAlreadyEnded_doesNotRepublish() {
+            // given
+            final UUID roomId = UUID.randomUUID();
+            callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(5)));
+            callService.endCall(roomId, CallEndReason.HANGUP);
+
+            // when
+            callService.endCall(roomId, CallEndReason.HANGUP);
+
+            // then
+            assertThat(callEndedOf(1L)).hasSize(1);
         }
     }
 
@@ -230,7 +293,7 @@ class CallServiceTest extends ServiceIntegrationHelper {
             callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(2)));
 
             // when
-            callService.endCall(roomId);
+            callService.endCall(roomId, CallEndReason.HANGUP);
 
             // then
             final UserStats statsA = userStatsRepository.findByUserId(1L).orElseThrow();
@@ -253,7 +316,7 @@ class CallServiceTest extends ServiceIntegrationHelper {
             callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW.minusSeconds(30)));
 
             // when
-            callService.endCall(roomId);
+            callService.endCall(roomId, CallEndReason.HANGUP);
 
             // then
             final UserStats statsA = userStatsRepository.findByUserId(1L).orElseThrow();
@@ -274,7 +337,7 @@ class CallServiceTest extends ServiceIntegrationHelper {
             callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW.minusSeconds(60)));
 
             // when
-            callService.endCall(roomId);
+            callService.endCall(roomId, CallEndReason.HANGUP);
 
             // then
             assertThat(userStatsRepository.findByUserId(1L).orElseThrow().getTotalCallCount()).isEqualTo(1);
@@ -289,10 +352,10 @@ class CallServiceTest extends ServiceIntegrationHelper {
             userStatsRepository.save(UserStats.create(2L));
             final UUID roomId = UUID.randomUUID();
             callRepository.save(Call.start(1L, 2L, roomId, FIXED_NOW.minusMinutes(2)));
-            callService.endCall(roomId);
+            callService.endCall(roomId, CallEndReason.HANGUP);
 
             // when
-            callService.endCall(roomId);
+            callService.endCall(roomId, CallEndReason.HANGUP);
 
             // then
             assertThat(userStatsRepository.findByUserId(1L).orElseThrow().getTotalCallCount()).isEqualTo(1);
