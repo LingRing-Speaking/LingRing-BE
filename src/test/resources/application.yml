@@ -1,4 +1,14 @@
 spring:
+  cloud:
+    aws:
+      region:
+        static: ap-northeast-2
+      credentials:
+        access-key: test
+        secret-key: test
+      sqs:
+        listener:
+          auto-startup: false   # 통합 테스트에서 리스너 컨테이너가 실제 SQS를 폴링하지 않도록 차단
   jpa:
     hibernate:
       ddl-auto: create
@@ -78,10 +88,7 @@ aws:
     region: ap-northeast-2
     call-analysis-function-name: test-call-analysis
   sqs:
-    region: ap-northeast-2
     call-analysis-result-queue-url: http://localhost:4566/000000000000/test-call-analysis-result
-    poll-interval-ms: 600000
-    poll-initial-delay-ms: 600000
 
 profile-image:
   allowed-content-type-prefix: image/

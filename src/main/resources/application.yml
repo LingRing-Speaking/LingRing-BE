@@ -3,6 +3,10 @@ spring:
     name: backend
   profiles:
     active: local
+  cloud:
+    aws:
+      region:
+        static: ap-northeast-2   # SQS(@SqsListener)용 리전. 자격증명은 EC2 IAM 역할(기본 체인) 사용.
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -74,9 +78,7 @@ aws:
     region: ap-northeast-2
     call-analysis-function-name: ${AWS_LAMBDA_CALL_ANALYSIS_ARN}
   sqs:
-    region: ap-northeast-2
-    call-analysis-result-queue-url: ${AWS_SQS_CALL_ANALYSIS_URL}
-    poll-interval-ms: 10000
+    call-analysis-result-queue-url: ${AWS_SQS_CALL_ANALYSIS_URL}   # @SqsListener가 소비하는 결과 큐
 
 profile-image:
   allowed-content-type-prefix: image/
