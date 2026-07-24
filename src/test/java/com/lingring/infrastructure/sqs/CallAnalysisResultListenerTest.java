@@ -1,16 +1,14 @@
 package com.lingring.infrastructure.sqs;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.verify;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.lingring.domain.review.dao.CallTranscriptRepository;
-import com.lingring.domain.review.domain.transcript.CallTranscript;
 import com.lingring.domain.review.dao.CallAnalysisRepository;
+import com.lingring.domain.review.dao.CallTranscriptRepository;
 import com.lingring.domain.review.domain.analysis.CallAnalysis;
 import com.lingring.domain.review.domain.analysis.CallAnalysisStatus;
 import com.lingring.domain.review.domain.analysis.vo.FeedbackTag;
+import com.lingring.domain.review.domain.transcript.CallTranscript;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.DisplayName;
@@ -18,21 +16,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import software.amazon.awssdk.services.sqs.SqsClient;
-import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest;
-import software.amazon.awssdk.services.sqs.model.Message;
-import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
-import software.amazon.awssdk.services.sqs.model.ReceiveMessageResponse;
+import tools.jackson.databind.ObjectMapper;
 
-class CallAnalysisResultPollerTest extends ServiceIntegrationHelper {
+class CallAnalysisResultListenerTest extends ServiceIntegrationHelper {
 
     private static final Long CALL_ID = 138L;
     private static final Long USER_A = 1L;
     private static final Long USER_B = 14L;
 
     @Autowired
-    private CallAnalysisResultPoller poller;
+    private CallAnalysisResultListener listener;
 
     @Autowired
     private CallTranscriptRepository callTranscriptRepository;
@@ -40,33 +33,28 @@ class CallAnalysisResultPollerTest extends ServiceIntegrationHelper {
     @Autowired
     private CallAnalysisRepository callAnalysisRepository;
 
-    @MockitoBean
-    private SqsClient sqsClient;
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Value("classpath:fixtures/call-analysis-result-sample.json")
     private Resource sampleMessage;
 
+    private CallAnalysisResultMessage sampleMessage() throws Exception {
+        return objectMapper.readValue(
+                sampleMessage.getContentAsString(StandardCharsets.UTF_8),
+                CallAnalysisResultMessage.class);
+    }
+
     @Test
-    @DisplayName("SQS 메시지를 받아 JSON을 파싱하고 transcript + 두 사용자 분석을 모두 영속화한다")
-    void poll_parsesSqsJsonAndPersistsTranscriptAndAnalyses() throws Exception {
+    @DisplayName("역직렬화된 결과 메시지를 받아 transcript + 두 사용자 분석을 모두 영속화한다")
+    void handle_persistsTranscriptAndBothUserAnalyses() throws Exception {
         // given: POST 트리거가 이미 완료된 상태(PROCESSING 행 3개)
         callTranscriptRepository.save(CallTranscript.create(CALL_ID));
         callAnalysisRepository.save(CallAnalysis.processing(CALL_ID, USER_A));
         callAnalysisRepository.save(CallAnalysis.processing(CALL_ID, USER_B));
 
-        final String body = sampleMessage.getContentAsString(StandardCharsets.UTF_8);
-        final Message message = Message.builder()
-                .messageId("test-message-1")
-                .receiptHandle("test-receipt")
-                .body(body)
-                .build();
-        given(sqsClient.receiveMessage(any(ReceiveMessageRequest.class)))
-                .willReturn(ReceiveMessageResponse.builder()
-                        .messages(message)
-                        .build());
-
         // when
-        poller.poll();
+        listener.handle(sampleMessage());
 
         // then: transcript 24 segments
         final CallTranscript transcript = callTranscriptRepository.findByCallId(CALL_ID).orElseThrow();
@@ -90,35 +78,18 @@ class CallAnalysisResultPollerTest extends ServiceIntegrationHelper {
         assertThat(a14.getModelIdentifier()).isEqualTo("gemini-2.5-flash");
         assertThat(a14.getResult().mistakes().count()).isEqualTo(5);
         assertThat(a14.getResult().positives().count()).isEqualTo(3);
-
-        // then: 성공 처리 후 ack(deleteMessage) 호출
-        verify(sqsClient).deleteMessage(any(DeleteMessageRequest.class));
     }
 
     @Test
-    @DisplayName("잘못된 JSON 메시지는 영속화하지 않고 ack도 호출하지 않는다")
-    void poll_whenMalformedJson_doesNotPersistAndDoesNotAck() {
-        // given
-        callTranscriptRepository.save(CallTranscript.create(CALL_ID));
-        callAnalysisRepository.save(CallAnalysis.processing(CALL_ID, USER_A));
-        callAnalysisRepository.save(CallAnalysis.processing(CALL_ID, USER_B));
+    @DisplayName("영속화 실패 시 예외를 전파한다 (프레임워크가 ack하지 않고 재전달하도록)")
+    void handle_propagatesException_whenPersistenceFails() throws Exception {
+        // given: PROCESSING 행이 없어 complete()가 실패하는 상태 (beforeEach가 DB를 비움)
 
-        final Message malformed = Message.builder()
-                .messageId("bad-1")
-                .receiptHandle("bad-receipt")
-                .body("not-a-json")
-                .build();
-        given(sqsClient.receiveMessage(any(ReceiveMessageRequest.class)))
-                .willReturn(ReceiveMessageResponse.builder().messages(malformed).build());
+        // when / then: 예외를 삼키지 않고 그대로 전파
+        assertThatThrownBy(() -> listener.handle(sampleMessage()))
+                .isInstanceOf(RuntimeException.class);
 
-        // when
-        poller.poll();
-
-        // then: transcript content 미반영, analysis 상태 PROCESSING 유지
-        assertThat(callTranscriptRepository.findByCallId(CALL_ID).orElseThrow().getContent()).isNull();
-        assertThat(callAnalysisRepository.findByCallIdAndUserId(CALL_ID, USER_A).orElseThrow().getStatus())
-                .isEqualTo(CallAnalysisStatus.PROCESSING);
-        assertThat(callAnalysisRepository.findByCallIdAndUserId(CALL_ID, USER_B).orElseThrow().getStatus())
-                .isEqualTo(CallAnalysisStatus.PROCESSING);
+        // and: 트랜잭션 롤백으로 아무것도 영속화되지 않음
+        assertThat(callTranscriptRepository.findByCallId(CALL_ID)).isEmpty();
     }
 }
