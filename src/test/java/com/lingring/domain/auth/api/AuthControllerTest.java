@@ -12,11 +12,11 @@ import com.lingring.domain.auth.dto.request.DemoLoginRequest;
 import com.lingring.domain.auth.dto.request.RefreshRequest;
 import com.lingring.domain.auth.dto.request.SocialLoginRequest;
 import com.lingring.domain.auth.dto.response.AuthTokenResponse;
-import com.lingring.domain.auth.dto.response.AuthTokenResponse.UserSummary;
 import com.lingring.domain.auth.dto.response.TokenPairResponse;
 import com.lingring.domain.auth.facade.DemoLoginFacade;
 import com.lingring.domain.auth.facade.SocialLoginFacade;
 import com.lingring.domain.auth.service.AuthService;
+import com.lingring.domain.user.dto.response.UserSummaryResponse;
 import com.lingring.global.auth.context.AuthContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -69,7 +69,7 @@ class AuthControllerTest {
                     new AuthTokenResponse(
                             "access-jwt",
                             "refresh-jwt",
-                            new UserSummary(42L, "링링이", null, false, "2026-06-30")
+                            new UserSummaryResponse(42L, "링링이", null, false, "2026-06-30", false, null)
                     )
             );
 
@@ -191,7 +191,7 @@ class AuthControllerTest {
                     new AuthTokenResponse(
                             "demo-access",
                             "demo-refresh",
-                            new UserSummary(7L, "Reviewer A", null, false, "2026-06-30")
+                            new UserSummaryResponse(7L, "Reviewer A", null, false, "2026-06-30", false, null)
                     )
             );
 

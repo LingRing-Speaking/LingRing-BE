@@ -10,7 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import com.lingring.domain.user.dto.request.AgreementCreateRequest;
 import com.lingring.domain.user.dto.response.AgreementResponse;
-import com.lingring.domain.user.dto.response.AgreementResponse.UserSummary;
+import com.lingring.domain.user.dto.response.UserSummaryResponse;
 import com.lingring.domain.user.service.UserAgreementService;
 import com.lingring.global.auth.context.AuthContext;
 import java.util.Set;
@@ -59,7 +59,7 @@ class UserAgreementControllerTest {
             );
             given(userAgreementService.accept(eq(userId), any(AgreementCreateRequest.class)))
                     .willReturn(new AgreementResponse(
-                            new UserSummary(userId, "링링이", null, false, "2026-06-30")
+                            new UserSummaryResponse(userId, "링링이", null, false, "2026-06-30", false, null)
                     ));
 
             // when
@@ -74,6 +74,8 @@ class UserAgreementControllerTest {
             final JsonNode body = objectMapper.readTree(response.getContentAsString());
             assertThat(body.get("data").get("user").get("id").asLong()).isEqualTo(userId);
             assertThat(body.get("data").get("user").get("requiresOnboarding").asBoolean()).isFalse();
+            assertThat(body.get("data").get("user").get("marketingPushAgreed").asBoolean()).isFalse();
+            assertThat(body.get("data").get("user").get("marketingPushUpdatedAt").isNull()).isTrue();
         }
 
         @Test
@@ -134,7 +136,7 @@ class UserAgreementControllerTest {
             );
             given(userAgreementService.accept(eq(userId), any(AgreementCreateRequest.class)))
                     .willReturn(new AgreementResponse(
-                            new UserSummary(userId, "링링이", null, false, "2026-06-30")
+                            new UserSummaryResponse(userId, "링링이", null, false, "2026-06-30", false, null)
                     ));
 
             // when

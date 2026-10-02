@@ -22,6 +22,8 @@ public interface UserAgreementApi {
                     가입 직후 약관 동의 화면에서 사용자가 필수 4개 항목(OVER14, TERMS, PRIVACY, VOICE_AI)에
                     동의했음을 기록한다. 동의 시점·약관 버전이 User에 저장되며, 이후 응답의
                     requiresOnboarding이 false로 전환된다.
+                    선택 항목 MARKETING_PUSH는 agreedItems에 포함되면 수신 동의, 빠지면 미동의(이전 동의는 철회)로
+                    저장하고, 값이 바뀐 경우에만 marketingPushUpdatedAt을 갱신한다.
                     """
     )
     @ApiResponses({

@@ -12,6 +12,8 @@ import com.lingring.domain.user.dto.response.AgreementResponse;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
+import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -172,6 +174,98 @@ class UserAgreementServiceTest extends ServiceIntegrationHelper {
                     .isInstanceOf(BadRequestException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.INVALID_INPUT_VALUE);
+        }
+    }
+
+    @Nested
+    @DisplayName("accept: 마케팅 푸시 수신 동의 (선택 항목)")
+    class AcceptMarketingPush {
+
+        private static final Set<String> REQUIRED_ITEMS = Set.of("over14", "terms", "privacy", "voice_ai");
+
+        @Test
+        @DisplayName("marketing_push가 포함되면 수신 동의와 처리 시각이 기록된다")
+        void accept_whenMarketingPushIncluded_agreesMarketingPush() {
+            // given
+            final User user = seedUser();
+
+            // when
+            final AgreementResponse response = userAgreementService.accept(
+                    user.getId(),
+                    requestWith("2026-10-02", withMarketingPush())
+            );
+
+            // then
+            assertThat(response.user().marketingPushAgreed()).isTrue();
+            assertThat(response.user().marketingPushUpdatedAt()).isNotNull();
+            final User reloaded = userRepository.findById(user.getId()).orElseThrow();
+            assertThat(reloaded.getMarketingPushConsent().isAgreed()).isTrue();
+        }
+
+        @Test
+        @DisplayName("marketing_push가 빠져도 약관 동의는 성공하고 미동의·처리 시각 null로 남는다")
+        void accept_whenMarketingPushOmitted_succeedsWithoutConsent() {
+            // given
+            final User user = seedUser();
+
+            // when
+            final AgreementResponse response = userAgreementService.accept(
+                    user.getId(),
+                    requestWith("2026-10-02", REQUIRED_ITEMS)
+            );
+
+            // then
+            assertThat(response.user().requiresOnboarding()).isFalse();
+            assertThat(response.user().marketingPushAgreed()).isFalse();
+            assertThat(response.user().marketingPushUpdatedAt()).isNull();
+        }
+
+        @Test
+        @DisplayName("동의했던 유저가 재동의할 때 marketing_push가 빠지면 철회로 처리된다")
+        void accept_whenReAgreeWithoutMarketingPush_withdrawsConsent() {
+            // given
+            final User user = seedUser();
+            userAgreementService.accept(user.getId(), requestWith("2026-10-02", withMarketingPush()));
+
+            // when
+            final AgreementResponse response = userAgreementService.accept(
+                    user.getId(),
+                    requestWith("2026-11-01", REQUIRED_ITEMS)
+            );
+
+            // then
+            assertThat(response.user().marketingPushAgreed()).isFalse();
+            assertThat(response.user().marketingPushUpdatedAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("이미 동의한 유저가 다시 marketing_push를 포함해 재동의하면 처리 시각을 유지한다")
+        void accept_whenReAgreeWithMarketingPush_keepsUpdatedAt() {
+            // given
+            final User user = seedUser();
+            final LocalDateTime firstUpdatedAt = userAgreementService.accept(
+                    user.getId(),
+                    requestWith("2026-10-02", withMarketingPush())
+            ).user().marketingPushUpdatedAt();
+
+            // when
+            final AgreementResponse response = userAgreementService.accept(
+                    user.getId(),
+                    requestWith("2026-11-01", withMarketingPush())
+            );
+
+            // then
+            assertThat(response.user().marketingPushUpdatedAt()).isEqualTo(firstUpdatedAt);
+        }
+
+        private Set<String> withMarketingPush() {
+            final Set<String> items = new HashSet<>(REQUIRED_ITEMS);
+            items.add("marketing_push");
+            return items;
+        }
+
+        private AgreementCreateRequest requestWith(final String termsVersion, final Set<String> items) {
+            return new AgreementCreateRequest(termsVersion, items);
         }
     }
 }

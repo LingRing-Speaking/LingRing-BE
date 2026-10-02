@@ -5,6 +5,7 @@ import static lombok.AccessLevel.PROTECTED;
 
 import com.lingring.domain.user.domain.vo.Agreement;
 import com.lingring.domain.user.domain.vo.AppleOAuthCredential;
+import com.lingring.domain.user.domain.vo.MarketingPushConsent;
 import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.domain.user.domain.vo.ProfileImage;
 import com.lingring.global.common.entity.BaseTimeEntity;
@@ -64,6 +65,9 @@ public class User extends BaseTimeEntity {
     @Embedded
     private AppleOAuthCredential appleCredential;
 
+    @Embedded
+    private MarketingPushConsent marketingPushConsent;
+
     private User(
             @NonNull final Provider provider,
             @NonNull final String providerUserId,
@@ -74,6 +78,7 @@ public class User extends BaseTimeEntity {
         this.providerUserId = providerUserId;
         this.name = name;
         this.profileImage = profileImage;
+        this.marketingPushConsent = MarketingPushConsent.none();
     }
 
     public static User createFromOAuth(
@@ -95,6 +100,10 @@ public class User extends BaseTimeEntity {
 
     public void markAgreed(@NonNull final String termsVersion, @NonNull final LocalDateTime agreedAt) {
         this.agreement = Agreement.of(termsVersion, agreedAt);
+    }
+
+    public void changeMarketingPushConsent(final boolean agreed, @NonNull final LocalDateTime changedAt) {
+        this.marketingPushConsent = this.marketingPushConsent.change(agreed, changedAt);
     }
 
     public void updateAppleCredential(@NonNull final String refreshToken) {

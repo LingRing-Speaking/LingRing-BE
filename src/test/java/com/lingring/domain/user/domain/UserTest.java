@@ -161,4 +161,35 @@ class UserTest {
             assertThat(user.agreedTermsVersion()).isEqualTo("2026-06-30");
         }
     }
+
+    @Nested
+    @DisplayName("changeMarketingPushConsent: 마케팅 푸시 수신 동의 변경")
+    class ChangeMarketingPushConsent {
+
+        @Test
+        @DisplayName("가입 직후에는 미동의 상태이고 처리 시각이 없다")
+        void createFromOAuth_startsWithoutMarketingPushConsent() {
+            // when
+            final User user = User.createFromOAuth(PROVIDER, PROVIDER_USER_ID, NAME, PROFILE_IMAGE_URL);
+
+            // then
+            assertThat(user.getMarketingPushConsent().isAgreed()).isFalse();
+            assertThat(user.getMarketingPushConsent().getUpdatedAt()).isNull();
+        }
+
+        @Test
+        @DisplayName("동의하면 동의 상태와 처리 시각이 기록된다")
+        void changeMarketingPushConsent_whenAgree_recordsConsent() {
+            // given
+            final User user = User.createFromOAuth(PROVIDER, PROVIDER_USER_ID, NAME, PROFILE_IMAGE_URL);
+            final LocalDateTime changedAt = LocalDateTime.of(2026, 10, 2, 12, 0);
+
+            // when
+            user.changeMarketingPushConsent(true, changedAt);
+
+            // then
+            assertThat(user.getMarketingPushConsent().isAgreed()).isTrue();
+            assertThat(user.getMarketingPushConsent().getUpdatedAt()).isEqualTo(changedAt);
+        }
+    }
 }

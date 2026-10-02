@@ -80,6 +80,9 @@ aws:
   sqs:
     call-analysis-result-queue-url: ${AWS_SQS_CALL_ANALYSIS_URL}   # @SqsListener가 소비하는 결과 큐
 
+firebase:
+  credentials: ${FIREBASE_CREDENTIALS}   # 서비스 계정 JSON을 base64 인코딩한 값
+
 profile-image:
   allowed-content-type-prefix: image/
   max-content-length-bytes: 31457280

@@ -1,12 +1,12 @@
 package com.lingring.domain.auth.dto.response;
 
 import com.lingring.domain.user.domain.User;
-import com.lingring.domain.user.domain.vo.ProfileImage;
+import com.lingring.domain.user.dto.response.UserSummaryResponse;
 
 public record AuthTokenResponse(
         String accessToken,
         String refreshToken,
-        UserSummary user
+        UserSummaryResponse user
 ) {
 
     public static AuthTokenResponse of(
@@ -14,32 +14,6 @@ public record AuthTokenResponse(
             final String refreshToken,
             final User user
     ) {
-        return new AuthTokenResponse(
-                accessToken,
-                refreshToken,
-                new UserSummary(
-                        user.getId(),
-                        user.getName().getValue(),
-                        extractUrl(user.getProfileImage()),
-                        user.requiresOnboarding(),
-                        user.agreedTermsVersion()
-                )
-        );
-    }
-
-    private static String extractUrl(final ProfileImage profileImage) {
-        if (profileImage == null) {
-            return null;
-        }
-        return profileImage.getValue();
-    }
-
-    public record UserSummary(
-            Long id,
-            String nickname,
-            String profileImage,
-            boolean requiresOnboarding,
-            String agreedTermsVersion
-    ) {
+        return new AuthTokenResponse(accessToken, refreshToken, UserSummaryResponse.from(user));
     }
 }
