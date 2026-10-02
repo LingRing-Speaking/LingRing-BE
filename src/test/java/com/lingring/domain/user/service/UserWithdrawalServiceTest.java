@@ -22,6 +22,9 @@ import com.lingring.domain.expression.domain.UserExpression;
 import com.lingring.domain.moderation.dao.UserReportRepository;
 import com.lingring.domain.moderation.domain.ReportReason;
 import com.lingring.domain.moderation.domain.UserReport;
+import com.lingring.domain.push.dao.DeviceTokenRepository;
+import com.lingring.domain.push.domain.DeviceToken;
+import com.lingring.domain.push.domain.Platform;
 import com.lingring.global.auth.apple.AppleAuthClient;
 import com.lingring.global.auth.apple.FakeAppleAuthClient;
 import com.lingring.global.config.ServiceIntegrationHelper;
@@ -68,6 +71,9 @@ class UserWithdrawalServiceTest extends ServiceIntegrationHelper {
 
     @Autowired
     private WithdrawalLogRepository withdrawalLogRepository;
+
+    @Autowired
+    private DeviceTokenRepository deviceTokenRepository;
 
     @Autowired
     private AppleAuthClient appleAuthClient;
@@ -277,6 +283,25 @@ class UserWithdrawalServiceTest extends ServiceIntegrationHelper {
 
             // then
             assertThat(refreshTokenRepository.exists(me.getId())).isFalse();
+        }
+
+        @Test
+        @DisplayName("내 디바이스 토큰은 전부 삭제되고, 다른 사용자의 토큰은 유지된다")
+        void withdraw_whenDeviceTokensExist_deletesOnlyMine() {
+            // given
+            final User me = saveUser("링링", "kakao-me");
+            final User other = saveUser("다른유저", "kakao-other");
+            deviceTokenRepository.save(DeviceToken.register(me.getId(), "my-ios-token", Platform.IOS));
+            deviceTokenRepository.save(DeviceToken.register(me.getId(), "my-android-token", Platform.ANDROID));
+            deviceTokenRepository.save(DeviceToken.register(other.getId(), "other-token", Platform.IOS));
+
+            // when
+            userWithdrawalService.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+
+            // then
+            assertThat(deviceTokenRepository.findAll())
+                    .extracting(DeviceToken::getToken)
+                    .containsExactly("other-token");
         }
 
         @Test
