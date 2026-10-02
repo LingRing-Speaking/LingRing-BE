@@ -5,7 +5,7 @@ import com.lingring.domain.user.domain.vo.MarketingPushConsent;
 import com.lingring.domain.user.domain.vo.ProfileImage;
 import java.time.LocalDateTime;
 
-public record MeResponse(
+public record UserSummaryResponse(
         Long id,
         String nickname,
         String profileImage,
@@ -15,9 +15,9 @@ public record MeResponse(
         LocalDateTime marketingPushUpdatedAt
 ) {
 
-    public static MeResponse from(final User user) {
+    public static UserSummaryResponse from(final User user) {
         final MarketingPushConsent consent = user.getMarketingPushConsent();
-        return new MeResponse(
+        return new UserSummaryResponse(
                 user.getId(),
                 user.getName().getValue(),
                 extractUrl(user.getProfileImage()),
