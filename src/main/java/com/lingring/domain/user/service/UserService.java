@@ -2,12 +2,14 @@ package com.lingring.domain.user.service;
 
 import com.lingring.domain.user.dao.UserRepository;
 import com.lingring.domain.user.dao.UserStatsRepository;
+import com.lingring.domain.user.dao.WithdrawnIdentityRepository;
 import com.lingring.domain.user.dao.dto.UserProfileProjection;
 import com.lingring.domain.user.domain.port.ProfileImageStorage;
 import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.UserStats;
 import com.lingring.domain.user.domain.policy.ProfileImagePolicy;
+import com.lingring.domain.user.domain.service.SocialIdentityHasher;
 import com.lingring.domain.user.domain.service.UserProfileChanger;
 import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.domain.user.domain.vo.ProfileImageKey;
@@ -16,6 +18,7 @@ import com.lingring.domain.user.dto.request.UpdateProfileRequest;
 import com.lingring.domain.user.dto.response.MeResponse;
 import com.lingring.domain.user.dto.response.PresignedUrlResponse;
 import com.lingring.domain.user.dto.response.UpdateProfileResponse;
+import com.lingring.domain.user.exception.RejoinConfirmationRequiredException;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
 import com.lingring.global.error.exception.NotFoundException;
@@ -32,6 +35,8 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserStatsRepository userStatsRepository;
+    private final WithdrawnIdentityRepository withdrawnIdentityRepository;
+    private final SocialIdentityHasher socialIdentityHasher;
     private final ProfileImageStorage profileImageStorage;
     private final ProfileImagePolicy profileImagePolicy;
     private final UserProfileChanger userProfileChanger;
@@ -80,8 +85,12 @@ public class UserService {
     public User register(
             final Provider provider,
             final String providerUserId,
-            final String nickname
+            final String nickname,
+            final boolean rejoinConfirmed
     ) {
+        if (!rejoinConfirmed && hasWithdrawnBefore(provider, providerUserId)) {
+            throw new RejoinConfirmationRequiredException(provider);
+        }
         if (nickname == null || nickname.isBlank()) {
             throw new BadRequestException(
                     ErrorCode.NICKNAME_REQUIRED,
@@ -93,6 +102,12 @@ public class UserService {
         final User user = userRepository.save(User.createFromOAuth(provider, providerUserId, name, null));
         userStatsRepository.save(UserStats.create(user.getId()));
         return user;
+    }
+
+    private boolean hasWithdrawnBefore(final Provider provider, final String providerUserId) {
+        return withdrawnIdentityRepository.existsByIdentityHash(
+                socialIdentityHasher.hash(provider, providerUserId)
+        );
     }
 
     @Transactional(readOnly = true)

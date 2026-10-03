@@ -2,6 +2,7 @@ package com.lingring.domain.auth.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -16,6 +17,8 @@ import com.lingring.domain.auth.dto.response.TokenPairResponse;
 import com.lingring.domain.auth.facade.DemoLoginFacade;
 import com.lingring.domain.auth.facade.SocialLoginFacade;
 import com.lingring.domain.auth.service.AuthService;
+import com.lingring.domain.user.domain.Provider;
+import com.lingring.domain.user.exception.RejoinConfirmationRequiredException;
 import com.lingring.domain.user.dto.response.UserSummaryResponse;
 import com.lingring.global.auth.context.AuthContext;
 import org.junit.jupiter.api.AfterEach;
@@ -63,7 +66,7 @@ class AuthControllerTest {
         void socialLogin_whenSuccess_returns200WithBody() throws Exception {
             // given
             final SocialLoginRequest request = new SocialLoginRequest(
-                    "kakao", "id-token", null, "링링이", null
+                    "kakao", "id-token", null, "링링이", null, null
             );
             given(socialLoginFacade.socialLogin(any(SocialLoginRequest.class))).willReturn(
                     new AuthTokenResponse(
@@ -94,7 +97,7 @@ class AuthControllerTest {
         void socialLogin_whenIdTokenBlank_rejectedByValidation() throws Exception {
             // given
             final SocialLoginRequest request = new SocialLoginRequest(
-                    "kakao", "", null, "링링이", null
+                    "kakao", "", null, "링링이", null, null
             );
 
             // when
@@ -115,7 +118,7 @@ class AuthControllerTest {
         void socialLogin_whenIdTokenMissing_rejectedByValidation() throws Exception {
             // given — idToken=null
             final SocialLoginRequest request = new SocialLoginRequest(
-                    "kakao", null, null, "링링이", null
+                    "kakao", null, null, "링링이", null, null
             );
 
             // when
@@ -129,6 +132,54 @@ class AuthControllerTest {
             final JsonNode body = objectMapper.readTree(response.getContentAsString());
             assertThat(body.get("status").asInt()).isEqualTo(400);
             then(socialLoginFacade).should(never()).socialLogin(any());
+        }
+
+        @Test
+        @DisplayName("탈퇴 이력으로 재가입 확인이 필요하면 409와 code=REJOIN_CONFIRMATION_REQUIRED를 반환한다")
+        void socialLogin_whenRejoinConfirmationRequired_returns409WithCode() throws Exception {
+            // given
+            final SocialLoginRequest request = new SocialLoginRequest(
+                    "kakao", "id-token", null, null, null, null
+            );
+            given(socialLoginFacade.socialLogin(any(SocialLoginRequest.class)))
+                    .willThrow(new RejoinConfirmationRequiredException(Provider.KAKAO));
+
+            // when
+            final MockHttpServletResponse response = mockMvc.perform(post("/api/v1/auth/social")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andReturn()
+                    .getResponse();
+
+            // then
+            assertThat(response.getStatus()).isEqualTo(409);
+            final JsonNode body = objectMapper.readTree(response.getContentAsString());
+            assertThat(body.get("status").asInt()).isEqualTo(409);
+            assertThat(body.get("code").asText()).isEqualTo("REJOIN_CONFIRMATION_REQUIRED");
+        }
+
+        @Test
+        @DisplayName("body의 rejoinConfirmed 값이 facade로 전달된다")
+        void socialLogin_whenRejoinConfirmed_passesFlagToFacade() throws Exception {
+            // given
+            final SocialLoginRequest request = new SocialLoginRequest(
+                    "kakao", "id-token", null, "링링이", null, true
+            );
+            given(socialLoginFacade.socialLogin(any(SocialLoginRequest.class))).willReturn(
+                    new AuthTokenResponse(
+                            "access-jwt",
+                            "refresh-jwt",
+                            new UserSummaryResponse(42L, "링링이", null, true, null, false, null)
+                    )
+            );
+
+            // when
+            mockMvc.perform(post("/api/v1/auth/social")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)));
+
+            // then
+            then(socialLoginFacade).should().socialLogin(argThat(SocialLoginRequest::hasConfirmedRejoin));
         }
     }
 

@@ -40,6 +40,7 @@ public enum ErrorCode {
     INVALID_USER_NAME(BAD_REQUEST, "유효하지 않은 사용자 이름입니다."),
     USER_NOT_FOUND(NOT_FOUND, "사용자를 찾을 수 없습니다."),
     EMPTY_UPDATE_PROFILE_REQUEST(BAD_REQUEST, "변경할 항목이 하나 이상 필요합니다."),
+    REJOIN_CONFIRMATION_REQUIRED(CONFLICT, "최근 탈퇴한 계정입니다. 재가입 여부를 확인해주세요."),
 
     // Profile Image Error
     INVALID_IMAGE_CONTENT_TYPE(BAD_REQUEST, "이미지 형식만 업로드할 수 있습니다."),

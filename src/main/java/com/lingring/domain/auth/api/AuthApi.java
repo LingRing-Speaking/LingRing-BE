@@ -21,7 +21,10 @@ public interface AuthApi {
 
     @Operation(
             summary = "소셜 로그인 (가입 or 로그인)",
-            description = "IdP의 id_token을 검증하고 LingRing 자체 JWT를 발급한다. 신규 사용자는 같이 보낸 nickname으로 가입된다."
+            description = """
+                    IdP의 id_token을 검증하고 LingRing 자체 JWT를 발급한다. 신규 사용자는 같이 보낸 nickname으로 가입된다.
+                    1년 내 탈퇴 이력이 있는 소셜 계정은 rejoinConfirmed=true로 재가입 의사를 보내야 가입된다 (이전 기록은 복구되지 않음).
+                    """
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -39,7 +42,10 @@ public interface AuthApi {
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "409",
-                    description = "닉네임 중복 — FE는 새 닉네임으로 재시도"
+                    description = """
+                            code=NICKNAME_CONFLICT: 닉네임 중복 — FE는 새 닉네임으로 재시도
+                            code=REJOIN_CONFIRMATION_REQUIRED: 1년 내 탈퇴 이력 — FE는 재가입 확인 후 rejoinConfirmed=true로 재시도
+                            """
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "502",
