@@ -14,6 +14,9 @@ import com.lingring.domain.user.domain.UserStats;
 import com.lingring.domain.user.domain.WithdrawReason;
 import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.domain.user.dao.WithdrawalLogRepository;
+import com.lingring.domain.user.dao.WithdrawnIdentityRepository;
+import com.lingring.domain.user.domain.WithdrawnIdentity;
+import com.lingring.domain.user.domain.service.SocialIdentityHasher;
 import com.lingring.domain.user.domain.WithdrawalLog;
 import com.lingring.domain.moderation.dao.UserBlockRepository;
 import com.lingring.domain.moderation.domain.UserBlock;
@@ -74,6 +77,12 @@ class UserWithdrawalServiceTest extends ServiceIntegrationHelper {
 
     @Autowired
     private DeviceTokenRepository deviceTokenRepository;
+
+    @Autowired
+    private WithdrawnIdentityRepository withdrawnIdentityRepository;
+
+    @Autowired
+    private SocialIdentityHasher socialIdentityHasher;
 
     @Autowired
     private AppleAuthClient appleAuthClient;
@@ -348,6 +357,46 @@ class UserWithdrawalServiceTest extends ServiceIntegrationHelper {
             assertThat(logs).hasSize(1);
             assertThat(logs.get(0).getReason()).isEqualTo(WithdrawReason.RARELY_USE);
             assertThat(logs.get(0).getDescription()).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("withdraw: 재가입 식별용 소셜 계정 해시 기록")
+    class RecordWithdrawnIdentity {
+
+        @Test
+        @DisplayName("탈퇴하면 provider+sub의 해시와 탈퇴 시각이 저장된다")
+        void withdraw_recordsIdentityHash() {
+            // given
+            final User me = saveUser("링링", "kakao-me");
+            final String expectedHash = socialIdentityHasher.hash(Provider.KAKAO, "kakao-me");
+
+            // when
+            userWithdrawalService.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+
+            // then
+            final WithdrawnIdentity identity = withdrawnIdentityRepository.findByIdentityHash(expectedHash)
+                    .orElseThrow();
+            assertThat(identity.getWithdrawnAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("같은 소셜 계정으로 재가입 후 다시 탈퇴하면 행을 추가하지 않고 탈퇴 시각만 갱신한다")
+        void withdraw_whenWithdrawnBefore_renewsWithdrawnAt() {
+            // given
+            final String identityHash = socialIdentityHasher.hash(Provider.KAKAO, "kakao-me");
+            final LocalDateTime previousWithdrawnAt = LocalDateTime.of(2025, 1, 1, 0, 0);
+            withdrawnIdentityRepository.save(WithdrawnIdentity.record(identityHash, previousWithdrawnAt));
+            final User rejoined = saveUser("링링", "kakao-me");
+
+            // when
+            userWithdrawalService.withdraw(rejoined.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+
+            // then
+            assertThat(withdrawnIdentityRepository.findAll())
+                    .singleElement()
+                    .extracting(WithdrawnIdentity::getWithdrawnAt)
+                    .matches(withdrawnAt -> withdrawnAt.isAfter(previousWithdrawnAt));
         }
     }
 

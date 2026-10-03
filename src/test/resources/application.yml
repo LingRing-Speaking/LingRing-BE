@@ -62,6 +62,9 @@ auth:
     aud: test-google-web-client-id,test-google-ios-client-id
     jwks-uri: https://www.googleapis.com/oauth2/v3/certs
 
+withdrawn-identity:
+  hmac-key: test-withdrawn-identity-hmac-key
+
 test-datasource:
   version: "8.4"
   database-name: test_db
