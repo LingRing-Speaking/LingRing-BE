@@ -149,4 +149,34 @@ class AnalysisQuotaServiceTest extends ServiceIntegrationHelper {
             assertThat(response.paidTicket()).isEqualTo(5);
         }
     }
+
+    @Nested
+    @DisplayName("charge: 황금티켓 지급")
+    class Charge {
+
+        @Test
+        @DisplayName("쿼터 행이 있으면 유료 티켓을 더한다")
+        void charge_whenRowExists_addsPaidTicket() {
+            // given
+            final AnalysisQuota quota = AnalysisQuota.initial(USER_ID);
+            quota.charge(2);
+            analysisQuotaRepository.save(quota);
+
+            // when
+            analysisQuotaService.charge(USER_ID, 3);
+
+            // then
+            assertThat(analysisQuotaRepository.findByUserId(USER_ID).orElseThrow().paidRemaining()).isEqualTo(5);
+        }
+
+        @Test
+        @DisplayName("쿼터 행이 없으면 새로 만들고 유료 티켓을 지급한다")
+        void charge_whenNoRow_createsRowWithPaidTicket() {
+            // when
+            analysisQuotaService.charge(USER_ID, 3);
+
+            // then
+            assertThat(analysisQuotaRepository.findByUserId(USER_ID).orElseThrow().paidRemaining()).isEqualTo(3);
+        }
+    }
 }

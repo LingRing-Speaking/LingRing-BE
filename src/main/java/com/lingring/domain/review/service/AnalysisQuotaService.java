@@ -20,9 +20,19 @@ public class AnalysisQuotaService {
     @Transactional
     public void consumeFreeDaily(final Long userId) {
         final LocalDate today = dateTimeProvider.now().toLocalDate();
-        final AnalysisQuota quota = analysisQuotaRepository.findByUserId(userId)
+        final AnalysisQuota quota = analysisQuotaRepository.findByUserIdForUpdate(userId)
                 .orElseGet(() -> analysisQuotaRepository.save(AnalysisQuota.initial(userId)));
         quota.consumeOn(today);
+    }
+
+    @Transactional
+    public void charge(final Long userId, final int amount) {
+        if (analysisQuotaRepository.addPaidTicket(userId, amount, dateTimeProvider.now()) > 0) {
+            return;
+        }
+        final AnalysisQuota quota = AnalysisQuota.initial(userId);
+        quota.charge(amount);
+        analysisQuotaRepository.save(quota);
     }
 
     @Transactional(readOnly = true)

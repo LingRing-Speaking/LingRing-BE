@@ -28,6 +28,8 @@ import com.lingring.domain.moderation.domain.UserReport;
 import com.lingring.domain.push.dao.DeviceTokenRepository;
 import com.lingring.domain.push.domain.DeviceToken;
 import com.lingring.domain.push.domain.Platform;
+import com.lingring.domain.referral.dao.ReferralRedemptionRepository;
+import com.lingring.domain.referral.domain.ReferralRedemption;
 import com.lingring.global.auth.apple.AppleAuthClient;
 import com.lingring.global.auth.apple.FakeAppleAuthClient;
 import com.lingring.global.config.ServiceIntegrationHelper;
@@ -83,6 +85,9 @@ class UserWithdrawalServiceTest extends ServiceIntegrationHelper {
 
     @Autowired
     private SocialIdentityHasher socialIdentityHasher;
+
+    @Autowired
+    private ReferralRedemptionRepository referralRedemptionRepository;
 
     @Autowired
     private AppleAuthClient appleAuthClient;
@@ -397,6 +402,52 @@ class UserWithdrawalServiceTest extends ServiceIntegrationHelper {
                     .singleElement()
                     .extracting(WithdrawnIdentity::getWithdrawnAt)
                     .matches(withdrawnAt -> withdrawnAt.isAfter(previousWithdrawnAt));
+        }
+    }
+
+    @Nested
+    @DisplayName("withdraw: 추천인 입력 기록 정리")
+    class CleanupReferralRedemption {
+
+        private static final LocalDateTime REDEEMED_AT = LocalDateTime.of(2026, 10, 3, 14, 0);
+
+        @Test
+        @DisplayName("입력자가 탈퇴하면 그 입력 기록은 삭제된다")
+        void withdraw_whenInvitee_deletesRedemption() {
+            // given
+            final User referrer = saveUser("추천인", "kakao-referrer");
+            final User invitee = saveUser("신규", "kakao-invitee");
+            referralRedemptionRepository.save(
+                    ReferralRedemption.record(invitee.getId(), referrer.getId(), REDEEMED_AT)
+            );
+
+            // when
+            userWithdrawalService.withdraw(invitee.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+
+            // then
+            assertThat(referralRedemptionRepository.findAll()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("추천인이 탈퇴하면 입력 기록은 남고 referrerId만 익명화된다")
+        void withdraw_whenReferrer_anonymizesReferrerId() {
+            // given
+            final User referrer = saveUser("추천인", "kakao-referrer");
+            final User invitee = saveUser("신규", "kakao-invitee");
+            referralRedemptionRepository.save(
+                    ReferralRedemption.record(invitee.getId(), referrer.getId(), REDEEMED_AT)
+            );
+
+            // when
+            userWithdrawalService.withdraw(referrer.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+
+            // then
+            assertThat(referralRedemptionRepository.findAll())
+                    .singleElement()
+                    .satisfies(redemption -> {
+                        assertThat(redemption.getInviteeId()).isEqualTo(invitee.getId());
+                        assertThat(redemption.getReferrerId()).isNull();
+                    });
         }
     }
 
