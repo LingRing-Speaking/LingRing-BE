@@ -7,6 +7,11 @@ public record SocialLoginRequest(
         @NotBlank(message = "idToken이 비어있습니다.") String idToken,
         String accessToken,
         String nickname,
-        String authorizationCode
+        String authorizationCode,
+        Boolean rejoinConfirmed
 ) {
+
+    public boolean hasConfirmedRejoin() {
+        return Boolean.TRUE.equals(rejoinConfirmed);
+    }
 }

@@ -1,13 +1,18 @@
 package com.lingring.domain.user.service;
 
 import com.lingring.domain.user.dao.UserRepository;
+import com.lingring.domain.user.dao.WithdrawnIdentityRepository;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.WithdrawReason;
+import com.lingring.domain.user.domain.WithdrawnIdentity;
 import com.lingring.domain.user.domain.port.OAuthCredentialRevoker;
+import com.lingring.domain.user.domain.service.SocialIdentityHasher;
 import com.lingring.domain.user.domain.vo.AppleOAuthCredential;
 import com.lingring.domain.user.event.UserWithdrawnEvent;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.NotFoundException;
+import com.lingring.global.util.DateTimeProvider;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -20,6 +25,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserWithdrawalService {
 
     private final UserRepository userRepository;
+    private final WithdrawnIdentityRepository withdrawnIdentityRepository;
+    private final SocialIdentityHasher socialIdentityHasher;
+    private final DateTimeProvider dateTimeProvider;
     private final OAuthCredentialRevoker oauthCredentialRevoker;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -35,8 +43,19 @@ public class UserWithdrawalService {
                         "ID가 %d인 사용자를 찾을 수 없습니다.".formatted(userId)
                 ));
         revokeOAuthCredentialIfApplicable(user);
+        recordWithdrawnIdentity(user);
         eventPublisher.publishEvent(new UserWithdrawnEvent(userId, reason, description));
         userRepository.delete(user);
+    }
+
+    private void recordWithdrawnIdentity(final User user) {
+        final String identityHash = socialIdentityHasher.hash(user.getProvider(), user.getProviderUserId());
+        final LocalDateTime now = dateTimeProvider.now();
+        withdrawnIdentityRepository.findByIdentityHash(identityHash)
+                .ifPresentOrElse(
+                        identity -> identity.renew(now),
+                        () -> withdrawnIdentityRepository.save(WithdrawnIdentity.record(identityHash, now))
+                );
     }
 
     private void revokeOAuthCredentialIfApplicable(final User user) {
