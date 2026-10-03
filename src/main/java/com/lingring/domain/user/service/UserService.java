@@ -4,6 +4,7 @@ import com.lingring.domain.user.dao.UserRepository;
 import com.lingring.domain.user.dao.UserStatsRepository;
 import com.lingring.domain.user.dao.WithdrawnIdentityRepository;
 import com.lingring.domain.user.dao.dto.UserProfileProjection;
+import com.lingring.domain.user.dao.dto.UserSearchProjection;
 import com.lingring.domain.user.domain.port.ProfileImageStorage;
 import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
@@ -73,6 +74,17 @@ public class UserService {
     @Transactional(readOnly = true)
     public Optional<User> findByProvider(final Provider provider, final String providerUserId) {
         return userRepository.findByProviderAndProviderUserId(provider, providerUserId);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Long> findIdByNickname(final String nickname) {
+        return userRepository.findSearchProfileByNickname(nickname.strip())
+                .map(UserSearchProjection::getId);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isRejoined(final User user) {
+        return hasWithdrawnBefore(user.getProvider(), user.getProviderUserId());
     }
 
     @Transactional

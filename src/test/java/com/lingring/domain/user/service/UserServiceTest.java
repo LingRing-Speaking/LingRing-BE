@@ -357,6 +357,80 @@ class UserServiceTest extends ServiceIntegrationHelper {
     }
 
     @Nested
+    @DisplayName("findIdByNickname: 닉네임으로 사용자 ID 조회")
+    class FindIdByNickname {
+
+        @Test
+        @DisplayName("대소문자가 달라도 같은 닉네임의 사용자를 찾는다")
+        void findIdByNickname_whenCaseDiffers_returnsId() {
+            // given
+            final User saved = userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "sub-1", new Name("LingRing"), null)
+            );
+
+            // when
+            final Optional<Long> found = userService.findIdByNickname("lingring");
+
+            // then
+            assertThat(found).contains(saved.getId());
+        }
+
+        @Test
+        @DisplayName("앞뒤 공백이 있어도 저장된 닉네임과 일치한다")
+        void findIdByNickname_whenPaddedWithWhitespace_returnsId() {
+            // given
+            final User saved = userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "sub-1", new Name("링링이"), null)
+            );
+
+            // when
+            final Optional<Long> found = userService.findIdByNickname("  링링이 ");
+
+            // then
+            assertThat(found).contains(saved.getId());
+        }
+
+        @Test
+        @DisplayName("해당 닉네임의 사용자가 없으면 빈 Optional을 반환한다")
+        void findIdByNickname_whenNotExists_returnsEmpty() {
+            // when & then
+            assertThat(userService.findIdByNickname("없는닉네임")).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("isRejoined: 재가입자 판정")
+    class IsRejoined {
+
+        @Test
+        @DisplayName("같은 소셜 계정의 탈퇴 해시가 있으면 재가입자다")
+        void isRejoined_whenWithdrawnHashExists_returnsTrue() {
+            // given
+            final User user = userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "rejoin-sub", new Name("링링이"), null)
+            );
+            withdrawnIdentityRepository.save(WithdrawnIdentity.record(
+                    socialIdentityHasher.hash(Provider.KAKAO, "rejoin-sub"), LocalDateTime.of(2026, 3, 1, 14, 0)
+            ));
+
+            // when & then
+            assertThat(userService.isRejoined(user)).isTrue();
+        }
+
+        @Test
+        @DisplayName("탈퇴 해시가 없으면 재가입자가 아니다")
+        void isRejoined_whenNoWithdrawnHash_returnsFalse() {
+            // given
+            final User user = userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "fresh-sub", new Name("링링이"), null)
+            );
+
+            // when & then
+            assertThat(userService.isRejoined(user)).isFalse();
+        }
+    }
+
+    @Nested
     @DisplayName("createProfileImageUploadUrl: 프로필 이미지 presigned URL 발급")
     class CreateProfileImageUploadUrl {
 
