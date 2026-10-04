@@ -6,11 +6,12 @@ import org.springframework.http.HttpStatus;
 public record ApiResponse<T>(
         T data,
         int status,
-        String message
+        String message,
+        String code
 ) {
 
     public static <T> ApiResponse<T> success(final HttpStatus httpStatus, final T data) {
-        return new ApiResponse<>(data, httpStatus.value(), httpStatus.name());
+        return new ApiResponse<>(data, httpStatus.value(), httpStatus.name(), null);
     }
 
     public static ApiResponse<Void> success(final HttpStatus httpStatus) {
@@ -18,6 +19,6 @@ public record ApiResponse<T>(
     }
 
     public static ApiResponse<Void> error(final ErrorCode errorCode) {
-        return new ApiResponse<>(null, errorCode.getHttpStatus().value(), errorCode.getMessage());
+        return new ApiResponse<>(null, errorCode.getHttpStatus().value(), errorCode.getMessage(), errorCode.name());
     }
 }

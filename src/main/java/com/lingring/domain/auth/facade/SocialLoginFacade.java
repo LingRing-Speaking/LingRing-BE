@@ -25,7 +25,10 @@ public class SocialLoginFacade {
         );
         final User user = userService.findByProvider(verified.provider(), verified.providerUserId())
                 .orElseGet(() -> userService.register(
-                        verified.provider(), verified.providerUserId(), request.nickname()
+                        verified.provider(),
+                        verified.providerUserId(),
+                        request.nickname(),
+                        request.hasConfirmedRejoin()
                 ));
         captureAppleCredentialIfPossible(verified.provider(), request.authorizationCode(), user.getId());
         return authService.issueTokensFor(user);

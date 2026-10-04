@@ -9,11 +9,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.lingring.domain.auth.dto.response.AuthTokenResponse;
-import com.lingring.domain.auth.dto.response.AuthTokenResponse.UserSummary;
 import com.lingring.domain.auth.service.AuthService;
 import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.vo.Name;
+import com.lingring.domain.user.dto.response.UserSummaryResponse;
 import com.lingring.domain.user.service.UserService;
 import com.lingring.global.auth.demo.DemoAuthProperties;
 import com.lingring.global.error.ErrorCode;
@@ -80,7 +80,7 @@ class DemoLoginFacadeTest {
         final AuthTokenResponse expected = new AuthTokenResponse(
                 "demo-access",
                 "demo-refresh",
-                new UserSummary(7L, "ReviewerA", null, false, "2026-06-30")
+                new UserSummaryResponse(7L, "ReviewerA", null, false, "2026-06-30", false, null)
         );
         given(authService.issueTokensFor(demoUser)).willReturn(expected);
 

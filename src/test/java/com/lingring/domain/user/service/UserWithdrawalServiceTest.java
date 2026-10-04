@@ -14,6 +14,9 @@ import com.lingring.domain.user.domain.UserStats;
 import com.lingring.domain.user.domain.WithdrawReason;
 import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.domain.user.dao.WithdrawalLogRepository;
+import com.lingring.domain.user.dao.WithdrawnIdentityRepository;
+import com.lingring.domain.user.domain.WithdrawnIdentity;
+import com.lingring.domain.user.domain.service.SocialIdentityHasher;
 import com.lingring.domain.user.domain.WithdrawalLog;
 import com.lingring.domain.moderation.dao.UserBlockRepository;
 import com.lingring.domain.moderation.domain.UserBlock;
@@ -22,6 +25,11 @@ import com.lingring.domain.expression.domain.UserExpression;
 import com.lingring.domain.moderation.dao.UserReportRepository;
 import com.lingring.domain.moderation.domain.ReportReason;
 import com.lingring.domain.moderation.domain.UserReport;
+import com.lingring.domain.push.dao.DeviceTokenRepository;
+import com.lingring.domain.push.domain.DeviceToken;
+import com.lingring.domain.push.domain.Platform;
+import com.lingring.domain.referral.dao.ReferralRedemptionRepository;
+import com.lingring.domain.referral.domain.ReferralRedemption;
 import com.lingring.global.auth.apple.AppleAuthClient;
 import com.lingring.global.auth.apple.FakeAppleAuthClient;
 import com.lingring.global.config.ServiceIntegrationHelper;
@@ -68,6 +76,18 @@ class UserWithdrawalServiceTest extends ServiceIntegrationHelper {
 
     @Autowired
     private WithdrawalLogRepository withdrawalLogRepository;
+
+    @Autowired
+    private DeviceTokenRepository deviceTokenRepository;
+
+    @Autowired
+    private WithdrawnIdentityRepository withdrawnIdentityRepository;
+
+    @Autowired
+    private SocialIdentityHasher socialIdentityHasher;
+
+    @Autowired
+    private ReferralRedemptionRepository referralRedemptionRepository;
 
     @Autowired
     private AppleAuthClient appleAuthClient;
@@ -280,6 +300,25 @@ class UserWithdrawalServiceTest extends ServiceIntegrationHelper {
         }
 
         @Test
+        @DisplayName("내 디바이스 토큰은 전부 삭제되고, 다른 사용자의 토큰은 유지된다")
+        void withdraw_whenDeviceTokensExist_deletesOnlyMine() {
+            // given
+            final User me = saveUser("링링", "kakao-me");
+            final User other = saveUser("다른유저", "kakao-other");
+            deviceTokenRepository.save(DeviceToken.register(me.getId(), "my-ios-token", Platform.IOS));
+            deviceTokenRepository.save(DeviceToken.register(me.getId(), "my-android-token", Platform.ANDROID));
+            deviceTokenRepository.save(DeviceToken.register(other.getId(), "other-token", Platform.IOS));
+
+            // when
+            userWithdrawalService.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+
+            // then
+            assertThat(deviceTokenRepository.findAll())
+                    .extracting(DeviceToken::getToken)
+                    .containsExactly("other-token");
+        }
+
+        @Test
         @DisplayName("존재하지 않는 userId로 호출하면 USER_NOT_FOUND 예외가 발생한다")
         void withdraw_whenUserNotFound_throwsNotFoundException() {
             // given
@@ -323,6 +362,92 @@ class UserWithdrawalServiceTest extends ServiceIntegrationHelper {
             assertThat(logs).hasSize(1);
             assertThat(logs.get(0).getReason()).isEqualTo(WithdrawReason.RARELY_USE);
             assertThat(logs.get(0).getDescription()).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("withdraw: 재가입 식별용 소셜 계정 해시 기록")
+    class RecordWithdrawnIdentity {
+
+        @Test
+        @DisplayName("탈퇴하면 provider+sub의 해시와 탈퇴 시각이 저장된다")
+        void withdraw_recordsIdentityHash() {
+            // given
+            final User me = saveUser("링링", "kakao-me");
+            final String expectedHash = socialIdentityHasher.hash(Provider.KAKAO, "kakao-me");
+
+            // when
+            userWithdrawalService.withdraw(me.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+
+            // then
+            final WithdrawnIdentity identity = withdrawnIdentityRepository.findByIdentityHash(expectedHash)
+                    .orElseThrow();
+            assertThat(identity.getWithdrawnAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("같은 소셜 계정으로 재가입 후 다시 탈퇴하면 행을 추가하지 않고 탈퇴 시각만 갱신한다")
+        void withdraw_whenWithdrawnBefore_renewsWithdrawnAt() {
+            // given
+            final String identityHash = socialIdentityHasher.hash(Provider.KAKAO, "kakao-me");
+            final LocalDateTime previousWithdrawnAt = LocalDateTime.of(2025, 1, 1, 0, 0);
+            withdrawnIdentityRepository.save(WithdrawnIdentity.record(identityHash, previousWithdrawnAt));
+            final User rejoined = saveUser("링링", "kakao-me");
+
+            // when
+            userWithdrawalService.withdraw(rejoined.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+
+            // then
+            assertThat(withdrawnIdentityRepository.findAll())
+                    .singleElement()
+                    .extracting(WithdrawnIdentity::getWithdrawnAt)
+                    .matches(withdrawnAt -> withdrawnAt.isAfter(previousWithdrawnAt));
+        }
+    }
+
+    @Nested
+    @DisplayName("withdraw: 추천인 입력 기록 정리")
+    class CleanupReferralRedemption {
+
+        private static final LocalDateTime REDEEMED_AT = LocalDateTime.of(2026, 10, 3, 14, 0);
+
+        @Test
+        @DisplayName("입력자가 탈퇴하면 그 입력 기록은 삭제된다")
+        void withdraw_whenInvitee_deletesRedemption() {
+            // given
+            final User referrer = saveUser("추천인", "kakao-referrer");
+            final User invitee = saveUser("신규", "kakao-invitee");
+            referralRedemptionRepository.save(
+                    ReferralRedemption.record(invitee.getId(), referrer.getId(), REDEEMED_AT)
+            );
+
+            // when
+            userWithdrawalService.withdraw(invitee.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+
+            // then
+            assertThat(referralRedemptionRepository.findAll()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("추천인이 탈퇴하면 입력 기록은 남고 referrerId만 익명화된다")
+        void withdraw_whenReferrer_anonymizesReferrerId() {
+            // given
+            final User referrer = saveUser("추천인", "kakao-referrer");
+            final User invitee = saveUser("신규", "kakao-invitee");
+            referralRedemptionRepository.save(
+                    ReferralRedemption.record(invitee.getId(), referrer.getId(), REDEEMED_AT)
+            );
+
+            // when
+            userWithdrawalService.withdraw(referrer.getId(), WithdrawReason.NO_GOOD_MATCH, null);
+
+            // then
+            assertThat(referralRedemptionRepository.findAll())
+                    .singleElement()
+                    .satisfies(redemption -> {
+                        assertThat(redemption.getInviteeId()).isEqualTo(invitee.getId());
+                        assertThat(redemption.getReferrerId()).isNull();
+                    });
         }
     }
 

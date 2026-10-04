@@ -40,6 +40,7 @@ public enum ErrorCode {
     INVALID_USER_NAME(BAD_REQUEST, "유효하지 않은 사용자 이름입니다."),
     USER_NOT_FOUND(NOT_FOUND, "사용자를 찾을 수 없습니다."),
     EMPTY_UPDATE_PROFILE_REQUEST(BAD_REQUEST, "변경할 항목이 하나 이상 필요합니다."),
+    REJOIN_CONFIRMATION_REQUIRED(CONFLICT, "최근 탈퇴한 계정입니다. 재가입 여부를 확인해주세요."),
 
     // Profile Image Error
     INVALID_IMAGE_CONTENT_TYPE(BAD_REQUEST, "이미지 형식만 업로드할 수 있습니다."),
@@ -113,6 +114,13 @@ public enum ErrorCode {
     ALREADY_FRIENDS(CONFLICT, "이미 친구인 사용자입니다."),
     FRIENDSHIP_NOT_FOUND(NOT_FOUND, "친구 관계를 찾을 수 없습니다."),
     FRIENDSHIP_ACCESS_DENIED(FORBIDDEN, "해당 친구 관계에 대한 권한이 없습니다."),
+
+    // Referral Error
+    REFERRAL_ALREADY_REDEEMED(CONFLICT, "이미 추천인을 입력했습니다."),
+    REFERRAL_PERIOD_EXPIRED(BAD_REQUEST, "추천인 입력 기간이 지났습니다."),
+    REFERRAL_NOT_ELIGIBLE_REJOINED(FORBIDDEN, "재가입한 계정은 추천인을 입력할 수 없습니다."),
+    REFERRER_NOT_FOUND(NOT_FOUND, "해당 닉네임의 사용자를 찾을 수 없습니다."),
+    REFERRAL_SELF_NOT_ALLOWED(BAD_REQUEST, "자기 자신을 추천인으로 입력할 수 없습니다."),
     ;
 
     private final HttpStatus httpStatus;

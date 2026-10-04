@@ -7,6 +7,7 @@ import com.lingring.domain.user.dto.response.AgreementResponse;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
 import com.lingring.global.util.DateTimeProvider;
+import java.time.LocalDateTime;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -28,7 +29,9 @@ public class UserAgreementService {
                 .collect(Collectors.toCollection(() -> EnumSet.noneOf(AgreementItem.class)));
         requireAllRequiredItems(agreed);
         final User user = userService.getById(userId);
-        user.markAgreed(request.termsVersion(), timeProvider.now());
+        final LocalDateTime now = timeProvider.now();
+        user.markAgreed(request.termsVersion(), now);
+        user.changeMarketingPushConsent(agreed.contains(AgreementItem.MARKETING_PUSH), now);
         return AgreementResponse.from(user);
     }
 

@@ -5,10 +5,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.lingring.domain.user.dao.UserRepository;
 import com.lingring.domain.user.dao.UserStatsRepository;
+import com.lingring.domain.user.dao.WithdrawnIdentityRepository;
 import com.lingring.domain.user.dao.dto.UserProfileProjection;
 import com.lingring.domain.user.domain.Provider;
 import com.lingring.domain.user.domain.User;
 import com.lingring.domain.user.domain.UserStats;
+import com.lingring.domain.user.domain.WithdrawnIdentity;
+import com.lingring.domain.user.domain.service.SocialIdentityHasher;
 import com.lingring.domain.user.domain.vo.Name;
 import com.lingring.domain.user.dto.request.PresignedUrlRequest;
 import com.lingring.domain.user.dto.request.UpdateProfileRequest;
@@ -16,6 +19,7 @@ import com.lingring.domain.user.dto.response.MeResponse;
 import com.lingring.domain.user.dto.response.PresignedUrlResponse;
 import com.lingring.domain.user.dto.response.UpdateProfileResponse;
 import com.lingring.domain.user.exception.NicknameConflictException;
+import com.lingring.domain.user.exception.RejoinConfirmationRequiredException;
 import com.lingring.global.config.ServiceIntegrationHelper;
 import com.lingring.global.error.ErrorCode;
 import com.lingring.global.error.exception.BadRequestException;
@@ -26,6 +30,7 @@ import com.lingring.infrastructure.rekognition.FakeProfileImageModerator;
 import com.lingring.infrastructure.rekognition.FakeProfileImageModeratorConfig;
 import com.lingring.infrastructure.s3.FakeProfileImageStorage;
 import com.lingring.infrastructure.s3.FakeProfileImageStorageConfig;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,6 +51,12 @@ class UserServiceTest extends ServiceIntegrationHelper {
 
     @Autowired
     private UserStatsRepository userStatsRepository;
+
+    @Autowired
+    private WithdrawnIdentityRepository withdrawnIdentityRepository;
+
+    @Autowired
+    private SocialIdentityHasher socialIdentityHasher;
 
     @Autowired
     private FakeProfileImageStorage fakeProfileImageStorage;
@@ -234,7 +245,7 @@ class UserServiceTest extends ServiceIntegrationHelper {
         @DisplayName("유효한 입력이면 User를 저장하고 UserStats도 함께 생성한다")
         void register_whenValid_savesUserAndUserStats() {
             // when
-            final User user = userService.register(Provider.KAKAO, "new-sub", "링링이");
+            final User user = userService.register(Provider.KAKAO, "new-sub", "링링이", false);
 
             // then
             assertThat(user.getId()).isNotNull();
@@ -248,7 +259,7 @@ class UserServiceTest extends ServiceIntegrationHelper {
         @DisplayName("nickname이 null이면 NICKNAME_REQUIRED 예외가 발생한다")
         void register_whenNicknameNull_throwsNicknameRequired() {
             // when & then
-            assertThatThrownBy(() -> userService.register(Provider.KAKAO, "sub-1", null))
+            assertThatThrownBy(() -> userService.register(Provider.KAKAO, "sub-1", null, false))
                     .isInstanceOf(BadRequestException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.NICKNAME_REQUIRED);
@@ -258,7 +269,7 @@ class UserServiceTest extends ServiceIntegrationHelper {
         @DisplayName("nickname이 공백이면 NICKNAME_REQUIRED 예외가 발생한다")
         void register_whenNicknameBlank_throwsNicknameRequired() {
             // when & then
-            assertThatThrownBy(() -> userService.register(Provider.KAKAO, "sub-1", "   "))
+            assertThatThrownBy(() -> userService.register(Provider.KAKAO, "sub-1", "   ", false))
                     .isInstanceOf(BadRequestException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.NICKNAME_REQUIRED);
@@ -273,10 +284,149 @@ class UserServiceTest extends ServiceIntegrationHelper {
             );
 
             // when & then
-            assertThatThrownBy(() -> userService.register(Provider.APPLE, "new-sub", "링링이"))
+            assertThatThrownBy(() -> userService.register(Provider.APPLE, "new-sub", "링링이", false))
                     .isInstanceOf(NicknameConflictException.class)
                     .extracting("errorCode")
                     .isEqualTo(ErrorCode.NICKNAME_CONFLICT);
+        }
+    }
+
+    @Nested
+    @DisplayName("register: 탈퇴 이력이 있는 소셜 계정의 재가입")
+    class RegisterRejoin {
+
+        @Test
+        @DisplayName("탈퇴 이력이 있는데 재가입 확인이 없으면 REJOIN_CONFIRMATION_REQUIRED 예외가 발생하고 가입되지 않는다")
+        void register_whenWithdrawnAndNotConfirmed_throwsRejoinConfirmationRequired() {
+            // given
+            recordWithdrawn(Provider.KAKAO, "rejoin-sub");
+
+            // when & then
+            assertThatThrownBy(() -> userService.register(Provider.KAKAO, "rejoin-sub", "링링이", false))
+                    .isInstanceOf(RejoinConfirmationRequiredException.class)
+                    .extracting("errorCode")
+                    .isEqualTo(ErrorCode.REJOIN_CONFIRMATION_REQUIRED);
+            assertThat(userRepository.findByProviderAndProviderUserId(Provider.KAKAO, "rejoin-sub")).isEmpty();
+        }
+
+        @Test
+        @DisplayName("탈퇴 이력이 있으면 nickname이 없어도 NICKNAME_REQUIRED보다 재가입 확인을 먼저 요구한다")
+        void register_whenWithdrawnAndNicknameMissing_requiresRejoinConfirmationFirst() {
+            // given
+            recordWithdrawn(Provider.KAKAO, "rejoin-sub");
+
+            // when & then
+            assertThatThrownBy(() -> userService.register(Provider.KAKAO, "rejoin-sub", null, false))
+                    .isInstanceOf(RejoinConfirmationRequiredException.class);
+        }
+
+        @Test
+        @DisplayName("탈퇴 이력이 있어도 재가입을 확인하면 가입되고, 해시는 재가입자 판정을 위해 유지된다")
+        void register_whenWithdrawnAndConfirmed_registersAndKeepsHash() {
+            // given
+            final String identityHash = recordWithdrawn(Provider.KAKAO, "rejoin-sub");
+
+            // when
+            final User user = userService.register(Provider.KAKAO, "rejoin-sub", "링링이", true);
+
+            // then
+            assertThat(userRepository.findById(user.getId())).isPresent();
+            assertThat(withdrawnIdentityRepository.existsByIdentityHash(identityHash)).isTrue();
+        }
+
+        @Test
+        @DisplayName("다른 provider의 같은 sub로 탈퇴한 이력은 재가입으로 판정하지 않는다")
+        void register_whenWithdrawnOnOtherProvider_registersWithoutConfirmation() {
+            // given
+            recordWithdrawn(Provider.APPLE, "same-sub");
+
+            // when
+            final User user = userService.register(Provider.KAKAO, "same-sub", "링링이", false);
+
+            // then
+            assertThat(user.getId()).isNotNull();
+        }
+
+        private String recordWithdrawn(final Provider provider, final String providerUserId) {
+            final String identityHash = socialIdentityHasher.hash(provider, providerUserId);
+            withdrawnIdentityRepository.save(
+                    WithdrawnIdentity.record(identityHash, LocalDateTime.of(2026, 3, 1, 14, 0))
+            );
+            return identityHash;
+        }
+    }
+
+    @Nested
+    @DisplayName("findIdByNickname: 닉네임으로 사용자 ID 조회")
+    class FindIdByNickname {
+
+        @Test
+        @DisplayName("대소문자가 달라도 같은 닉네임의 사용자를 찾는다")
+        void findIdByNickname_whenCaseDiffers_returnsId() {
+            // given
+            final User saved = userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "sub-1", new Name("LingRing"), null)
+            );
+
+            // when
+            final Optional<Long> found = userService.findIdByNickname("lingring");
+
+            // then
+            assertThat(found).contains(saved.getId());
+        }
+
+        @Test
+        @DisplayName("앞뒤 공백이 있어도 저장된 닉네임과 일치한다")
+        void findIdByNickname_whenPaddedWithWhitespace_returnsId() {
+            // given
+            final User saved = userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "sub-1", new Name("링링이"), null)
+            );
+
+            // when
+            final Optional<Long> found = userService.findIdByNickname("  링링이 ");
+
+            // then
+            assertThat(found).contains(saved.getId());
+        }
+
+        @Test
+        @DisplayName("해당 닉네임의 사용자가 없으면 빈 Optional을 반환한다")
+        void findIdByNickname_whenNotExists_returnsEmpty() {
+            // when & then
+            assertThat(userService.findIdByNickname("없는닉네임")).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("isRejoined: 재가입자 판정")
+    class IsRejoined {
+
+        @Test
+        @DisplayName("같은 소셜 계정의 탈퇴 해시가 있으면 재가입자다")
+        void isRejoined_whenWithdrawnHashExists_returnsTrue() {
+            // given
+            final User user = userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "rejoin-sub", new Name("링링이"), null)
+            );
+            withdrawnIdentityRepository.save(WithdrawnIdentity.record(
+                    socialIdentityHasher.hash(Provider.KAKAO, "rejoin-sub"), LocalDateTime.of(2026, 3, 1, 14, 0)
+            ));
+
+            // when & then
+            assertThat(userService.isRejoined(user)).isTrue();
+        }
+
+        @Test
+        @DisplayName("탈퇴 해시가 없으면 재가입자가 아니다")
+        void isRejoined_whenNoWithdrawnHash_returnsFalse() {
+            // given
+            final User user = userRepository.save(
+                    User.createFromOAuth(Provider.KAKAO, "fresh-sub", new Name("링링이"), null)
+            );
+
+            // when & then
+            assertThat(userService.isRejoined(user)).isFalse();
         }
     }
 
