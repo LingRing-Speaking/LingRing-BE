@@ -62,6 +62,9 @@ auth:
     aud: test-google-web-client-id,test-google-ios-client-id
     jwks-uri: https://www.googleapis.com/oauth2/v3/certs
 
+slack:
+  matching-webhook-url: ""
+
 withdrawn-identity:
   hmac-key: test-withdrawn-identity-hmac-key
 

@@ -83,6 +83,9 @@ aws:
 firebase:
   credentials: ${FIREBASE_CREDENTIALS}   # 서비스 계정 JSON을 base64 인코딩한 값
 
+slack:
+  matching-webhook-url: ""   # 매칭 대기 진입 알림. prod에서만 주입하며, 비어 있으면 발송을 건너뛴다
+
 withdrawn-identity:
   hmac-key: ${WITHDRAWN_IDENTITY_HMAC_KEY}   # 탈퇴 소셜 계정 해시용. 변경 시 기존 해시와 대조 불가 — 고정 유지
 

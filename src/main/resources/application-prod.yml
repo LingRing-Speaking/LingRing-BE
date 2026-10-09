@@ -22,6 +22,9 @@ auth:
       REVIEWER_B: ${DEMO_TOKEN_B}
       REVIEWER_C: ${DEMO_TOKEN_C}
 
+slack:
+  matching-webhook-url: ${SLACK_MATCHING_WEBHOOK_URL}   # 매칭 대기 진입 알림용 Incoming Webhook
+
 management:
   endpoints:
     web:
